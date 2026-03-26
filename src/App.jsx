@@ -400,34 +400,34 @@ const FOOTER_LINKS=[
 const FAQ_ITEMS=[
   {
     q:"When are CBAM prices set, and when do importers actually pay?",
-    a:"CBAM certificate prices are based on the weekly average auction price of EU ETS allowances, so they fluctuate with the carbon market. Importers must purchase and surrender certificates annually; for goods imported in 2026, the deadline is September 30, 2027. The obligation accrues from January 1, 2026.",
+    a:<>CBAM certificate prices are based on the <b>weekly average auction price of EU ETS allowances</b>, so they fluctuate with the carbon market. Importers must purchase and surrender certificates annually; for goods imported in 2026, the deadline is <b>September 30, 2027</b>. The obligation accrues from <b>January 1, 2026</b>.</>,
   },
   {
     q:"Why does the fertilizer sector have a lower phase-in rate than other sectors?",
-    a:"Fertilisers have a lower initial phase-in rate, starting at 1%, due to their high exposure to carbon leakage and global competition, as well as their importance for agricultural supply chains. The EU adopted a more gradual adjustment to avoid disruption during the transition.",
+    a:<>Fertilizers have a lower initial phase-in rate, starting at <b>1%</b>, due to their <b>high exposure to carbon leakage and global competition</b>, as well as their importance for agricultural supply chains. The EU adopted a more gradual adjustment to avoid disruption during the transition.</>,
   },
   {
-    q:"Why do CBAM charges increase every year?",
-    a:"CBAM charges increase over time as free EU ETS allowances for domestic producers are phased out from 2026 to 2034. As European producers face higher carbon costs, CBAM obligations on imports rise accordingly to maintain a level playing field.",
+    q:"Why does the mark-up increase over time?",
+    a:<>The mark-up applied to CBAM default values increases over time to ensure emissions estimates remain <b>conservative</b> and reflect variability across production processes. It is designed to discourage reliance on default values and encourage importers to report verified, installation-level emissions data.</>,
   },
   {
     q:"How should I read the numbers at the top of the page?",
-    a:"The figures show an upper-bound estimate of CBAM costs on US exports, based on EU default emissions values and current ETS prices. Exporters that report verified, installation-level emissions, especially for lower-emitting processes, would likely face lower costs. The effective tariff rate expresses this cost as a share of total CBAM-covered trade value.",
+    a:<>The figures show an <b>upper-bound estimate</b> of CBAM costs on US exports, based on EU default emissions values and current ETS prices. Exporters that report <b>verified, installation-level emissions</b>, especially lower-emitting processes, would likely face lower costs. The effective tariff rate expresses this cost as a share of total CBAM-covered trade value.</>,
   },
   {
     q:"What has the EU carbon price been in recent years?",
-    a:"EU ETS allowance prices peaked near €100/tCO2 in early 2023, then declined and fluctuated between €50 and €70/tCO2 through 2024. As of early 2026, prices are roughly €70 to €85/tCO2, depending on market conditions.",
+    a:<>EU ETS allowance prices peaked near <b>€100/tCO₂ in early 2023</b>, then declined and fluctuated between <b>€50–70/tCO₂ through 2024</b>. As of early 2026, prices are roughly <b>€70–85/tCO₂</b>, depending on market conditions.</>,
   },
   {
     q:"Are other countries implementing their own CBAM?",
-    a:"The UK has announced plans to introduce a CBAM starting in 2027, broadly aligned with the EU's approach. Canada has explored similar mechanisms, but no other major economy has fully implemented a CBAM to date.",
+    a:<>The UK has announced plans to introduce a CBAM starting in <b>2027</b>, broadly aligned with the EU's approach. Canada has explored similar mechanisms, but no other major economy has fully implemented a CBAM to date.</>,
   },
 ];
 
 const KEY_TERMS=[
   {
     term:"CBAM (Carbon Border Adjustment Mechanism)",
-    def:"A policy requiring importers of certain carbon-intensive goods to purchase certificates reflecting the carbon cost under EU climate rules. It is designed to prevent carbon leakage, the relocation of production to jurisdictions with weaker climate policies.",
+    def:<>A policy requiring importers of certain carbon-intensive goods to purchase certificates reflecting the carbon cost under EU climate rules. It is designed to prevent <b>carbon leakage</b> — the relocation of production to jurisdictions with weaker climate policies.</>,
   },
   {
     term:"EU ETS (Emissions Trading System)",
@@ -435,19 +435,19 @@ const KEY_TERMS=[
   },
   {
     term:"Allowance",
-    def:"One EU ETS allowance equals the right to emit one tonne of CO2-equivalent. Companies must surrender allowances to cover their verified emissions. CBAM certificate prices are linked to the weekly average auction price of these allowances.",
+    def:<>One EU ETS allowance equals the right to emit <b>one tonne of CO₂-equivalent</b>. Companies must surrender allowances to cover their verified emissions. CBAM certificate prices are linked to the weekly average auction price of these allowances.</>,
   },
   {
     term:"CN Code (Combined Nomenclature)",
-    def:"The EU's 8-digit product classification system, building on the global 6-digit HS system. CBAM applies to specific CN codes covering steel, aluminium, cement, fertilisers, hydrogen, and electricity. The number of digits indicates the level of product specificity.",
+    def:<>The EU's <b>8-digit product classification system</b>, building on the global 6-digit HS system. CBAM applies to specific CN codes covering steel, aluminium, cement, fertilizers, hydrogen, and electricity. The number of digits (4, 6, or 8) indicates the level of product specificity.</>,
   },
   {
     term:"Default Value",
-    def:"An EU-assigned emissions intensity, expressed in tCO2e per tonne of product, used when verified emissions data is unavailable. Default values are typically conservative and may exceed actual emissions, incentivizing firms to report installation-level data.",
+    def:<>An EU-assigned emissions intensity (tCO₂e per tonne of product) used when verified emissions data is unavailable. Default values are typically <b>conservative and may exceed actual emissions</b>, incentivizing firms to report installation-level data.</>,
   },
   {
     term:"Mark-up",
-    def:"An additional percentage applied to CBAM default emissions values to ensure they are conservative and do not underestimate actual emissions. The mark-up increases over time and is designed to reflect variation across installations and incentivize the reporting of verified emissions data.",
+    def:<>An additional percentage applied to CBAM default emissions values to ensure they are <b>conservative and do not underestimate actual emissions</b>. The mark-up increases over time (e.g. 10–30%) and is designed to reflect variation across installations and incentivize the reporting of verified emissions data.</>,
   },
   {
     term:"Benchmark Value",
@@ -459,11 +459,11 @@ const KEY_TERMS=[
   },
   {
     term:"Electric Arc Furnace (EAF)",
-    def:"A steelmaking process that melts scrap steel or direct reduced iron using electricity. It is significantly less carbon-intensive than the blast furnace route. The US produces roughly 70 to 75% of its steel via EAF, but CBAM default values for the US do not explicitly reflect this, potentially overstating emissions.",
+    def:<>A steelmaking process that melts scrap steel or direct reduced iron using electricity. It is significantly less carbon-intensive than the blast furnace route. The US produces roughly <b>70–75% of its steel via EAF</b>, but CBAM default values for the US do not explicitly reflect this, potentially overstating emissions.</>,
   },
   {
     term:"BF/BOF (Blast Furnace / Basic Oxygen Furnace)",
-    def:"The traditional coal-based steelmaking route, where iron ore is reduced in a blast furnace and converted to steel in a basic oxygen furnace. This process produces significantly higher CO2 emissions per tonne than EAF.",
+    def:"The traditional coal-based steelmaking route, where iron ore is reduced in a blast furnace and converted to steel in a basic oxygen furnace. This process produces significantly higher CO₂ emissions per tonne than EAF.",
   },
 ];
 
