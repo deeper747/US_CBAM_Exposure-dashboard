@@ -20,7 +20,7 @@ from io import StringIO
 import time
 
 BASE_URL = "https://ec.europa.eu/eurostat/api/comext/dissemination/sdmx/2.1/data/DS-045409"
-YEARS = [2022, 2023, 2024]
+YEARS = [2022, 2023, 2024, 2025]
 BATCH_SIZE = 10
 
 # ── CBAM regulation CN codes (IR 2025/2621 Annex I) ─────────────────────────

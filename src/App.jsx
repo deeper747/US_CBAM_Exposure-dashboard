@@ -37,7 +37,7 @@ function eu(v){
 
 // ── TRADE DATA — from data/raw/comext_us_cbam_trade_by_year.csv ──────────────
 // Keyed by CN code exactly as listed in the regulation (no spaces).
-// Each entry: [t2022, e2022, t2023, e2023, t2024, e2024]
+// Each entry: [t2022, e2022, t2023, e2023, t2024, e2024, t2025, e2025]
 const TRADE = {
   "25070080":[20678.152,9007217,15861.983,6853748,6487.241,4410229],
   "25231000":[28.702,44869,57.514,23892,5.44,15597],
@@ -147,8 +147,8 @@ const TRADE = {
 };
 
 // Derive avg from year data
-function tradeAvg(cn){ const d=TRADE[cn.replace(/\s/g,"")]; if(!d)return null; return {t:(d[0]+d[2]+d[4])/3, e:(d[1]+d[3]+d[5])/3}; }
-function tradeYr(cn,yr){ const d=TRADE[cn.replace(/\s/g,"")]; if(!d)return null; const i=yr==="2022"?0:yr==="2023"?2:4; return {t:d[i],e:d[i+1]}; }
+function tradeAvg(cn){ const d=TRADE[cn.replace(/\s/g,"")]; if(!d)return null; const has2025=d[6]!=null; return has2025?{t:(d[0]+d[2]+d[4]+d[6])/4,e:(d[1]+d[3]+d[5]+d[7])/4}:{t:(d[0]+d[2]+d[4])/3,e:(d[1]+d[3]+d[5])/3}; }
+function tradeYr(cn,yr){ const d=TRADE[cn.replace(/\s/g,"")]; if(!d)return null; const i=yr==="2022"?0:yr==="2023"?2:yr==="2024"?4:6; return {t:d[i]??0,e:d[i+1]??0}; }
 
 // ── REGULATION DATA ──────────────────────────────────────────────────────────
 const RAW=[
@@ -356,7 +356,7 @@ const SECTOR_AVG_DV={};
 });
 
 // Historical sectoral tonnage — same getTrade logic
-const HIST_YEARS=["2022","2023","2024"];
+const HIST_YEARS=["2023","2024","2025"];
 function calcHistSector(yr){
   const out={};
   ["Iron & Steel","Aluminium","Fertilisers","Hydrogen","Cement"].forEach(sec=>{
@@ -374,9 +374,9 @@ function calcHistSector(yr){
   return out;
 }
 const HIST_COST_FACTOR={
-  "2022":calcHistSector("2022"),
   "2023":calcHistSector("2023"),
   "2024":calcHistSector("2024"),
+  "2025":calcHistSector("2025"),
 };
 
 // Baseline annual tonnage for clock tab
@@ -627,7 +627,7 @@ export default function App(){
             <div style={{fontFamily:SERIF,fontSize:22,fontWeight:800,color:N.teal400,marginTop:2,lineHeight:1.1}}>
               {annualExpStr}<span style={{fontFamily:SANS,fontSize:12,fontWeight:600,color:"#aac4e8"}}> / year</span>
             </div>
-            <div style={{fontFamily:SANS,fontSize:11,color:"#aac4e8",marginTop:3}}>est. · 2022–24 avg · ${(ets*EUR_USD).toFixed(0)}/t · {MKPCT[year]}</div>
+            <div style={{fontFamily:SANS,fontSize:11,color:"#aac4e8",marginTop:3}}>est. · 2022–25 avg · ${(ets*EUR_USD).toFixed(0)}/t · {MKPCT[year]}</div>
           </div>
           <div style={{padding:"11px 14px",borderRadius:8,background:N.tealPale,borderLeft:`4px solid ${N.teal600}`}}>
             <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>CN Codes w/ Trade Data</div>
@@ -693,7 +693,7 @@ export default function App(){
                 <div style={{background:N.white,border:`1.5px solid ${N.tealLight}`,borderRadius:8,padding:"10px 16px"}}>
                   <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Data Currently Showing</div>
                   <div style={{fontFamily:SANS,fontSize:13,marginTop:4,fontWeight:600,color:comextStatus==="done"&&comext2026?.gotAny?N.green600:N.tealMid}}>
-                    {comextStatus==="idle"?"Not loaded":comextStatus==="loading"?"⟳ Fetching Comext…":comext2026?.gotAny?`✓ Live: ${comext2026.monthsCovered.join(", ")}`:"2022–24 baseline"}
+                    {comextStatus==="idle"?"Not loaded":comextStatus==="loading"?"⟳ Fetching Comext…":comext2026?.gotAny?`✓ Live: ${comext2026.monthsCovered.join(", ")}`:"2022–25 baseline"}
                   </div>
                 </div>
               </div>
@@ -705,7 +705,7 @@ export default function App(){
                   Estimated forgone tax revenue to date{clockSector!=="All"&&<span style={{color:SC[clockSector]||N.teal400}}> · {clockSector}</span>}
                 </div>
                 <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginBottom:14}}>
-                  Accruing since January 1, 2026 · based on {comext2026?.gotAny?`live Comext data (latest: ${comext2026.monthsCovered.slice(-1)[0]}, retrieved March 16, 2026)`:"2022–24 baseline trade volumes"}
+                  Accruing since January 1, 2026 · based on {comext2026?.gotAny?`live Comext data (latest: ${comext2026.monthsCovered.slice(-1)[0]}, retrieved March 16, 2026)`:"2022–25 baseline trade volumes"}
                 </div>
                 <div style={{fontFamily:SERIF,fontSize:48,fontWeight:700,color:N.white,lineHeight:1.1,marginBottom:8,minHeight:60}}>
                   {clockData?tickingNum(clockData.accrued,noLiveData):"Loading…"}
@@ -742,7 +742,7 @@ export default function App(){
                     );
                   })}
                   <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginTop:10,paddingTop:10,borderTop:`1px solid ${N.tealLight}`}}>
-                    "Live" = annualised from actual 2026 Comext data. "Est." = 2022–24 baseline. Cost = tonnes × sector avg default value (tonnage-weighted, incl. 10% mark-up) × ETS price × $1.08/€.
+                    "Live" = annualised from actual 2026 Comext data. "Est." = 2022–25 baseline. Cost = tonnes × sector avg default value (tonnage-weighted, incl. 10% mark-up) × ETS price × $1.08/€.
                   </div>
                 </div>
               )}
@@ -752,7 +752,7 @@ export default function App(){
               </div>
               {noLiveData&&(
                 <div style={{fontFamily:SANS,fontSize:12,color:N.tealMid,marginTop:8,padding:"10px 14px",background:N.tealPale,borderLeft:`4px solid ${N.tealMid}`,borderRadius:4}}>
-                  * Extrapolated figure. No 2026 Comext trade data is available yet. Projected from 2022–24 average monthly volumes from January 1, 2026.
+                  * Extrapolated figure. No 2026 Comext trade data is available yet. Projected from 2022–25 average monthly volumes from January 1, 2026.
                 </div>
               )}
             </div>
@@ -760,7 +760,7 @@ export default function App(){
 
           {tab==="historical"&&(
             <div>
-              <h3 style={{marginTop:0,fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:20}}>Hypothetical CBAM Exposure on US Exports, 2022–2024</h3>
+              <h3 style={{marginTop:0,fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:20}}>Hypothetical CBAM Exposure on US Exports, 2022–2025</h3>
               <p style={{fontFamily:SANS,color:N.tealMid,fontSize:13,marginTop:-8,marginBottom:18}}>
                 <i>If CBAM had applied to US exports in these years</i> — calculated at ETS price of ${(ets*EUR_USD).toFixed(1)}/t with 2026 mark-up (10%). Real annual tonnage from Eurostat Comext DS-045409. Converted at $1.08/€.
               </p>
@@ -816,7 +816,7 @@ export default function App(){
                 <span style={{fontFamily:SANS,fontSize:12,color:N.tealMid}}>{sorted.length} codes</span>
               </div>
               <p style={{fontFamily:SANS,fontSize:12,color:N.tealMid,marginTop:0,marginBottom:12,lineHeight:1.6}}>
-                <b style={{color:N.teal800}}>Export Vol. & Trade Value</b> are EU imports from the US averaged over 2022–2024, sourced from Eurostat Comext (DS-045409), matched at exact CN digit level. CBAM Exposure = Export Vol. × Default Value (incl. mark-up) × ETS price × $1.08/€.
+                <b style={{color:N.teal800}}>Export Vol. & Trade Value</b> are EU imports from the US averaged over 2022–2025, sourced from Eurostat Comext (DS-045409), matched at exact CN digit level. CBAM Exposure = Export Vol. × Default Value (incl. mark-up) × ETS price × $1.08/€.
               </p>
               <div style={{overflowX:"auto",borderRadius:8,boxShadow:`0 1px 6px rgba(25,72,82,0.10)`,border:`1px solid ${N.tealLight}`}}>
                 <table style={{width:"100%",borderCollapse:"collapse",background:N.white,fontSize:12}}>
@@ -825,8 +825,8 @@ export default function App(){
                       <Th k="cn" label="CN Code"/><Th k="desc" label="Description"/>
                       <Th k="sector" label="Sector"/><Th k="route" label="Route"/>
                       <Th k="total" label={"Default\n(tCO₂e/t)"}/><Th k={mvf} label={`+${MKPCT[year]}\nMark-up`}/>
-                      <Th k="cbamPerTonne" label={"$/t\nExported"}/><Th k="tonnes" label={"Export Vol.\n(t, 2022–24 avg)"}/>
-                      <Th k="tradeEur" label={"Trade Value\n(2022–24 avg)"}/><Th k="cbamCost" label={"CBAM\nExposure / yr"}/>
+                      <Th k="cbamPerTonne" label={"$/t\nExported"}/><Th k="tonnes" label={"Export Vol.\n(t, 2022–25 avg)"}/>
+                      <Th k="tradeEur" label={"Trade Value\n(2022–25 avg)"}/><Th k="cbamCost" label={"CBAM\nExposure / yr"}/>
                     </tr>
                   </thead>
                   <tbody>
@@ -966,11 +966,12 @@ export default function App(){
                   </ul>
                 </li>
                 <li><b>Payment timing:</b> Manufacturers are not obligated to pay for emissions from 2026 imports until September 2027.</li>
+                <li><b>No supply-side adjustment:</b> This is a first approximation based on observed 2022–25 trade volumes. It does not account for any reduction in US exports to the EU that may result from the CBAM itself — exporters facing higher costs may divert shipments to other markets, which would lower the actual liability below these estimates.</li>
               </ul>
               <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:16}}>Sources</h4>
               <ul style={{paddingLeft:20,lineHeight:1.8}}>
                 <li><a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>EU Commission Implementing Regulation (EU) 2025/2621</a>, 16 December 2025 — Annex I (US)</li>
-                <li><a href="https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409?category=ext_go.ext_go_detail" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>Eurostat Comext DS-045409</a> — annual data 2022–2024, matched at CN4/CN6/CN8 level</li>
+                <li><a href="https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409?category=ext_go.ext_go_detail" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>Eurostat Comext DS-045409</a> — annual data 2022–2025, matched at CN4/CN6/CN8 level</li>
                 <li><a href="https://tradingeconomics.com/commodity/carbon" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>EU ETS price: Trading Economics</a> (EU Carbon Permits, EUR/tonne)</li>
               </ul>
             </div>
