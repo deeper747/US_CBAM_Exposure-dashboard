@@ -397,6 +397,76 @@ const FOOTER_LINKS=[
   {url:"https://www.niskanencenter.org/carbon-border-adjustment-bills-how-do-the-u-s-proposals-compare-to-the-eu-one/",title:"Carbon Border Adjustment Bills: How Do the U.S. Proposals Compare to the EU One?",desc:"A comparative analysis of U.S. CBAM legislative proposals against the EU's implemented mechanism."},
 ];
 
+const FAQ_ITEMS=[
+  {
+    q:"When are CBAM prices set, and when do importers actually pay?",
+    a:"CBAM certificate prices are based on the weekly average auction price of EU ETS allowances, so they fluctuate with the carbon market. Importers must purchase and surrender certificates annually; for goods imported in 2026, the deadline is September 30, 2027. The obligation accrues from January 1, 2026.",
+  },
+  {
+    q:"Why does the fertilizer sector have a lower phase-in rate than other sectors?",
+    a:"Fertilisers have a lower initial phase-in rate, starting at 1%, due to their high exposure to carbon leakage and global competition, as well as their importance for agricultural supply chains. The EU adopted a more gradual adjustment to avoid disruption during the transition.",
+  },
+  {
+    q:"Why do CBAM charges increase every year?",
+    a:"CBAM charges increase over time as free EU ETS allowances for domestic producers are phased out from 2026 to 2034. As European producers face higher carbon costs, CBAM obligations on imports rise accordingly to maintain a level playing field.",
+  },
+  {
+    q:"How should I read the numbers at the top of the page?",
+    a:"The figures show an upper-bound estimate of CBAM costs on US exports, based on EU default emissions values and current ETS prices. Exporters that report verified, installation-level emissions, especially for lower-emitting processes, would likely face lower costs. The effective tariff rate expresses this cost as a share of total CBAM-covered trade value.",
+  },
+  {
+    q:"What has the EU carbon price been in recent years?",
+    a:"EU ETS allowance prices peaked near €100/tCO2 in early 2023, then declined and fluctuated between €50 and €70/tCO2 through 2024. As of early 2026, prices are roughly €70 to €85/tCO2, depending on market conditions.",
+  },
+  {
+    q:"Are other countries implementing their own CBAM?",
+    a:"The UK has announced plans to introduce a CBAM starting in 2027, broadly aligned with the EU's approach. Canada has explored similar mechanisms, but no other major economy has fully implemented a CBAM to date.",
+  },
+];
+
+const KEY_TERMS=[
+  {
+    term:"CBAM (Carbon Border Adjustment Mechanism)",
+    def:"A policy requiring importers of certain carbon-intensive goods to purchase certificates reflecting the carbon cost under EU climate rules. It is designed to prevent carbon leakage, the relocation of production to jurisdictions with weaker climate policies.",
+  },
+  {
+    term:"EU ETS (Emissions Trading System)",
+    def:"The EU's cap-and-trade carbon market, in operation since 2005. It sets a cap on total emissions from covered sectors and allows companies to buy and sell allowances. The ETS price directly determines the cost of CBAM certificates.",
+  },
+  {
+    term:"Allowance",
+    def:"One EU ETS allowance equals the right to emit one tonne of CO2-equivalent. Companies must surrender allowances to cover their verified emissions. CBAM certificate prices are linked to the weekly average auction price of these allowances.",
+  },
+  {
+    term:"CN Code (Combined Nomenclature)",
+    def:"The EU's 8-digit product classification system, building on the global 6-digit HS system. CBAM applies to specific CN codes covering steel, aluminium, cement, fertilisers, hydrogen, and electricity. The number of digits indicates the level of product specificity.",
+  },
+  {
+    term:"Default Value",
+    def:"An EU-assigned emissions intensity, expressed in tCO2e per tonne of product, used when verified emissions data is unavailable. Default values are typically conservative and may exceed actual emissions, incentivizing firms to report installation-level data.",
+  },
+  {
+    term:"Mark-up",
+    def:"An additional percentage applied to CBAM default emissions values to ensure they are conservative and do not underestimate actual emissions. The mark-up increases over time and is designed to reflect variation across installations and incentivize the reporting of verified emissions data.",
+  },
+  {
+    term:"Benchmark Value",
+    def:"The emissions intensity of the most efficient EU installations, used to determine free allocation levels under the EU ETS. It differs from default values, which are conservative estimates applied when actual data is unavailable.",
+  },
+  {
+    term:"Free Allocation Adjustment",
+    def:"A factor reflecting the gradual phase-out of free EU ETS allowances. As free allocation declines from 2026 to 2034, CBAM obligations increase correspondingly.",
+  },
+  {
+    term:"Electric Arc Furnace (EAF)",
+    def:"A steelmaking process that melts scrap steel or direct reduced iron using electricity. It is significantly less carbon-intensive than the blast furnace route. The US produces roughly 70 to 75% of its steel via EAF, but CBAM default values for the US do not explicitly reflect this, potentially overstating emissions.",
+  },
+  {
+    term:"BF/BOF (Blast Furnace / Basic Oxygen Furnace)",
+    def:"The traditional coal-based steelmaking route, where iron ore is reduced in a blast furnace and converted to steel in a basic oxygen furnace. This process produces significantly higher CO2 emissions per tonne than EAF.",
+  },
+];
+
 export default function App(){
   const [year,setYear]=useState("2026");
   const [sector,setSector]=useState("All");
@@ -515,15 +585,6 @@ export default function App(){
   const annualExpUSD=totExp*EUR_USD;
   const annualExpStr=annualExpUSD>=1e9?`$${(annualExpUSD/1e9).toFixed(2)}B`:annualExpUSD>=1e6?`$${(annualExpUSD/1e6).toFixed(1)}M`:`$${fmt(annualExpUSD)}`;
 
-  const NAV_COLS=[
-    {heading:"Who Are We",links:["About Us","Leadership & Staff","Financials"]},
-    {heading:"Key Initiatives",links:["Open Society","State Capacity","Abundance & Dynamism","Captured Economy"]},
-    {heading:"Policy Areas",links:["Climate","Criminal Justice","Immigration","Social Policy"]},
-    {heading:"Advocacy",links:["Press Releases","Testimony","Coalition Letters","Legal"]},
-    {heading:"Publications & Analysis",links:["Studies","Commentary","Media","Podcasts","Substack","Foundational Reading"]},
-    {heading:"Get Involved",links:["Events","Careers","Summer Institute","Donate","Subscribe","Contact"]},
-  ];
-
   return(
     <>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Neuton:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}body{margin:0;}`}</style>
@@ -601,7 +662,7 @@ export default function App(){
 
         {/* TABS */}
         <div style={{display:"flex",padding:"0 24px",background:N.white,borderBottom:`1px solid ${N.tealLight}`,overflowX:"auto"}}>
-          {[["clock","🔴 Live Cost Clock"],["historical","📅 Historical Baseline"],["table","📋 CN Code Table"],["chart","📊 Exposure by Code"],["methodology","📖 Methodology"]].map(([t,lbl])=>(
+          {[["clock","🔴 Live Cost Clock"],["historical","📅 Historical Baseline"],["table","📋 CN Code Table"],["chart","📊 Exposure by Code"],["methodology","📖 Methodology"],["faq","❓ FAQ"]].map(([t,lbl])=>(
             <button key={t} onClick={()=>setTab(t)} style={{padding:"11px 16px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:13,whiteSpace:"nowrap",borderBottom:tab===t?`3px solid ${N.teal600}`:"3px solid transparent",background:"none",fontWeight:tab===t?700:500,color:tab===t?N.teal800:N.tealMid}}>{lbl}</button>
           ))}
         </div>
@@ -912,6 +973,34 @@ export default function App(){
                 <li><a href="https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409?category=ext_go.ext_go_detail" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>Eurostat Comext DS-045409</a> — annual data 2022–2024, matched at CN4/CN6/CN8 level</li>
                 <li><a href="https://tradingeconomics.com/commodity/carbon" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>EU ETS price: Trading Economics</a> (EU Carbon Permits, EUR/tonne)</li>
               </ul>
+            </div>
+          )}
+
+          {tab==="faq"&&(
+            <div style={{maxWidth:880,fontFamily:SANS,fontSize:13,lineHeight:1.75,color:N.teal900}}>
+              <h3 style={{fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:22,marginTop:0}}>Frequently Asked Questions</h3>
+              <p style={{color:N.tealMid,marginTop:-6,marginBottom:18}}>
+                Quick answers to the most common questions about how to interpret the dashboard, how CBAM obligations work, and what the core terms mean.
+              </p>
+
+              <div style={{display:"grid",gap:12,marginBottom:28}}>
+                {FAQ_ITEMS.map(item=>(
+                  <div key={item.q} style={{background:N.white,border:`1px solid ${N.tealLight}`,borderLeft:`4px solid ${N.teal600}`,borderRadius:10,padding:"16px 18px"}}>
+                    <h4 style={{margin:"0 0 8px",fontFamily:SERIF,fontSize:18,color:N.teal800}}>{item.q}</h4>
+                    <p style={{margin:0,color:N.tealMid,lineHeight:1.7}}>{item.a}</p>
+                  </div>
+                ))}
+              </div>
+
+              <h3 style={{fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:22,marginBottom:14}}>Key Terms</h3>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:12}}>
+                {KEY_TERMS.map(item=>(
+                  <div key={item.term} style={{background:N.white,border:`1px solid ${N.tealLight}`,borderRadius:10,padding:"16px 18px"}}>
+                    <div style={{fontFamily:SERIF,fontSize:17,fontWeight:700,color:N.teal800,marginBottom:8}}>{item.term}</div>
+                    <div style={{fontSize:12.5,color:N.tealMid,lineHeight:1.7}}>{item.def}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
