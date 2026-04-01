@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import ETS_PRICES from "./data/ets_prices.json";
 
 const N = {
   teal900:"#0c2a30",teal800:"#194852",teal600:"#348397",teal400:"#7dceda",
@@ -388,7 +389,7 @@ const BASELINE_ANNUAL={};
 });
 
 const NiskanenLogo=()=>(
-  <span style={{fontFamily:"'Neuton', Georgia, serif",fontSize:26,fontWeight:700,color:N.white,lineHeight:1}}>Niskanen Center</span>
+  <span style={{fontFamily:"'Neuton', Georgia, serif",fontSize:28,fontWeight:700,color:N.white,lineHeight:1}}>Niskanen Center</span>
 );
 
 const FOOTER_LINKS=[
@@ -416,11 +417,11 @@ const FAQ_ITEMS=[
   },
   {
     q:"What has the EU carbon price been in recent years?",
-    a:<>EU ETS allowance prices peaked near <b>€100/tCO₂ in early 2023</b>, then declined and fluctuated between <b>€50–70/tCO₂ through 2024</b>. As of early 2026, prices are roughly <b>€70–85/tCO₂</b>, depending on market conditions.</>,
+    a:<>EU ETS allowance prices peaked near <b>€100/tCO₂ in early 2023</b>, then fell sharply — averaging <b>€66/tCO₂ across 2024</b>. Prices recovered through 2025, averaging <b>€74/tCO₂</b> for the year and closing Q4 near <b>€80/tCO₂</b>. In January 2026 prices briefly exceeded <b>€90/tCO₂</b>, before dropping to a four-month low of roughly <b>€69/tCO₂</b> in February 2026 — driven by political calls from Germany, the Czech Republic, Slovakia, and Austria to revise or postpone the ETS free allocation phase-out.</>,
   },
   {
     q:"Are other countries implementing their own CBAM?",
-    a:<>The UK has announced plans to introduce a CBAM starting in <b>2027</b>, broadly aligned with the EU's approach. Canada has explored similar mechanisms, but no other major economy has fully implemented a CBAM to date.</>,
+    a:<>Several economies are moving toward CBAM-like mechanisms, though none has fully implemented one outside the EU. The <b>UK</b> has announced plans to introduce a CBAM starting in <b>2027</b>, broadly aligned with the EU's approach. <a href="https://reports.weforum.org/docs/WEF_Climate_and_Competitiveness_Border_Carbon_Adjustments_in_Action_2025.pdf" target="_blank" rel="noopener noreferrer" style={{color:"inherit",textDecoration:"underline"}}><b>Canada</b></a> has explored border carbon adjustments but has not committed to a specific design or timeline. <a href="https://www.spglobal.com/energy/en/news-research/latest-news/energy-transition/021326-australias-final-carbon-leakage-review-recommends-cbam-like-scheme-for-high-risk-sectors" target="_blank" rel="noopener noreferrer" style={{color:"inherit",textDecoration:"underline"}}><b>Australia</b></a>'s final carbon leakage review (2026) recommended a CBAM-like scheme for high-risk sectors, though no legislation has been introduced. <a href="https://www.taipeitimes.com/News/taiwan/archives/2025/12/19/2003849157" target="_blank" rel="noopener noreferrer" style={{color:"inherit",textDecoration:"underline"}}><b>Taiwan</b></a> passed a carbon border charge framework in late 2025, making it one of the first Asian economies to legislate a mechanism of this kind.</>,
   },
 ];
 
@@ -470,14 +471,12 @@ const KEY_TERMS=[
 export default function App(){
   const [year,setYear]=useState("2026");
   const [sector,setSector]=useState("All");
-  const [ets,setEts]=useState(70);
+  const [ets,setEts]=useState(ETS_PRICES.default);
   const [search,setSearch]=useState("");
   const [tab,setTab]=useState("clock");
   const [sk,setSk]=useState("cbamCost");
   const [sd,setSd]=useState("desc");
   const [clockSector,setClockSector]=useState("All");
-  const [etsLive,setEtsLive]=useState(null);
-  const [etsStatus,setEtsStatus]=useState("idle");
   const [comext2026,setComext2026]=useState(null);
   const [comextStatus,setComextStatus]=useState("idle");
   const [tick,setTick]=useState(0);
@@ -505,21 +504,11 @@ export default function App(){
   const maxC=chartData[0]?.cbamCost||1;
   const hs=k=>{if(sk===k)setSd(d=>d==="desc"?"asc":"desc");else{setSk(k);setSd("desc");}};
   const Th=({k,label})=>(
-    <th onClick={()=>hs(k)} style={{padding:"9px 10px",textAlign:"left",whiteSpace:"pre-line",fontFamily:SANS,fontSize:11,fontWeight:600,cursor:"pointer",userSelect:"none",background:sk===k?N.teal900:"transparent",borderRight:"1px solid rgba(255,255,255,0.12)",color:sk===k?N.teal200:N.tealLight}}>
+    <th onClick={()=>hs(k)} style={{padding:"9px 10px",textAlign:"left",whiteSpace:"pre-line",fontFamily:SANS,fontSize:13,fontWeight:600,cursor:"pointer",userSelect:"none",background:sk===k?N.teal900:"transparent",borderRight:"1px solid rgba(255,255,255,0.12)",color:sk===k?N.teal200:N.tealLight}}>
       {label}{sk===k?(sd==="desc"?" ↓":" ↑"):""}
     </th>
   );
 
-  const fetchEts=useCallback(async()=>{
-    setEtsStatus("loading");
-    try{
-      const r=await fetch("https://query1.finance.yahoo.com/v8/finance/chart/C02.DE?interval=1d&range=5d");
-      const d=await r.json();
-      const p=d?.chart?.result?.[0]?.meta?.regularMarketPrice;
-      if(p&&p>20&&p<200){setEtsLive(p);setEtsStatus("ok");return;}
-      throw new Error();
-    }catch{setEtsLive(71.5);setEtsStatus("fallback");}
-  },[]);
 
   const fetchComext=useCallback(async()=>{
     setComextStatus("loading");
@@ -550,14 +539,14 @@ export default function App(){
     setComextStatus("done");
   },[]);
 
-  useEffect(()=>{if(tab==="clock"&&!clockInitRef.current){clockInitRef.current=true;fetchEts();fetchComext();}},[tab,fetchEts,fetchComext]);
+  useEffect(()=>{if(tab==="clock"&&!clockInitRef.current){clockInitRef.current=true;fetchComext();}},[tab,fetchComext]);
   useEffect(()=>{
     if(tab!=="clock"){clearInterval(tickRef.current);return;}
     tickRef.current=setInterval(()=>setTick(t=>t+1),1000);
     return()=>clearInterval(tickRef.current);
   },[tab]);
 
-  const etsPriceEur=etsLive||ets;
+  const etsPriceEur=ets;
   const SECS_PER_YEAR=365.25*24*3600;
   const secsPassed=Math.max(0,(Date.now()-new Date("2026-01-01T00:00:00Z").getTime())/1000);
   const noLiveData=comextStatus==="done"&&!comext2026?.gotAny;
@@ -596,10 +585,10 @@ export default function App(){
         <div style={{background:N.teal800,color:N.white,padding:"18px 28px 14px"}}>
           <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
             <div>
-              <h1 style={{margin:0,fontFamily:SERIF,fontSize:24,fontWeight:700}}>US CBAM Exposure Dashboard (Beta)</h1>
-              <p style={{margin:"4px 0 0",fontSize:12,color:N.tealLight,maxWidth:520}}>Maximum carbon costs for US exporters under the EU CBAM default values<br/>A.K.A. Forgone revenue for the federal government</p>
+              <h1 style={{margin:0,fontFamily:SERIF,fontSize:26,fontWeight:700}}>US CBAM Exposure Dashboard (Beta)</h1>
+              <p style={{margin:"4px 0 0",fontSize:14,color:N.tealLight,maxWidth:520}}>Maximum carbon costs for US exporters under the EU CBAM default values<br/>A.K.A. Forgone revenue for the federal government</p>
             </div>
-            <div style={{fontSize:11,color:N.tealMid,textAlign:"right",lineHeight:1.9}}>
+            <div style={{fontSize:13,color:N.tealMid,textAlign:"right",lineHeight:1.9}}>
               <div>EU IR 2025/2621 · <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621&qid=1773675297476#:~:text=United%20States" target="_blank" rel="noopener noreferrer" style={{color:N.tealMid,textDecoration:"underline"}}>Annex I (US)</a></div>
               <div>Trade: <a href="https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409?category=ext_go.ext_go_detail" target="_blank" rel="noopener noreferrer" style={{color:N.tealMid,textDecoration:"underline"}}>Eurostat Comext DS-045409</a></div>
               <div style={{color:N.tealMid,fontWeight:600}}>Last updated: March 16, 2026</div>
@@ -607,15 +596,15 @@ export default function App(){
           </div>
           <div style={{display:"flex",gap:12,marginTop:14,flexWrap:"wrap",alignItems:"center"}}>
             <div style={{display:"flex",borderRadius:6,overflow:"hidden",border:`1px solid ${N.tealMid}`}}>
-              {YEARS.map(y=><button key={y} onClick={()=>setYear(y)} style={{padding:"7px 15px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:13,fontWeight:600,background:year===y?N.teal400:"transparent",color:year===y?N.teal900:N.tealLight}}>{y}</button>)}
+              {YEARS.map(y=><button key={y} onClick={()=>setYear(y)} style={{padding:"7px 15px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:15,fontWeight:600,background:year===y?N.teal400:"transparent",color:year===y?N.teal900:N.tealLight}}>{y}</button>)}
             </div>
             <div style={{display:"flex",borderRadius:6,overflow:"hidden",border:`1px solid ${N.tealMid}`}}>
-              {SECTORS.map(s=><button key={s} onClick={()=>setSector(s)} style={{padding:"7px 10px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:12,fontWeight:600,background:sector===s?N.teal600:"transparent",color:sector===s?N.white:N.tealLight}}>{s}</button>)}
+              {SECTORS.map(s=><button key={s} onClick={()=>setSector(s)} style={{padding:"7px 10px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:14,fontWeight:600,background:sector===s?N.teal600:"transparent",color:sector===s?N.white:N.tealLight}}>{s}</button>)}
             </div>
             <div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.08)",padding:"7px 14px",borderRadius:6,border:`1px solid ${N.tealMid}`}}>
-              <span style={{fontSize:12,color:N.tealLight}}>EU allowance prices:</span>
+              <span style={{fontSize:14,color:N.tealLight}}>EU allowance prices:</span>
               <input type="range" min={30} max={130} value={ets} onChange={e=>setEts(+e.target.value)} style={{width:80,accentColor:N.teal400}}/>
-              <span style={{fontSize:14,fontWeight:800,color:N.teal400,minWidth:80}}>€{ets} / ${(ets*EUR_USD).toFixed(0)} per ton</span>
+              <span style={{fontSize:16,fontWeight:800,color:N.teal400,minWidth:80}}>€{ets} / ${(ets*EUR_USD).toFixed(0)} per ton</span>
             </div>
           </div>
         </div>
@@ -623,26 +612,26 @@ export default function App(){
         {/* KPI CARDS */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(148px,1fr))",gap:10,padding:"12px 24px 8px",background:N.white}}>
           <div style={{padding:"11px 14px",borderRadius:8,background:N.teal800,borderLeft:`4px solid ${N.teal600}`}}>
-            <div style={{fontFamily:SANS,fontSize:11,color:"#aac4e8",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Total CBAM Exposure</div>
-            <div style={{fontFamily:SERIF,fontSize:22,fontWeight:800,color:N.teal400,marginTop:2,lineHeight:1.1}}>
-              {annualExpStr}<span style={{fontFamily:SANS,fontSize:12,fontWeight:600,color:"#aac4e8"}}> / year</span>
+            <div style={{fontFamily:SANS,fontSize:13,color:"#aac4e8",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Total CBAM Exposure</div>
+            <div style={{fontFamily:SERIF,fontSize:24,fontWeight:800,color:N.teal400,marginTop:2,lineHeight:1.1}}>
+              {annualExpStr}<span style={{fontFamily:SANS,fontSize:14,fontWeight:600,color:"#aac4e8"}}> / year</span>
             </div>
-            <div style={{fontFamily:SANS,fontSize:11,color:"#aac4e8",marginTop:3}}>est. · 2022–25 avg · ${(ets*EUR_USD).toFixed(0)}/t · {MKPCT[year]}</div>
+            <div style={{fontFamily:SANS,fontSize:13,color:"#aac4e8",marginTop:3}}>est. · 2022–25 avg · ${(ets*EUR_USD).toFixed(0)}/t · {MKPCT[year]}</div>
           </div>
           <div style={{padding:"11px 14px",borderRadius:8,background:N.tealPale,borderLeft:`4px solid ${N.teal600}`}}>
-            <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>CN Codes w/ Trade Data</div>
-            <div style={{fontFamily:SANS,fontSize:18,fontWeight:800,color:N.teal800,marginTop:2}}>{enriched.filter(d=>d.tonnes&&d.tonnes>0).length}</div>
-            <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginTop:2}}>of {enriched.length} total codes</div>
+            <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>CN Codes w/ Trade Data</div>
+            <div style={{fontFamily:SANS,fontSize:20,fontWeight:800,color:N.teal800,marginTop:2}}>{enriched.filter(d=>d.tonnes&&d.tonnes>0).length}</div>
+            <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,marginTop:2}}>of {enriched.length} total codes</div>
           </div>
           <div style={{padding:"11px 14px",borderRadius:8,background:N.tealPale,borderLeft:`4px solid ${N.tealMid}`}}>
-            <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>US Exports to EU under CBAM</div>
-            <div style={{fontFamily:SANS,fontSize:18,fontWeight:800,color:N.teal800,marginTop:2}}>{fmtM(totE)}</div>
-            <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginTop:2}}>vs. <a href="https://ustr.gov/countries-regions/europe-middle-east/europe/european-union" target="_blank" rel="noopener noreferrer" style={{color:N.tealMid,textDecoration:"underline"}}>$414.4B</a> total US–EU exports</div>
+            <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>US Exports to EU under CBAM</div>
+            <div style={{fontFamily:SANS,fontSize:20,fontWeight:800,color:N.teal800,marginTop:2}}>{fmtM(totE)}</div>
+            <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,marginTop:2}}>vs. <a href="https://ustr.gov/countries-regions/europe-middle-east/europe/european-union" target="_blank" rel="noopener noreferrer" style={{color:N.tealMid,textDecoration:"underline"}}>$414.4B</a> total US–EU exports</div>
           </div>
           <div style={{padding:"11px 14px",borderRadius:8,background:N.tealPale,borderLeft:`4px solid ${N.orange400}`}}>
-            <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Effective Tariff Rate</div>
-            <div style={{fontFamily:SANS,fontSize:18,fontWeight:800,color:N.orange500,marginTop:2}}>{totE>0?`${((totExp/totE)*100).toFixed(1)}%`:"—"}</div>
-            <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginTop:2}}>est. annual cost as % of export value</div>
+            <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Effective Tariff Rate</div>
+            <div style={{fontFamily:SANS,fontSize:20,fontWeight:800,color:N.orange500,marginTop:2}}>{totE>0?`${((totExp/totE)*100).toFixed(1)}%`:"—"}</div>
+            <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,marginTop:2}}>est. annual cost as % of export value</div>
           </div>
         </div>
 
@@ -650,20 +639,20 @@ export default function App(){
         <div style={{display:"flex",gap:8,padding:"0 24px 10px",background:N.white,borderBottom:`3px solid ${N.teal600}`,flexWrap:"wrap"}}>
           {[{label:"CBAM definitive period",value:"Since 1 Jan 2026"},{label:"Certificates due",value:"30 Sep 2027"}].map(k=>(
             <div key={k.label} style={{display:"flex",alignItems:"center",gap:6,background:N.tealPale,borderRadius:20,padding:"4px 12px",border:`1px solid ${N.tealLight}`}}>
-              <span style={{fontFamily:SANS,fontSize:11,color:N.tealMid,fontWeight:600}}>{k.label}:</span>
-              <span style={{fontFamily:SANS,fontSize:11,color:N.teal800,fontWeight:700}}>{k.value}</span>
+              <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid,fontWeight:600}}>{k.label}:</span>
+              <span style={{fontFamily:SANS,fontSize:13,color:N.teal800,fontWeight:700}}>{k.value}</span>
             </div>
           ))}
         </div>
 
-        <div style={{background:N.tealPale,borderLeft:`4px solid ${N.tealMid}`,padding:"6px 24px",fontFamily:SANS,fontSize:12,color:N.teal900}}>
+        <div style={{background:N.tealPale,borderLeft:`4px solid ${N.tealMid}`,padding:"6px 24px",fontFamily:SANS,fontSize:14,color:N.teal900}}>
           <b>Data:</b> Default values from EU IR 2025/2621 Annex I (US). Trade: Eurostat Comext DS-045409 — matched at exact CN digit level (CN4/CN6/CN8) as listed in the regulation. Converted at fixed $1.08/€. CBAM cost = tonnes × default value (tCO₂e/t, incl. mark-up) × ETS price.
         </div>
 
         {/* TABS */}
         <div style={{display:"flex",padding:"0 24px",background:N.white,borderBottom:`1px solid ${N.tealLight}`,overflowX:"auto"}}>
           {[["clock","🔴 Live Cost Clock"],["historical","📅 Historical Baseline"],["table","📋 CN Code Table"],["chart","📊 Exposure by Code"],["methodology","📖 Methodology"],["faq","❓ FAQ"]].map(([t,lbl])=>(
-            <button key={t} onClick={()=>setTab(t)} style={{padding:"11px 16px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:13,whiteSpace:"nowrap",borderBottom:tab===t?`3px solid ${N.teal600}`:"3px solid transparent",background:"none",fontWeight:tab===t?700:500,color:tab===t?N.teal800:N.tealMid}}>{lbl}</button>
+            <button key={t} onClick={()=>setTab(t)} style={{padding:"11px 16px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:15,whiteSpace:"nowrap",borderBottom:tab===t?`3px solid ${N.teal600}`:"3px solid transparent",background:"none",fontWeight:tab===t?700:500,color:tab===t?N.teal800:N.tealMid}}>{lbl}</button>
           ))}
         </div>
 
@@ -674,25 +663,24 @@ export default function App(){
               <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap",alignItems:"stretch"}}>
                 <div style={{background:N.white,border:`1.5px solid ${N.tealLight}`,borderRadius:8,padding:"10px 16px",display:"flex",gap:16,alignItems:"center"}}>
                   <div>
-                    <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>EU ETS Price</div>
-                    <div style={{fontFamily:SERIF,fontSize:26,fontWeight:700,color:etsStatus==="ok"?N.teal600:N.tealMid}}>
-                      ${((etsLive||ets)*EUR_USD).toFixed(1)}<span style={{fontFamily:SANS,fontSize:13,fontWeight:400,color:N.tealMid}}>/t</span>
+                    <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>EU ETS Price</div>
+                    <div style={{fontFamily:SERIF,fontSize:28,fontWeight:700,color:N.teal600}}>
+                      ${(ets*EUR_USD).toFixed(1)}<span style={{fontFamily:SANS,fontSize:15,fontWeight:400,color:N.tealMid}}>/t</span>
                     </div>
-                    <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid}}>{etsStatus==="ok"?`Live · €${(etsLive||ets).toFixed(1)} × $1.08`:etsStatus==="loading"?"Fetching…":"Fallback · €71.5 × $1.08"}</div>
+                    <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>{`${ETS_PRICES.latest_period} avg · €${ets.toFixed(1)} × $1.08`}</div>
                   </div>
-                  <button onClick={fetchEts} style={{padding:"6px 12px",borderRadius:6,border:`1px solid ${N.teal400}`,background:"transparent",color:N.teal600,fontFamily:SANS,fontSize:12,fontWeight:600,cursor:"pointer"}}>↻</button>
                 </div>
                 <div style={{background:N.white,border:`1.5px solid ${N.tealLight}`,borderRadius:8,padding:"10px 16px"}}>
-                  <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:6}}>Filter by Sector</div>
+                  <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:6}}>Filter by Sector</div>
                   <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                     {["All",...Object.keys(BASELINE_ANNUAL)].map(s=>(
-                      <button key={s} onClick={()=>setClockSector(s)} style={{padding:"5px 11px",borderRadius:20,border:"none",cursor:"pointer",fontFamily:SANS,fontSize:12,fontWeight:600,background:clockSector===s?(SC[s]||N.teal600):SCL[s]||N.tealPale,color:clockSector===s?N.white:(SC[s]||N.teal800)}}>{s}</button>
+                      <button key={s} onClick={()=>setClockSector(s)} style={{padding:"5px 11px",borderRadius:20,border:"none",cursor:"pointer",fontFamily:SANS,fontSize:14,fontWeight:600,background:clockSector===s?(SC[s]||N.teal600):SCL[s]||N.tealPale,color:clockSector===s?N.white:(SC[s]||N.teal800)}}>{s}</button>
                     ))}
                   </div>
                 </div>
                 <div style={{background:N.white,border:`1.5px solid ${N.tealLight}`,borderRadius:8,padding:"10px 16px"}}>
-                  <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Data Currently Showing</div>
-                  <div style={{fontFamily:SANS,fontSize:13,marginTop:4,fontWeight:600,color:comextStatus==="done"&&comext2026?.gotAny?N.green600:N.tealMid}}>
+                  <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Data Currently Showing</div>
+                  <div style={{fontFamily:SANS,fontSize:15,marginTop:4,fontWeight:600,color:comextStatus==="done"&&comext2026?.gotAny?N.green600:N.tealMid}}>
                     {comextStatus==="idle"?"Not loaded":comextStatus==="loading"?"⟳ Fetching Comext…":comext2026?.gotAny?`✓ Live: ${comext2026.monthsCovered.join(", ")}`:"2022–25 baseline"}
                   </div>
                 </div>
@@ -701,23 +689,23 @@ export default function App(){
               <div style={{background:N.teal900,borderRadius:16,padding:"36px 40px",marginBottom:20,textAlign:"center",position:"relative"}}>
                 <div style={{position:"absolute",top:-60,right:-60,width:240,height:240,borderRadius:"50%",border:`2px solid ${N.teal600}`,opacity:0.2,pointerEvents:"none"}}/>
                 <div style={{position:"absolute",top:-30,right:-30,width:180,height:180,borderRadius:"50%",border:`2px solid ${N.teal400}`,opacity:0.15,pointerEvents:"none"}}/>
-                <div style={{fontFamily:SANS,fontSize:12,fontWeight:700,letterSpacing:"0.15em",color:N.teal400,textTransform:"uppercase",marginBottom:6}}>
+                <div style={{fontFamily:SANS,fontSize:14,fontWeight:700,letterSpacing:"0.15em",color:N.teal400,textTransform:"uppercase",marginBottom:6}}>
                   Estimated forgone tax revenue to date{clockSector!=="All"&&<span style={{color:SC[clockSector]||N.teal400}}> · {clockSector}</span>}
                 </div>
-                <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginBottom:14}}>
+                <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,marginBottom:14}}>
                   Accruing since January 1, 2026 · based on {comext2026?.gotAny?`live Comext data (latest: ${comext2026.monthsCovered.slice(-1)[0]}, retrieved March 16, 2026)`:"2022–25 baseline trade volumes"}
                 </div>
-                <div style={{fontFamily:SERIF,fontSize:48,fontWeight:700,color:N.white,lineHeight:1.1,marginBottom:8,minHeight:60}}>
+                <div style={{fontFamily:SERIF,fontSize:52,fontWeight:700,color:N.white,lineHeight:1.1,marginBottom:8,minHeight:60}}>
                   {clockData?tickingNum(clockData.accrued,noLiveData):"Loading…"}
                 </div>
-                <div style={{fontFamily:SANS,fontSize:13,color:N.teal400,marginBottom:24}}>
-                  Jan 1 – today · at ${((etsLive||ets)*EUR_USD).toFixed(1)}/tonne ETS · 10% mark-up · 2026 liability
+                <div style={{fontFamily:SANS,fontSize:15,color:N.teal400,marginBottom:24}}>
+                  Jan 1 – today · at ${(ets*EUR_USD).toFixed(1)}/tonne ETS · 10% mark-up · 2026 liability
                 </div>
                 <div style={{display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
                   {[{label:"Per second",val:clockData?`$${(clockData.perSec*EUR_USD).toFixed(2)}`:"-"},{label:"Per hour",val:clockData?fmtM(clockData.perHour):"-"},{label:"Per day",val:clockData?fmtM(clockData.perDay):"-"},{label:"Annual rate",val:clockData?fmtM(clockData.annualRate):"-"}].map(k=>(
                     <div key={k.label} style={{background:"rgba(255,255,255,0.06)",borderRadius:10,padding:"12px 18px",minWidth:110}}>
-                      <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>{k.label}</div>
-                      <div style={{fontFamily:SERIF,fontSize:18,fontWeight:700,color:N.teal200,marginTop:2}}>{k.val}</div>
+                      <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>{k.label}</div>
+                      <div style={{fontFamily:SERIF,fontSize:20,fontWeight:700,color:N.teal200,marginTop:2}}>{k.val}</div>
                     </div>
                   ))}
                 </div>
@@ -725,33 +713,33 @@ export default function App(){
 
               {clockData&&comext2026&&(
                 <div style={{background:N.white,borderRadius:10,padding:"18px 20px",border:`1px solid ${N.tealLight}`}}>
-                  <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:16,margin:"0 0 14px"}}>Annual Rate by Sector</h4>
+                  <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:18,margin:"0 0 14px"}}>Annual Rate by Sector</h4>
                   {Object.entries(BASELINE_ANNUAL).map(([sec])=>{
                     const d=getClockCost(sec),allCost=getClockCost("All");
                     const pct=d&&allCost&&allCost.annualRate>0?d.annualRate/allCost.annualRate*100:0;
                     const isLive=comext2026.sectorTonnes[sec]?.live;
                     return(
                       <div key={sec} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
-                        <span style={{fontFamily:SANS,width:110,fontSize:13,fontWeight:600,color:SC[sec]}}>{sec}</span>
+                        <span style={{fontFamily:SANS,width:110,fontSize:15,fontWeight:600,color:SC[sec]}}>{sec}</span>
                         <div style={{flex:1,height:20,background:N.tealLight,borderRadius:4,overflow:"hidden"}}>
                           <div style={{height:"100%",width:`${pct.toFixed(1)}%`,background:SC[sec],borderRadius:4}}/>
                         </div>
-                        <span style={{fontFamily:SANS,fontSize:13,fontWeight:800,color:N.teal800,minWidth:80,textAlign:"right"}}>{d?fmtM(d.annualRate):"—"}</span>
-                        <span style={{fontFamily:SANS,fontSize:11,padding:"2px 7px",borderRadius:8,background:isLive?N.green200:N.tealPale,color:isLive?N.green900:N.tealMid,fontWeight:600,minWidth:48,textAlign:"center"}}>{isLive?"live":"est."}</span>
+                        <span style={{fontFamily:SANS,fontSize:15,fontWeight:800,color:N.teal800,minWidth:80,textAlign:"right"}}>{d?fmtM(d.annualRate):"—"}</span>
+                        <span style={{fontFamily:SANS,fontSize:13,padding:"2px 7px",borderRadius:8,background:isLive?N.green200:N.tealPale,color:isLive?N.green900:N.tealMid,fontWeight:600,minWidth:48,textAlign:"center"}}>{isLive?"live":"est."}</span>
                       </div>
                     );
                   })}
-                  <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginTop:10,paddingTop:10,borderTop:`1px solid ${N.tealLight}`}}>
+                  <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,marginTop:10,paddingTop:10,borderTop:`1px solid ${N.tealLight}`}}>
                     "Live" = annualised from actual 2026 Comext data. "Est." = 2022–25 baseline. Cost = tonnes × sector avg default value (tonnage-weighted, incl. 10% mark-up) × ETS price × $1.08/€.
                   </div>
                 </div>
               )}
 
-              <div style={{fontFamily:SANS,fontSize:12,color:N.tealMid,marginTop:12,padding:"10px 14px",background:N.yellow200,borderLeft:`4px solid ${N.yellow600}`,borderRadius:4}}>
+              <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,marginTop:12,padding:"10px 14px",background:N.yellow200,borderLeft:`4px solid ${N.yellow600}`,borderRadius:4}}>
                 <b style={{color:N.yellow900}}>Framing note:</b> This counter shows the CBAM liability US exporters are accruing in 2026 that they cannot offset against a domestic carbon price — because the US has no national carbon pricing mechanism. If the US had a carbon price equivalent to the EU ETS, exporters could claim a deduction under CBAM rules, potentially reducing this liability to zero.
               </div>
               {noLiveData&&(
-                <div style={{fontFamily:SANS,fontSize:12,color:N.tealMid,marginTop:8,padding:"10px 14px",background:N.tealPale,borderLeft:`4px solid ${N.tealMid}`,borderRadius:4}}>
+                <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,marginTop:8,padding:"10px 14px",background:N.tealPale,borderLeft:`4px solid ${N.tealMid}`,borderRadius:4}}>
                   * Extrapolated figure. No 2026 Comext trade data is available yet. Projected from 2022–25 average monthly volumes from January 1, 2026.
                 </div>
               )}
@@ -760,33 +748,33 @@ export default function App(){
 
           {tab==="historical"&&(
             <div>
-              <h3 style={{marginTop:0,fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:20}}>Hypothetical CBAM Exposure on US Exports, 2022–2025</h3>
-              <p style={{fontFamily:SANS,color:N.tealMid,fontSize:13,marginTop:-8,marginBottom:18}}>
+              <h3 style={{marginTop:0,fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:22}}>Hypothetical CBAM Exposure on US Exports, 2022–2025</h3>
+              <p style={{fontFamily:SANS,color:N.tealMid,fontSize:15,marginTop:-8,marginBottom:18}}>
                 <i>If CBAM had applied to US exports in these years</i> — calculated at ETS price of ${(ets*EUR_USD).toFixed(1)}/t with 2026 mark-up (10%). Real annual tonnage from Eurostat Comext DS-045409. Converted at $1.08/€.
               </p>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:14,marginBottom:24}}>
                 {histByYear.map(y=>(
                   <div key={y.year} style={{background:N.white,borderRadius:10,padding:"16px 18px",border:`1px solid ${N.tealLight}`,borderTop:`4px solid ${N.teal600}`}}>
-                    <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>{y.year}</div>
-                    <div style={{fontFamily:SERIF,fontSize:28,fontWeight:700,color:N.teal800,marginTop:4}}>{fmtM(y.total)}</div>
-                    <div style={{fontFamily:SANS,fontSize:12,color:N.tealMid,marginTop:2}}>hypothetical CBAM exposure</div>
+                    <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>{y.year}</div>
+                    <div style={{fontFamily:SERIF,fontSize:30,fontWeight:700,color:N.teal800,marginTop:4}}>{fmtM(y.total)}</div>
+                    <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,marginTop:2}}>hypothetical CBAM exposure</div>
                     <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:4}}>
                       {y.rows.sort((a,b)=>b.cbam-a.cbam).map(r=>(
                         <div key={r.sector} style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <span style={{fontFamily:SANS,fontSize:12,color:SC[r.sector],fontWeight:600}}>{r.sector}</span>
-                          <span style={{fontFamily:SANS,fontSize:12,color:N.teal900,fontWeight:700}}>{fmtM(r.cbam)}</span>
+                          <span style={{fontFamily:SANS,fontSize:14,color:SC[r.sector],fontWeight:600}}>{r.sector}</span>
+                          <span style={{fontFamily:SANS,fontSize:14,color:N.teal900,fontWeight:700}}>{fmtM(r.cbam)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 ))}
               </div>
-              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:16,marginBottom:12}}>By Year {"&"} Sector</h4>
+              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:18,marginBottom:12}}>By Year {"&"} Sector</h4>
               {histByYear.map(y=>(
                 <div key={y.year} style={{marginBottom:16}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                    <span style={{fontFamily:SANS,fontSize:13,fontWeight:700,color:N.teal800}}>{y.year}</span>
-                    <span style={{fontFamily:SANS,fontSize:13,fontWeight:800,color:N.teal600}}>{fmtM(y.total)}</span>
+                    <span style={{fontFamily:SANS,fontSize:15,fontWeight:700,color:N.teal800}}>{y.year}</span>
+                    <span style={{fontFamily:SANS,fontSize:15,fontWeight:800,color:N.teal600}}>{fmtM(y.total)}</span>
                   </div>
                   <div style={{height:28,display:"flex",borderRadius:6,overflow:"hidden",background:N.tealLight}}>
                     {y.rows.sort((a,b)=>b.cbam-a.cbam).map(r=>(
@@ -797,13 +785,13 @@ export default function App(){
                     {y.rows.sort((a,b)=>b.cbam-a.cbam).map(r=>(
                       <div key={r.sector} style={{display:"flex",alignItems:"center",gap:4}}>
                         <div style={{width:10,height:10,borderRadius:2,background:SC[r.sector]}}/>
-                        <span style={{fontFamily:SANS,fontSize:11,color:N.tealMid}}>{r.sector}: {fmtM(r.cbam)}</span>
+                        <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>{r.sector}: {fmtM(r.cbam)}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               ))}
-              <div style={{fontFamily:SANS,fontSize:12,color:N.tealMid,marginTop:16,padding:"10px 14px",background:N.tealPale,borderLeft:`4px solid ${N.tealMid}`,borderRadius:4}}>
+              <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,marginTop:16,padding:"10px 14px",background:N.tealPale,borderLeft:`4px solid ${N.tealMid}`,borderRadius:4}}>
                 CBAM financial obligations only began January 1, 2026. These figures show what US exporters would have owed had CBAM applied in each prior year, using 2026 default values and mark-ups. Each row uses the actual year's tonnage matched at exact CN digit level.
               </div>
             </div>
@@ -812,14 +800,14 @@ export default function App(){
           {tab==="table"&&(
             <>
               <div style={{display:"flex",gap:10,marginBottom:8,alignItems:"center"}}>
-                <input placeholder="Search CN code or description…" value={search} onChange={e=>setSearch(e.target.value)} style={{padding:"8px 14px",borderRadius:6,border:`1.5px solid ${N.tealLight}`,fontFamily:SANS,fontSize:13,width:280,outline:"none",color:N.teal900,background:N.white}}/>
-                <span style={{fontFamily:SANS,fontSize:12,color:N.tealMid}}>{sorted.length} codes</span>
+                <input placeholder="Search CN code or description…" value={search} onChange={e=>setSearch(e.target.value)} style={{padding:"8px 14px",borderRadius:6,border:`1.5px solid ${N.tealLight}`,fontFamily:SANS,fontSize:15,width:280,outline:"none",color:N.teal900,background:N.white}}/>
+                <span style={{fontFamily:SANS,fontSize:14,color:N.tealMid}}>{sorted.length} codes</span>
               </div>
-              <p style={{fontFamily:SANS,fontSize:12,color:N.tealMid,marginTop:0,marginBottom:12,lineHeight:1.6}}>
+              <p style={{fontFamily:SANS,fontSize:14,color:N.tealMid,marginTop:0,marginBottom:12,lineHeight:1.6}}>
                 <b style={{color:N.teal800}}>Export Vol. & Trade Value</b> are EU imports from the US averaged over 2022–2025, sourced from Eurostat Comext (DS-045409), matched at exact CN digit level. CBAM Exposure = Export Vol. × Default Value (incl. mark-up) × ETS price × $1.08/€.
               </p>
               <div style={{overflowX:"auto",borderRadius:8,boxShadow:`0 1px 6px rgba(25,72,82,0.10)`,border:`1px solid ${N.tealLight}`}}>
-                <table style={{width:"100%",borderCollapse:"collapse",background:N.white,fontSize:12}}>
+                <table style={{width:"100%",borderCollapse:"collapse",background:N.white,fontSize:14}}>
                   <thead>
                     <tr style={{background:N.teal800}}>
                       <Th k="cn" label="CN Code"/><Th k="desc" label="Description"/>
@@ -832,10 +820,10 @@ export default function App(){
                   <tbody>
                     {sorted.map((d,i)=>(
                       <tr key={d.cn+d.desc} style={{background:i%2===0?N.white:N.tealPale,borderBottom:`1px solid ${N.tealLight}`}}>
-                        <td style={{padding:"8px 10px",fontWeight:700,color:N.teal600,whiteSpace:"nowrap",fontSize:11,fontFamily:SANS}}>{d.cn}</td>
-                        <td style={{padding:"8px 10px",color:N.teal900,maxWidth:200,fontSize:11,fontFamily:SANS}}>{d.desc}</td>
-                        <td style={{padding:"8px 10px"}}><span style={{background:SCL[d.sector],color:SC[d.sector],padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:700,fontFamily:SANS,whiteSpace:"nowrap"}}>{d.sector}</span></td>
-                        <td style={{padding:"8px 10px",fontSize:11,color:N.tealMid,fontFamily:SANS}}>{d.route||"—"}</td>
+                        <td style={{padding:"8px 10px",fontWeight:700,color:N.teal600,whiteSpace:"nowrap",fontSize:13,fontFamily:SANS}}>{d.cn}</td>
+                        <td style={{padding:"8px 10px",color:N.teal900,maxWidth:200,fontSize:13,fontFamily:SANS}}>{d.desc}</td>
+                        <td style={{padding:"8px 10px"}}><span style={{background:SCL[d.sector],color:SC[d.sector],padding:"2px 7px",borderRadius:10,fontSize:12,fontWeight:700,fontFamily:SANS,whiteSpace:"nowrap"}}>{d.sector}</span></td>
+                        <td style={{padding:"8px 10px",fontSize:13,color:N.tealMid,fontFamily:SANS}}>{d.route||"—"}</td>
                         <td style={{padding:"8px 10px",textAlign:"right",fontWeight:600,color:N.teal900,fontFamily:SANS}}>{d.total!=null?d.total.toFixed(3):"—"}</td>
                         <td style={{padding:"8px 10px",textAlign:"right",fontWeight:700,color:N.teal600,fontFamily:SANS}}>{d[mvf]!=null?d[mvf].toFixed(3):"—"}</td>
                         <td style={{padding:"8px 10px",textAlign:"right",color:N.orange500,fontWeight:600,fontFamily:SANS}}>{d.cbamPerTonne!=null?`$${(d.cbamPerTonne*EUR_USD).toFixed(2)}`:"—"}</td>
@@ -855,7 +843,7 @@ export default function App(){
                   </tfoot>
                 </table>
               </div>
-              <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginTop:14,padding:"12px 16px",background:N.white,border:`1px solid ${N.tealLight}`,borderRadius:6,lineHeight:1.8}}>
+              <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,marginTop:14,padding:"12px 16px",background:N.white,border:`1px solid ${N.tealLight}`,borderRadius:6,lineHeight:1.8}}>
                 <b style={{color:N.teal800,display:"block",marginBottom:8}}>Production Route Key</b>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:"4px 24px"}}>
                   {[
@@ -883,60 +871,60 @@ export default function App(){
 
           {tab==="chart"&&(
             <div>
-              <h3 style={{marginTop:0,fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:20}}>Top CN Codes by Estimated CBAM Exposure — {year}</h3>
-              <p style={{fontFamily:SANS,color:N.tealMid,fontSize:13,marginTop:-8}}>ETS: €{ets} / ${(ets*EUR_USD).toFixed(0)} per tonne · Mark-up: {MKPCT[year]}</p>
+              <h3 style={{marginTop:0,fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:22}}>Top CN Codes by Estimated CBAM Exposure — {year}</h3>
+              <p style={{fontFamily:SANS,color:N.tealMid,fontSize:15,marginTop:-8}}>ETS: €{ets} / ${(ets*EUR_USD).toFixed(0)} per tonne · Mark-up: {MKPCT[year]}</p>
               <div style={{display:"flex",flexDirection:"column",gap:9}}>
                 {chartData.map(d=>(
                   <div key={d.cn+d.desc}>
                     <div style={{display:"flex",justifyContent:"space-between",marginBottom:2,alignItems:"baseline"}}>
-                      <span style={{fontFamily:SANS,fontSize:12,fontWeight:600,color:N.teal800}}>{d.cn} <span style={{fontWeight:400,color:N.tealMid}}>— {d.desc}</span></span>
-                      <span style={{fontFamily:SANS,fontSize:12,fontWeight:800,color:SC[d.sector]}}>{fmtM(d.cbamCost)}</span>
+                      <span style={{fontFamily:SANS,fontSize:14,fontWeight:600,color:N.teal800}}>{d.cn} <span style={{fontWeight:400,color:N.tealMid}}>— {d.desc}</span></span>
+                      <span style={{fontFamily:SANS,fontSize:14,fontWeight:800,color:SC[d.sector]}}>{fmtM(d.cbamCost)}</span>
                     </div>
                     <div style={{height:18,background:N.tealLight,borderRadius:4,overflow:"hidden"}}>
                       <div style={{height:"100%",width:`${(d.cbamCost/maxC*100).toFixed(1)}%`,background:SC[d.sector],borderRadius:4,transition:"width 0.3s"}}/>
                     </div>
-                    <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginTop:2}}>
+                    <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,marginTop:2}}>
                       {d.tonnes&&d.tonnes>0?fmt(d.tonnes):0} t · {d[mvf]?.toFixed(3)} tCO₂e/t · ${(d.cbamPerTonne*EUR_USD).toFixed(2)}/t
                       <span style={{marginLeft:8,background:SCL[d.sector],color:SC[d.sector],padding:"1px 7px",borderRadius:8,fontWeight:700,fontFamily:SANS}}>{d.sector}</span>
                     </div>
                   </div>
                 ))}
               </div>
-              <h3 style={{marginTop:26,fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:20}}>By Sector</h3>
+              <h3 style={{marginTop:26,fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:22}}>By Sector</h3>
               {Object.entries(enriched.filter(d=>d.cbamCost).reduce((acc,d)=>{acc[d.sector]=(acc[d.sector]||0)+d.cbamCost;return acc;},{})).sort((a,b)=>b[1]-a[1]).map(([sec,cost])=>(
                 <div key={sec} style={{display:"flex",alignItems:"center",gap:12,marginBottom:9}}>
-                  <span style={{fontFamily:SANS,width:110,fontSize:13,fontWeight:600,color:SC[sec]}}>{sec}</span>
+                  <span style={{fontFamily:SANS,width:110,fontSize:15,fontWeight:600,color:SC[sec]}}>{sec}</span>
                   <div style={{flex:1,height:20,background:N.tealLight,borderRadius:4,overflow:"hidden"}}>
                     <div style={{height:"100%",width:`${(cost/totExp*100).toFixed(1)}%`,background:SC[sec],borderRadius:4}}/>
                   </div>
-                  <span style={{fontFamily:SANS,fontSize:13,fontWeight:800,color:N.teal800,minWidth:80,textAlign:"right"}}>{fmtM(cost)}</span>
-                  <span style={{fontFamily:SANS,fontSize:12,color:N.tealMid,minWidth:40}}>{((cost/totExp)*100).toFixed(1)}%</span>
+                  <span style={{fontFamily:SANS,fontSize:15,fontWeight:800,color:N.teal800,minWidth:80,textAlign:"right"}}>{fmtM(cost)}</span>
+                  <span style={{fontFamily:SANS,fontSize:14,color:N.tealMid,minWidth:40}}>{((cost/totExp)*100).toFixed(1)}%</span>
                 </div>
               ))}
             </div>
           )}
 
           {tab==="methodology"&&(
-            <div style={{maxWidth:760,fontFamily:SANS,fontSize:13,lineHeight:1.75,color:N.teal900}}>
-              <h3 style={{fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:22,marginTop:0}}>Calculation Methodology</h3>
+            <div style={{maxWidth:760,fontFamily:SANS,fontSize:15,lineHeight:1.75,color:N.teal900}}>
+              <h3 style={{fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:24,marginTop:0}}>Calculation Methodology</h3>
               <div style={{background:N.tealPale,padding:18,borderRadius:8,borderLeft:`4px solid ${N.teal600}`,marginBottom:20}}>
-                <p style={{margin:0,fontFamily:"monospace",fontSize:13,color:N.teal800}}><b>CBAM Cost ($) = Exported Tonnes × Default Value (tCO₂e/t, incl. mark-up) × ETS Price (€/tCO₂e) × 1.08</b></p>
+                <p style={{margin:0,fontFamily:"monospace",fontSize:15,color:N.teal800}}><b>CBAM Cost ($) = Exported Tonnes × Default Value (tCO₂e/t, incl. mark-up) × ETS Price (€/tCO₂e) × 1.08</b></p>
                 <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:8}}>
                   {[
                     ["Exported Tonnes","Annual quantity of goods exported from the US to the EU27, sourced from Eurostat Comext DS-045409, matched at exact CN digit level (CN4, CN6, or CN8) as listed in the regulation."],
                     ["Default Value (tCO₂e/t, incl. mark-up)","The embedded carbon intensity assigned to each product by EU IR 2025/2621 Annex I, expressed in tonnes of CO₂-equivalent per tonne of product. The mark-up column is used (see schedule below), which scales the base default value upward by a fixed percentage to account for the phase-in of CBAM obligations. This determines the number of CBAM certificates required per tonne exported. Note: these are conservative default values — if a manufacturer provides verified carbon intensity data, the actual levy could be significantly lower."],
                     ["Mark-up","A percentage applied to the base default value as CBAM obligations ramp up. For most sectors the mark-up is 10% in 2026, 20% in 2027, and 30% from 2028 onward. For fertilisers it remains at 1% throughout. The mark-up reflects the share of free EU ETS allowances still in circulation: as free allocations phase out by 2034, the mark-up will eventually reach 100%."],
-                    ["ETS Price (€/tCO₂e)","The prevailing market price of one EU Emissions Trading System allowance, which equals the right to emit one tonne of CO₂-equivalent. The live price is fetched from Trading Economics; the slider allows scenario analysis. This is the price US exporters would effectively face per tonne of embedded carbon."],
+                    ["ETS Price (€/tCO₂e)","The prevailing market price of one EU Emissions Trading System allowance, which equals the right to emit one tonne of CO₂-equivalent. The dashboard defaults to the most recent completed quarterly average from the ICAP Allowance Price Explorer; the slider allows scenario analysis. This is the price US exporters would effectively face per tonne of embedded carbon."],
                     ["× 1.08","Fixed EUR/USD conversion rate based on the 2022–24 ECB average. Actual CBAM certificate payments are denominated in euros."],
                   ].map(([term,def])=>(
                     <div key={term} style={{display:"flex",gap:12}}>
-                      <span style={{fontFamily:"monospace",fontSize:12,fontWeight:700,color:N.teal800,minWidth:220,flexShrink:0}}>{term}</span>
-                      <span style={{fontFamily:SANS,fontSize:12,color:N.tealMid,lineHeight:1.6}}>{def}</span>
+                      <span style={{fontFamily:"monospace",fontSize:14,fontWeight:700,color:N.teal800,minWidth:220,flexShrink:0}}>{term}</span>
+                      <span style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.6}}>{def}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:16}}>Production Route Assumptions</h4>
+              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:18}}>Production Route Assumptions</h4>
               <p>Some CN codes carry multiple default values depending on the production route. Eurostat Comext trade data records tonnage at the CN code level without distinguishing routes, so a route assumption must be applied. This dashboard uses the following approach:</p>
               <ul style={{paddingLeft:20,lineHeight:1.8}}>
                 <li><b>Aluminium:</b> All US aluminium exports are assigned Route K (primary aluminium), as this is the only route listed in Annex I for the US.</li>
@@ -944,21 +932,21 @@ export default function App(){
                 <li><b>Cement:</b> Both grey (Route A) and white (Route B) clinker/cement entries are retained as separate rows. Given the negligible volume of US cement exports to the EU, the route ambiguity has no material effect on aggregate results.</li>
               </ul>
               <p>Each regulation entry is matched to Comext trade data at exactly the digit level stated in the regulation — CN8, CN6, or CN4. No padding or fallback aggregation is used. When the regulation lists a CN4 code, the Comext API returns the aggregate of all sub-codes for that heading automatically.</p>
-              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:16}}>Mark-up Schedule (IR 2025/2621)</h4>
+              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:18}}>Mark-up Schedule (IR 2025/2621)</h4>
               <table style={{width:"100%",borderCollapse:"collapse",background:N.white,borderRadius:8,overflow:"hidden",marginBottom:20,border:`1px solid ${N.tealLight}`}}>
-                <thead><tr style={{background:N.teal800,color:N.white,fontSize:12}}>{["Sector","2026","2027","2028+"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:h==="Sector"?"left":"right",fontFamily:SANS}}>{h}</th>)}</tr></thead>
+                <thead><tr style={{background:N.teal800,color:N.white,fontSize:14}}>{["Sector","2026","2027","2028+"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:h==="Sector"?"left":"right",fontFamily:SANS}}>{h}</th>)}</tr></thead>
                 <tbody>{[["Iron & Steel","10%","20%","30%"],["Aluminium","10%","20%","30%"],["Cement","10%","20%","30%"],["Hydrogen","10%","20%","30%"],["Fertilisers","1%","1%","1%"]].map((r,i)=>(
                   <tr key={r[0]} style={{borderBottom:`1px solid ${N.tealLight}`,background:i%2===0?N.white:N.tealPale}}>
                     {r.map((v,j)=><td key={j} style={{padding:"8px 12px",fontFamily:SANS,textAlign:j>0?"right":"left",fontWeight:j===0?600:400,color:j===0?SC[r[0]]||N.teal800:N.teal900}}>{v}</td>)}
                   </tr>
                 ))}</tbody>
               </table>
-              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:16}}>Key Assumptions</h4>
+              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:18}}>Key Assumptions</h4>
               <ul style={{paddingLeft:20,lineHeight:1.8}}>
                 <li><b>Exchange rate assumption:</b> Uses fixed 2022–24 average ($1.08/€). Actual CBAM payments occur in EUR.</li>
                 <li><b>No free allocation offset:</b> Costs shown are gross CBAM liability before deduction for remaining EU ETS free allocations (phasing out by 2034).</li>
               </ul>
-              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:16}}>Caveats</h4>
+              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:18}}>Caveats</h4>
               <ul style={{paddingLeft:20,lineHeight:1.8}}>
                 <li><b>These are default values:</b> Default values are designed to be punitive to importers that do not provide verified emissions data. If a manufacturer provides verified carbon intensity data along with the goods, the actual levy would be significantly lower.
                   <ul style={{paddingLeft:20,marginTop:6,lineHeight:1.8}}>
@@ -968,18 +956,18 @@ export default function App(){
                 <li><b>Payment timing:</b> Manufacturers are not obligated to pay for emissions from 2026 imports until September 2027.</li>
                 <li><b>No supply-side adjustment:</b> This is a first approximation based on observed 2022–25 trade volumes. It does not account for any reduction in US exports to the EU that may result from the CBAM itself — exporters facing higher costs may divert shipments to other markets, which would lower the actual liability below these estimates.</li>
               </ul>
-              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:16}}>Sources</h4>
+              <h4 style={{fontFamily:SERIF,color:N.teal800,fontSize:18}}>Sources</h4>
               <ul style={{paddingLeft:20,lineHeight:1.8}}>
                 <li><a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>EU Commission Implementing Regulation (EU) 2025/2621</a>, 16 December 2025 — Annex I (US)</li>
                 <li><a href="https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409?category=ext_go.ext_go_detail" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>Eurostat Comext DS-045409</a> — annual data 2022–2025, matched at CN4/CN6/CN8 level</li>
-                <li><a href="https://tradingeconomics.com/commodity/carbon" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>EU ETS price: Trading Economics</a> (EU Carbon Permits, EUR/tonne)</li>
+                <li><a href="https://allowancepriceexplorer.icapcarbonaction.com" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>EU ETS price: ICAP Allowance Price Explorer</a> — secondary market daily closing prices (EUR/tCO₂e). The dashboard uses the average price for the most recently completed calendar quarter.</li>
               </ul>
             </div>
           )}
 
           {tab==="faq"&&(
-            <div style={{maxWidth:880,fontFamily:SANS,fontSize:13,lineHeight:1.75,color:N.teal900}}>
-              <h3 style={{fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:22,marginTop:0}}>Frequently Asked Questions</h3>
+            <div style={{maxWidth:880,fontFamily:SANS,fontSize:15,lineHeight:1.75,color:N.teal900}}>
+              <h3 style={{fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:24,marginTop:0}}>Frequently Asked Questions</h3>
               <p style={{color:N.tealMid,marginTop:-6,marginBottom:18}}>
                 Quick answers to the most common questions about how to interpret the dashboard, how CBAM obligations work, and what the core terms mean.
               </p>
@@ -987,18 +975,18 @@ export default function App(){
               <div style={{display:"grid",gap:12,marginBottom:28}}>
                 {FAQ_ITEMS.map(item=>(
                   <div key={item.q} style={{background:N.white,border:`1px solid ${N.tealLight}`,borderLeft:`4px solid ${N.teal600}`,borderRadius:10,padding:"16px 18px"}}>
-                    <h4 style={{margin:"0 0 8px",fontFamily:SERIF,fontSize:18,color:N.teal800}}>{item.q}</h4>
+                    <h4 style={{margin:"0 0 8px",fontFamily:SERIF,fontSize:20,color:N.teal800}}>{item.q}</h4>
                     <p style={{margin:0,color:N.tealMid,lineHeight:1.7}}>{item.a}</p>
                   </div>
                 ))}
               </div>
 
-              <h3 style={{fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:22,marginBottom:14}}>Key Terms</h3>
+              <h3 style={{fontFamily:SERIF,color:N.teal800,fontWeight:700,fontSize:24,marginBottom:14}}>Key Terms</h3>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:12}}>
                 {KEY_TERMS.map(item=>(
                   <div key={item.term} style={{background:N.white,border:`1px solid ${N.tealLight}`,borderRadius:10,padding:"16px 18px"}}>
-                    <div style={{fontFamily:SERIF,fontSize:17,fontWeight:700,color:N.teal800,marginBottom:8}}>{item.term}</div>
-                    <div style={{fontSize:12.5,color:N.tealMid,lineHeight:1.7}}>{item.def}</div>
+                    <div style={{fontFamily:SERIF,fontSize:19,fontWeight:700,color:N.teal800,marginBottom:8}}>{item.term}</div>
+                    <div style={{fontSize:14,color:N.tealMid,lineHeight:1.7}}>{item.def}</div>
                   </div>
                 ))}
               </div>
@@ -1012,7 +1000,7 @@ export default function App(){
             <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20,paddingBottom:16,borderBottom:`1px solid rgba(125,206,218,0.2)`}}>
               <NiskanenLogo/>
               <div style={{borderLeft:`1px solid ${N.tealMid}`,paddingLeft:16}}>
-                <div style={{fontFamily:SANS,fontSize:12,fontWeight:700,color:N.teal400,letterSpacing:"0.1em",textTransform:"uppercase"}}>Climate & Energy</div>
+                <div style={{fontFamily:SANS,fontSize:14,fontWeight:700,color:N.teal400,letterSpacing:"0.1em",textTransform:"uppercase"}}>Climate & Energy</div>
               </div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
@@ -1022,15 +1010,15 @@ export default function App(){
                   onMouseEnter={e=>e.currentTarget.style.background="rgba(125,206,218,0.1)"}
                   onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.05)"}
                 >
-                  <div style={{fontFamily:SERIF,fontSize:14,fontWeight:700,color:N.white,lineHeight:1.4,marginBottom:8}}>{lnk.title}</div>
-                  <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5}}>{lnk.desc}</div>
-                  <div style={{marginTop:10,fontFamily:SANS,fontSize:11,color:N.teal400,fontWeight:600}}>Read →</div>
+                  <div style={{fontFamily:SERIF,fontSize:16,fontWeight:700,color:N.white,lineHeight:1.4,marginBottom:8}}>{lnk.title}</div>
+                  <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,lineHeight:1.5}}>{lnk.desc}</div>
+                  <div style={{marginTop:10,fontFamily:SANS,fontSize:13,color:N.teal400,fontWeight:600}}>Read →</div>
                 </a>
               ))}
             </div>
           </div>
           <div style={{borderTop:`1px solid rgba(125,206,218,0.15)`,padding:"12px 28px"}}>
-            <span style={{fontFamily:SANS,color:N.tealMid,fontSize:11}}>
+            <span style={{fontFamily:SANS,color:N.tealMid,fontSize:13}}>
               Niskanen Center · Climate & Energy · <a href="https://www.niskanencenter.org/newsletter/" target="_blank" rel="noopener noreferrer" style={{color:N.tealMid,textDecoration:"underline"}}>Subscribe to our newsletter</a> · March 2026
             </span>
           </div>
