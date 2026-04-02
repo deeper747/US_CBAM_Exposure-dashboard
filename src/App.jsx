@@ -591,7 +591,7 @@ export default function App(){
             <div style={{fontSize:13,color:N.tealMid,textAlign:"right",lineHeight:1.9}}>
               <div>EU IR 2025/2621 · <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621&qid=1773675297476#:~:text=United%20States" target="_blank" rel="noopener noreferrer" style={{color:N.tealMid,textDecoration:"underline"}}>Annex I (US)</a></div>
               <div>Trade: <a href="https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409?category=ext_go.ext_go_detail" target="_blank" rel="noopener noreferrer" style={{color:N.tealMid,textDecoration:"underline"}}>Eurostat Comext DS-045409</a></div>
-              <div style={{color:N.tealMid,fontWeight:600}}>Last updated: March 16, 2026</div>
+              <div style={{color:N.tealMid,fontWeight:600}}>Last updated: March 31, 2026</div>
             </div>
           </div>
           <div style={{display:"flex",gap:12,marginTop:14,flexWrap:"wrap",alignItems:"center"}}>
