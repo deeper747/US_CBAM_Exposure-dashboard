@@ -28,9 +28,29 @@ The script pulls daily secondary market EUA prices (systems 33 & 34) and compute
 **Live fetch:** The "Live Cost Clock" tab fetches 2026 monthly data directly from the Comext API at runtime.  
 **Static baseline:** The `TRADE` object in `App.jsx` contains pre-loaded annual totals for 2022–2025.
 
-**When to update the static baseline:**
-- When Eurostat publishes final annual trade figures for a completed year (typically 6–9 months after year-end, so 2025 final data expected ~Q3 2026)
-- When preliminary 2026 data becomes available and you want to lock in year-to-date figures
+### Comext publication lag
+
+Eurostat publishes monthly trade data on a rolling basis with the following typical lags:
+
+| Data type | Lag after reference month |
+|---|---|
+| Extra-EU aggregated & detailed | ~46 days (~6.5 weeks) |
+| Intra-EU detailed | ~70 days (~2.5 months) |
+
+Since DS-045409 covers extra-EU trade (US → EU27), **data for a given month is typically available within 6–7 weeks** of that month ending. For example, January 2026 data would normally appear in mid-March 2026.
+
+Eurostat publishes a [release calendar](https://ec.europa.eu/eurostat/news/release-calendar) with exact dates in advance.
+
+### Provisional vs. final
+
+Monthly data is initially published as **provisional** (flagged `p` in the API). Revisions occur regularly as member states submit corrections. Data is not considered **final** until October of the following year — so 2026 monthly figures won't be final until October 2027.
+
+For dashboard purposes, provisional figures are fine. Just be aware that figures for the most recent 1–2 months may shift slightly in subsequent releases.
+
+### When to update the static baseline
+
+- **2025 final data:** Expected October 2026. Update the `TRADE` constant in `App.jsx` at that point.
+- **Mid-year check:** If you want to lock in provisional 2026 year-to-date figures (e.g. for a publication), extract from Comext in Q3 or Q4 2026 once several months of data are available.
 
 **How to update:** Re-run the Comext data extraction process and replace the `TRADE` constant in `App.jsx`. The CN-code matching logic (`CN_MAP`) should not need changes unless the regulation's CN code list changes.
 
