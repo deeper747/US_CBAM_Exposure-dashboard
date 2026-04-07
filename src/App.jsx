@@ -479,6 +479,7 @@ export default function App(){
   const [clockSector,setClockSector]=useState("All");
   const [comext2026,setComext2026]=useState(null);
   const [comextStatus,setComextStatus]=useState("idle");
+  const [ytdBaseline,setYtdBaseline]=useState(null);
   const [tick,setTick]=useState(0);
   const tickRef=useRef(null);
   const clockInitRef=useRef(false);
@@ -510,6 +511,49 @@ export default function App(){
   );
 
 
+  const fetchYtdBaseline=useCallback(async(liveMonths)=>{
+    // liveMonths: array of "YYYY-MM" strings that 2026 Comext has returned, e.g. ["2026-01"]
+    // We compare only against those same calendar months in prior years for a clean like-for-like.
+    if(!liveMonths||!liveMonths.length)return;
+    const monthNums=liveMonths.map(s=>parseInt(s.split("-")[1])); // [1] for January
+    const pad=m=>String(m).padStart(2,"0");
+    const BASE="https://ec.europa.eu/eurostat/api/comext/dissemination/sdmx/2.1/data/DS-045409";
+    const queries={"Iron & Steel":"7208+7209+7210+7213+7216+7304+7306+7308+7318","Aluminium":"7601+7604+7606+7607+7608","Fertilisers":"2814+3102+3105","Hydrogen":"2804","Cement":"2523"};
+    const BASELINE_YEARS=[2022,2023,2024,2025];
+    const maxMo=Math.max(...monthNums);
+    const result={};
+    for(const[sec,codes]of Object.entries(queries)){
+      try{
+        const r=await fetch(`${BASE}/M.EU27_2020.US.${codes}.1./?format=SDMX-CSV&startPeriod=2022-01&endPeriod=2025-${pad(maxMo)}`,{signal:AbortSignal.timeout(15000)});
+        if(!r.ok){result[sec]=null;continue;}
+        const txt=await r.text();
+        const allLines=txt.split("\n").filter(l=>l.trim());
+        const headerLine=allLines.find(l=>l.startsWith("DATAFLOW"));
+        const dataLines=allLines.filter(l=>!l.startsWith("DATAFLOW"));
+        if(!headerLine||dataLines.length<1){result[sec]=null;continue;}
+        const hdrs=headerLine.split(",").map(h=>h.trim().replace(/"/g,"").toLowerCase());
+        const iInd=hdrs.indexOf("indicators"),iVal=hdrs.indexOf("obs_value"),iPer=hdrs.indexOf("time_period");
+        if(iInd<0){result[sec]=null;continue;}
+        const byYear={};
+        for(const line of dataLines){
+          const c=line.split(",").map(x=>x.trim().replace(/"/g,""));
+          if(c[iInd]!=="QUANTITY_IN_100KG")continue;
+          const[yr,mo]=c[iPer].split("-").map(Number);
+          if(!BASELINE_YEARS.includes(yr)||!monthNums.includes(mo))continue;
+          const v=parseFloat(c[iVal]);
+          if(!isNaN(v)){if(!byYear[yr])byYear[yr]=0;byYear[yr]+=v/10;}
+        }
+        const years=Object.keys(byYear).map(Number);
+        if(!years.length){result[sec]=null;continue;}
+        const avgTonnes=years.reduce((s,y)=>s+byYear[y],0)/years.length;
+        result[sec]={annualTonnes:avgTonnes/monthNums.length*12,yearsUsed:years.length};
+      }catch{result[sec]=null;}
+    }
+    const MONTH_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const label=monthNums.length===1?MONTH_NAMES[monthNums[0]-1]:`${MONTH_NAMES[monthNums[0]-1]}–${MONTH_NAMES[monthNums[monthNums.length-1]-1]}`;
+    setYtdBaseline({sectors:result,monthNums,label});
+  },[]);
+
   const fetchComext=useCallback(async()=>{
     setComextStatus("loading");
     const BASE="https://ec.europa.eu/eurostat/api/comext/dissemination/sdmx/2.1/data/DS-045409";
@@ -520,14 +564,16 @@ export default function App(){
         const r=await fetch(`${BASE}/M.EU27_2020.US.${codes}.1./?format=SDMX-CSV&startPeriod=2026-01&endPeriod=2026-12`,{signal:AbortSignal.timeout(10000)});
         if(!r.ok){sectorTonnes[sec]=null;continue;}
         const txt=await r.text();
-        const lines=txt.split("\n").filter(l=>l.trim()&&!l.startsWith("DATAFLOW"));
-        if(lines.length<2){sectorTonnes[sec]=null;continue;}
-        const hdrs=lines[0].split(",").map(h=>h.trim().replace(/"/g,""));
-        const iInd=hdrs.indexOf("INDICATORS"),iVal=hdrs.indexOf("OBS_VALUE"),iPer=hdrs.indexOf("TIME_PERIOD");
+        const allLines=txt.split("\n").filter(l=>l.trim());
+        const headerLine=allLines.find(l=>l.startsWith("DATAFLOW"));
+        const dataLines=allLines.filter(l=>!l.startsWith("DATAFLOW"));
+        if(!headerLine||dataLines.length<1){sectorTonnes[sec]=null;continue;}
+        const hdrs=headerLine.split(",").map(h=>h.trim().replace(/"/g,"").toLowerCase());
+        const iInd=hdrs.indexOf("indicators"),iVal=hdrs.indexOf("obs_value"),iPer=hdrs.indexOf("time_period");
         if(iInd<0){sectorTonnes[sec]=null;continue;}
         let tonnes=0;const months=new Set();
-        for(let i=1;i<lines.length;i++){
-          const c=lines[i].split(",").map(x=>x.trim().replace(/"/g,""));
+        for(let i=0;i<dataLines.length;i++){
+          const c=dataLines[i].split(",").map(x=>x.trim().replace(/"/g,""));
           if(c[iInd]==="QUANTITY_IN_100KG"){const v=parseFloat(c[iVal]);if(!isNaN(v)){tonnes+=v/10;months.add(c[iPer]);monthsCovered.add(c[iPer]);}}
         }
         if(months.size>0){sectorTonnes[sec]={live:true,tonnes:(tonnes/months.size)*12,monthsObserved:months.size};gotAny=true;}
@@ -535,9 +581,11 @@ export default function App(){
       }catch{sectorTonnes[sec]=null;}
     }
     Object.keys(BASELINE_ANNUAL).forEach(sec=>{if(!sectorTonnes[sec])sectorTonnes[sec]={live:false,tonnes:BASELINE_ANNUAL[sec].tonnes,monthsObserved:0};});
-    setComext2026({sectorTonnes,monthsCovered:[...monthsCovered],gotAny});
+    const months=[...monthsCovered];
+    setComext2026({sectorTonnes,monthsCovered:months,gotAny});
     setComextStatus("done");
-  },[]);
+    if(gotAny)fetchYtdBaseline(months);
+  },[fetchYtdBaseline]);
 
   useEffect(()=>{if(tab==="clock"&&!clockInitRef.current){clockInitRef.current=true;fetchComext();}},[tab,fetchComext]);
   useEffect(()=>{
@@ -681,7 +729,7 @@ export default function App(){
                 <div style={{background:N.white,border:`1.5px solid ${N.tealLight}`,borderRadius:8,padding:"10px 16px"}}>
                   <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Data Currently Showing</div>
                   <div style={{fontFamily:SANS,fontSize:15,marginTop:4,fontWeight:600,color:comextStatus==="done"&&comext2026?.gotAny?N.green600:N.tealMid}}>
-                    {comextStatus==="idle"?"Not loaded":comextStatus==="loading"?"⟳ Fetching Comext…":comext2026?.gotAny?`✓ Live: ${comext2026.monthsCovered.join(", ")}`:"2022–25 baseline"}
+                    {comextStatus==="idle"?"Not loaded":comextStatus==="loading"?"⟳ Fetching Comext…":comext2026?.gotAny?`✓ ${comext2026.monthsCovered.join(", ")} (annualised)`:"2022–25 baseline"}
                   </div>
                 </div>
               </div>
@@ -690,10 +738,10 @@ export default function App(){
                 <div style={{position:"absolute",top:-60,right:-60,width:240,height:240,borderRadius:"50%",border:`2px solid ${N.teal600}`,opacity:0.2,pointerEvents:"none"}}/>
                 <div style={{position:"absolute",top:-30,right:-30,width:180,height:180,borderRadius:"50%",border:`2px solid ${N.teal400}`,opacity:0.15,pointerEvents:"none"}}/>
                 <div style={{fontFamily:SANS,fontSize:14,fontWeight:700,letterSpacing:"0.15em",color:N.teal400,textTransform:"uppercase",marginBottom:6}}>
-                  Estimated forgone tax revenue to date{clockSector!=="All"&&<span style={{color:SC[clockSector]||N.teal400}}> · {clockSector}</span>}
+                  Estimated forgone tax revenue to date{clockSector!=="All"&&<span style={{color:SCL[clockSector]||N.teal400}}> · {clockSector}</span>}
                 </div>
                 <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,marginBottom:14}}>
-                  Accruing since January 1, 2026 · based on {comext2026?.gotAny?`live Comext data (latest: ${comext2026.monthsCovered.slice(-1)[0]}, retrieved March 16, 2026)`:"2022–25 baseline trade volumes"}
+                  Accruing since January 1, 2026 · based on {comext2026?.gotAny?`${comext2026.monthsCovered.length} month${comext2026.monthsCovered.length>1?"s":""} of 2026 Comext data (${comext2026.monthsCovered.join(", ")}), annualised`:"2022–25 baseline trade volumes"}
                 </div>
                 <div style={{fontFamily:SERIF,fontSize:52,fontWeight:700,color:N.white,lineHeight:1.1,marginBottom:8,minHeight:60}}>
                   {clockData?tickingNum(clockData.accrued,noLiveData):"Loading…"}
@@ -718,19 +766,32 @@ export default function App(){
                     const d=getClockCost(sec),allCost=getClockCost("All");
                     const pct=d&&allCost&&allCost.annualRate>0?d.annualRate/allCost.annualRate*100:0;
                     const isLive=comext2026.sectorTonnes[sec]?.live;
+                    const ytd=ytdBaseline?.sectors[sec];
+                    const live2026Ann=comext2026.sectorTonnes[sec]?.live?comext2026.sectorTonnes[sec].tonnes:null;
+                    const ytdBaseAnn=ytd?.annualTonnes||null;
+                    const diff=live2026Ann&&ytdBaseAnn?((live2026Ann-ytdBaseAnn)/ytdBaseAnn*100):null;
                     return(
-                      <div key={sec} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
-                        <span style={{fontFamily:SANS,width:110,fontSize:15,fontWeight:600,color:SC[sec]}}>{sec}</span>
-                        <div style={{flex:1,height:20,background:N.tealLight,borderRadius:4,overflow:"hidden"}}>
-                          <div style={{height:"100%",width:`${pct.toFixed(1)}%`,background:SC[sec],borderRadius:4}}/>
+                      <div key={sec} style={{marginBottom:14}}>
+                        <div style={{display:"flex",alignItems:"center",gap:12}}>
+                          <span style={{fontFamily:SANS,width:110,fontSize:15,fontWeight:600,color:SC[sec]}}>{sec}</span>
+                          <div style={{flex:1,height:20,background:N.tealLight,borderRadius:4,overflow:"hidden"}}>
+                            <div style={{height:"100%",width:`${pct.toFixed(1)}%`,background:SC[sec],borderRadius:4}}/>
+                          </div>
+                          <span style={{fontFamily:SANS,fontSize:15,fontWeight:800,color:N.teal800,minWidth:80,textAlign:"right"}}>{d?fmtM(d.annualRate):"—"}</span>
+                          <span style={{fontFamily:SANS,fontSize:13,padding:"2px 7px",borderRadius:8,background:isLive?N.green200:N.tealPale,color:isLive?N.green900:N.tealMid,fontWeight:600,minWidth:48,textAlign:"center"}}>{isLive?"live":"est."}</span>
                         </div>
-                        <span style={{fontFamily:SANS,fontSize:15,fontWeight:800,color:N.teal800,minWidth:80,textAlign:"right"}}>{d?fmtM(d.annualRate):"—"}</span>
-                        <span style={{fontFamily:SANS,fontSize:13,padding:"2px 7px",borderRadius:8,background:isLive?N.green200:N.tealPale,color:isLive?N.green900:N.tealMid,fontWeight:600,minWidth:48,textAlign:"center"}}>{isLive?"live":"est."}</span>
+                        {ytd&&live2026Ann&&(
+                          <div style={{display:"flex",gap:16,marginTop:4,marginLeft:122,fontFamily:SANS,fontSize:12,color:N.tealMid}}>
+                            <span>2026 pace: <b style={{color:N.teal800}}>{fmt(live2026Ann/1000,0)}k t/yr</b></span>
+                            <span>{ytd.label} avg ({ytd.yearsUsed}yr): <b style={{color:N.tealMid}}>{fmt(ytdBaseAnn/1000,0)}k t/yr</b></span>
+                            {diff!==null&&<span style={{fontWeight:700,color:diff<-5?N.orange500:diff>5?N.green600:N.tealMid}}>{diff>0?"+":""}{diff.toFixed(1)}% vs prior years</span>}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                   <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,marginTop:10,paddingTop:10,borderTop:`1px solid ${N.tealLight}`}}>
-                    "Live" = annualised from actual 2026 Comext data. "Est." = 2022–25 baseline. Cost = tonnes × sector avg default value (tonnage-weighted, incl. 10% mark-up) × ETS price × $1.08/€.
+                    "Live" = annualised from actual 2026 Comext data. "Est." = 2022–25 baseline. Cost = tonnes × sector avg default value (tonnage-weighted, incl. 10% mark-up) × ETS price × $1.08/€. Comparison row shows annualised export pace for the same months (Jan–present) averaged across 2022–25.
                   </div>
                 </div>
               )}
@@ -914,7 +975,7 @@ export default function App(){
                     ["Exported Tonnes","Annual quantity of goods exported from the US to the EU27, sourced from Eurostat Comext DS-045409, matched at exact CN digit level (CN4, CN6, or CN8) as listed in the regulation."],
                     ["Default Value (tCO₂e/t, incl. mark-up)","The embedded carbon intensity assigned to each product by EU IR 2025/2621 Annex I, expressed in tonnes of CO₂-equivalent per tonne of product. The mark-up column is used (see schedule below), which scales the base default value upward by a fixed percentage to account for the phase-in of CBAM obligations. This determines the number of CBAM certificates required per tonne exported. Note: these are conservative default values — if a manufacturer provides verified carbon intensity data, the actual levy could be significantly lower."],
                     ["Mark-up","A percentage applied to the base default value as CBAM obligations ramp up. For most sectors the mark-up is 10% in 2026, 20% in 2027, and 30% from 2028 onward. For fertilisers it remains at 1% throughout. The mark-up reflects the share of free EU ETS allowances still in circulation: as free allocations phase out by 2034, the mark-up will eventually reach 100%."],
-                    ["ETS Price (€/tCO₂e)","The prevailing market price of one EU Emissions Trading System allowance, which equals the right to emit one tonne of CO₂-equivalent. The dashboard defaults to the most recent completed quarterly average from the ICAP Allowance Price Explorer; the slider allows scenario analysis. This is the price US exporters would effectively face per tonne of embedded carbon."],
+                    ["ETS Price (€/tCO₂e)","The prevailing price of one EU ETS allowance (one tonne of CO₂-equivalent). The dashboard defaults to the official CBAM certificate price published quarterly by the European Commission — the weighted average of EU ETS auction clearing prices for the most recently completed quarter (Q1 2026: €75.36). The slider allows scenario analysis."],
                     ["× 1.08","Fixed EUR/USD conversion rate based on the 2022–24 ECB average. Actual CBAM certificate payments are denominated in euros."],
                   ].map(([term,def])=>(
                     <div key={term} style={{display:"flex",gap:12}}>
@@ -960,7 +1021,7 @@ export default function App(){
               <ul style={{paddingLeft:20,lineHeight:1.8}}>
                 <li><a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>EU Commission Implementing Regulation (EU) 2025/2621</a>, 16 December 2025 — Annex I (US)</li>
                 <li><a href="https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409?category=ext_go.ext_go_detail" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>Eurostat Comext DS-045409</a> — annual data 2022–2025, matched at CN4/CN6/CN8 level</li>
-                <li><a href="https://allowancepriceexplorer.icapcarbonaction.com" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>EU ETS price: ICAP Allowance Price Explorer</a> — secondary market daily closing prices (EUR/tCO₂e). The dashboard uses the average price for the most recently completed calendar quarter.</li>
+                <li><a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>CBAM certificate price: European Commission</a> — official quarterly price (weighted avg. EU ETS auction clearing prices, EUR/tCO₂e). Q1 2026: €75.36 (published 7 Apr 2026). Historical data: <a href="https://allowancepriceexplorer.icapcarbonaction.com" target="_blank" rel="noopener noreferrer" style={{color:N.teal600}}>ICAP Allowance Price Explorer</a>.</li>
               </ul>
             </div>
           )}

@@ -27,7 +27,7 @@ This dashboard estimates what that levy would cost US exporters across five tabs
 
 - **Regulation:** EU Commission Implementing Regulation (EU) 2025/2621, Annex I (US-specific default values)
 - **Trade volumes:** [Eurostat Comext DS-045409](https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409) — matched at exact CN4/CN6/CN8 digit level as listed in the regulation
-- **ETS price:** Live fetch from Yahoo Finance (C02.DE); falls back to a configurable slider
+- **CBAM certificate price:** Official quarterly price published by the [European Commission](https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en) — the weighted average of EU ETS auction clearing prices for the most recently completed quarter (Q1 2026: €75.36). Historical quarterly data from [ICAP Allowance Price Explorer](https://allowancepriceexplorer.icapcarbonaction.com) (secondary market). A slider allows scenario analysis.
 - **Exchange rate:** Fixed at $1.08/€ (2022–24 ECB average)
 
 ## How costs are calculated
@@ -38,7 +38,7 @@ CBAM exposure = Export tonnes × Default value (tCO₂e/t) × Mark-up × ETS pri
 
 - **Default value** — the regulation's Annex I value for each CN code and production route
 - **Mark-up** — 10% in 2026, 20% in 2027, 30% from 2028 (1% for fertilisers throughout)
-- **ETS price** — live or user-set via slider
+- **CBAM certificate price** — the official quarterly price published by the European Commission (auction-based); user-adjustable via slider
 
 These are **upper-bound estimates**: they use default (punitive) values. Exporters who provide verified facility-level emissions data would face lower levies.
 
