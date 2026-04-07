@@ -518,7 +518,7 @@ export default function App(){
     const monthNums=liveMonths.map(s=>parseInt(s.split("-")[1])); // [1] for January
     const pad=m=>String(m).padStart(2,"0");
     const BASE="https://ec.europa.eu/eurostat/api/comext/dissemination/sdmx/2.1/data/DS-045409";
-    const queries={"Iron & Steel":"7208+7209+7210+7213+7216+7304+7306+7308+7318","Aluminium":"7601+7604+7606+7607+7608","Fertilisers":"2814+3102+3105","Hydrogen":"2804","Cement":"2523"};
+    const queries={"Iron & Steel":"2601+7201+7202+7203+7205+7206+7208+7209+7210+7211+7212+7213+7214+7215+7216+7217+7218+7219+7221+7223+7224+7225+7301+7302+7303+7304+7305+7306+7307+7308+7309+7310+7311+7318+7326","Aluminium":"7601+7603+7604+7605+7606+7607+7608+7609+7610+7611+7612+7613+7614+7616","Fertilisers":"2808+2814+2834+3102+3105","Hydrogen":"2804","Cement":"2507+2523"};
     const BASELINE_YEARS=[2022,2023,2024,2025];
     const maxMo=Math.max(...monthNums);
     const result={};
@@ -557,7 +557,7 @@ export default function App(){
   const fetchComext=useCallback(async()=>{
     setComextStatus("loading");
     const BASE="https://ec.europa.eu/eurostat/api/comext/dissemination/sdmx/2.1/data/DS-045409";
-    const queries={"Iron & Steel":"7208+7209+7210+7213+7216+7304+7306+7308+7318","Aluminium":"7601+7604+7606+7607+7608","Fertilisers":"2814+3102+3105","Hydrogen":"2804","Cement":"2523"};
+    const queries={"Iron & Steel":"2601+7201+7202+7203+7205+7206+7208+7209+7210+7211+7212+7213+7214+7215+7216+7217+7218+7219+7221+7223+7224+7225+7301+7302+7303+7304+7305+7306+7307+7308+7309+7310+7311+7318+7326","Aluminium":"7601+7603+7604+7605+7606+7607+7608+7609+7610+7611+7612+7613+7614+7616","Fertilisers":"2808+2814+2834+3102+3105","Hydrogen":"2804","Cement":"2507+2523"};
     const sectorTonnes={};const monthsCovered=new Set();let gotAny=false;
     for(const[sec,codes]of Object.entries(queries)){
       try{
