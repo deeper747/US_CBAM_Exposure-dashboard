@@ -594,18 +594,47 @@ export default function App(){
     return()=>clearInterval(tickRef.current);
   },[tab]);
 
-  const etsPriceEur=ets;
   const SECS_PER_YEAR=365.25*24*3600;
-  const secsPassed=Math.max(0,(Date.now()-new Date("2026-01-01T00:00:00Z").getTime())/1000);
   const noLiveData=comextStatus==="done"&&!comext2026?.gotAny;
+
+  // Official CBAM certificate prices published quarterly by EU Commission.
+  // Quarters present in ets_prices.json are confirmed (locked); the rest use the user's forecast (ets slider).
+  const Q2026_BOUNDARIES=[
+    {q:"2026-Q1",start:new Date("2026-01-01T00:00:00Z"),end:new Date("2026-04-01T00:00:00Z")},
+    {q:"2026-Q2",start:new Date("2026-04-01T00:00:00Z"),end:new Date("2026-07-01T00:00:00Z")},
+    {q:"2026-Q3",start:new Date("2026-07-01T00:00:00Z"),end:new Date("2026-10-01T00:00:00Z")},
+    {q:"2026-Q4",start:new Date("2026-10-01T00:00:00Z"),end:new Date("2027-01-01T00:00:00Z")},
+  ];
+  const CONFIRMED_PERIODS=Q2026_BOUNDARIES
+    .filter(b=>ETS_PRICES.quarterly[b.q]!=null)
+    .map(b=>({...b,price:ETS_PRICES.quarterly[b.q]}));
 
   function getClockCost(sf){
     if(!comext2026)return null;
     const sectors=sf==="All"?Object.keys(BASELINE_ANNUAL):[sf];
-    let annualRate=0;
-    sectors.forEach(sec=>{const e=comext2026.sectorTonnes[sec];if(e)annualRate+=e.tonnes*(SECTOR_AVG_DV[sec]||0)*etsPriceEur;});
+    // Base rate: tonnes × default value, without price (price applied per period below)
+    let tonneDvPerYear=0;
+    sectors.forEach(sec=>{const e=comext2026.sectorTonnes[sec];if(e)tonneDvPerYear+=e.tonnes*(SECTOR_AVG_DV[sec]||0);});
+    const now=Date.now();
+    const yearStart=new Date("2026-01-01T00:00:00Z").getTime();
+    // Accrued cost: each confirmed quarter uses its official locked price; remaining time uses forecast (ets)
+    let accrued=0,cursor=yearStart;
+    for(const p of CONFIRMED_PERIODS){
+      const pEnd=p.end.getTime();
+      if(pEnd<=cursor)continue;
+      const sliceEnd=Math.min(pEnd,now);
+      if(sliceEnd<=cursor)break;
+      accrued+=tonneDvPerYear*((sliceEnd-cursor)/1000/SECS_PER_YEAR)*p.price;
+      cursor=sliceEnd;
+      if(cursor>=now)break;
+    }
+    if(cursor<now)accrued+=tonneDvPerYear*((now-cursor)/1000/SECS_PER_YEAR)*ets;
+    // Current rate uses confirmed price if we're inside a confirmed quarter, else forecast
+    const currentConfirmed=CONFIRMED_PERIODS.find(p=>now>=p.start.getTime()&&now<p.end.getTime());
+    const currentPrice=currentConfirmed?currentConfirmed.price:ets;
+    const annualRate=tonneDvPerYear*currentPrice;
     const perSec=annualRate/SECS_PER_YEAR;
-    return{accrued:perSec*secsPassed,perSec,annualRate,perDay:perSec*86400,perHour:perSec*3600};
+    return{accrued,perSec,annualRate,perDay:perSec*86400,perHour:perSec*3600};
   }
   const clockData=getClockCost(clockSector);
 
@@ -650,7 +679,7 @@ export default function App(){
               {SECTORS.map(s=><button key={s} onClick={()=>setSector(s)} style={{padding:"7px 10px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:14,fontWeight:600,background:sector===s?N.teal600:"transparent",color:sector===s?N.white:N.tealLight}}>{s}</button>)}
             </div>
             <div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.08)",padding:"7px 14px",borderRadius:6,border:`1px solid ${N.tealMid}`}}>
-              <span style={{fontSize:14,color:N.tealLight}}>EU allowance prices:</span>
+              <span style={{fontSize:14,color:N.tealLight}}>Forecast price (unconfirmed qtrs):</span>
               <input type="range" min={30} max={130} value={ets} onChange={e=>setEts(+e.target.value)} style={{width:80,accentColor:N.teal400}}/>
               <span style={{fontSize:16,fontWeight:800,color:N.teal400,minWidth:80}}>€{ets} / ${(ets*EUR_USD).toFixed(0)} per ton</span>
             </div>
@@ -711,11 +740,19 @@ export default function App(){
               <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap",alignItems:"stretch"}}>
                 <div style={{background:N.white,border:`1.5px solid ${N.tealLight}`,borderRadius:8,padding:"10px 16px",display:"flex",gap:16,alignItems:"center"}}>
                   <div>
-                    <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>EU ETS Price</div>
-                    <div style={{fontFamily:SERIF,fontSize:28,fontWeight:700,color:N.teal600}}>
-                      ${(ets*EUR_USD).toFixed(1)}<span style={{fontFamily:SANS,fontSize:15,fontWeight:400,color:N.tealMid}}>/t</span>
+                    <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>CBAM Certificate Price</div>
+                    {CONFIRMED_PERIODS.map(p=>(
+                      <div key={p.q} style={{display:"flex",alignItems:"center",gap:6,marginTop:3}}>
+                        <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>{p.q}:</span>
+                        <span style={{fontFamily:SERIF,fontSize:20,fontWeight:700,color:N.teal600}}>€{p.price.toFixed(2)}</span>
+                        <span style={{fontFamily:SANS,fontSize:11,color:N.teal400,background:"rgba(0,200,150,0.12)",borderRadius:3,padding:"1px 6px"}}>confirmed</span>
+                      </div>
+                    ))}
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginTop:4}}>
+                      <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>Q2–Q4 2026:</span>
+                      <span style={{fontFamily:SERIF,fontSize:20,fontWeight:700,color:N.orange500}}>€{ets.toFixed(1)}</span>
+                      <span style={{fontFamily:SANS,fontSize:11,color:N.tealMid}}>forecast (slider)</span>
                     </div>
-                    <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>{`${ETS_PRICES.latest_period} avg · €${ets.toFixed(1)} × $1.08`}</div>
                   </div>
                 </div>
                 <div style={{background:N.white,border:`1.5px solid ${N.tealLight}`,borderRadius:8,padding:"10px 16px"}}>
@@ -747,7 +784,7 @@ export default function App(){
                   {clockData?tickingNum(clockData.accrued,noLiveData):"Loading…"}
                 </div>
                 <div style={{fontFamily:SANS,fontSize:15,color:N.teal400,marginBottom:24}}>
-                  Jan 1 – today · at ${(ets*EUR_USD).toFixed(1)}/tonne ETS · 10% mark-up · 2026 liability
+                  Jan 1 – today · {CONFIRMED_PERIODS.map(p=>`${p.q}: €${p.price.toFixed(2)} confirmed`).join(" · ")}{CONFIRMED_PERIODS.length<4?` · Q2–Q4 forecast: €${ets.toFixed(1)}`:""} · 10% mark-up
                 </div>
                 <div style={{display:"flex",gap:20,justifyContent:"center",flexWrap:"wrap"}}>
                   {[{label:"Per second",val:clockData?`$${(clockData.perSec*EUR_USD).toFixed(2)}`:"-"},{label:"Per hour",val:clockData?fmtM(clockData.perHour):"-"},{label:"Per day",val:clockData?fmtM(clockData.perDay):"-"},{label:"Annual rate",val:clockData?fmtM(clockData.annualRate):"-"}].map(k=>(
@@ -975,7 +1012,7 @@ export default function App(){
                     ["Exported Tonnes","Annual quantity of goods exported from the US to the EU27, sourced from Eurostat Comext DS-045409, matched at exact CN digit level (CN4, CN6, or CN8) as listed in the regulation."],
                     ["Default Value (tCO₂e/t, incl. mark-up)","The embedded carbon intensity assigned to each product by EU IR 2025/2621 Annex I, expressed in tonnes of CO₂-equivalent per tonne of product. The mark-up column is used (see schedule below), which scales the base default value upward by a fixed percentage to account for the phase-in of CBAM obligations. This determines the number of CBAM certificates required per tonne exported. Note: these are conservative default values — if a manufacturer provides verified carbon intensity data, the actual levy could be significantly lower."],
                     ["Mark-up","A percentage applied to the base default value as CBAM obligations ramp up. For most sectors the mark-up is 10% in 2026, 20% in 2027, and 30% from 2028 onward. For fertilisers it remains at 1% throughout. The mark-up reflects the share of free EU ETS allowances still in circulation: as free allocations phase out by 2034, the mark-up will eventually reach 100%."],
-                    ["ETS Price (€/tCO₂e)","The prevailing price of one EU ETS allowance (one tonne of CO₂-equivalent). The dashboard defaults to the official CBAM certificate price published quarterly by the European Commission — the weighted average of EU ETS auction clearing prices for the most recently completed quarter (Q1 2026: €75.36). The slider allows scenario analysis."],
+                    ["ETS Price (€/tCO₂e)","For quarters where the EU Commission has published an official CBAM certificate price (Q1 2026: €75.36), that value is locked and cannot be adjusted — it is the authoritative weighted-average EU ETS auction clearing price for that quarter. For quarters not yet published (Q2–Q4 2026), the slider sets a forecast price for scenario analysis. The Live Cost Clock accrues each period at its own price: confirmed quarters at the official rate, remaining time at the user's forecast."],
                     ["× 1.08","Fixed EUR/USD conversion rate based on the 2022–24 ECB average. Actual CBAM certificate payments are denominated in euros."],
                   ].map(([term,def])=>(
                     <div key={term} style={{display:"flex",gap:12}}>

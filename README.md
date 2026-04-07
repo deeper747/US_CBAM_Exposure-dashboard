@@ -16,7 +16,7 @@ This dashboard estimates what that levy would cost US exporters across five tabs
 
 | Tab | Description |
 |-----|-------------|
-| **Live Cost Clock** | Real-time accruing cost estimate since January 1, 2026, using live EU ETS price and Comext trade data when available |
+| **Live Cost Clock** | Real-time accruing cost estimate since January 1, 2026, using confirmed official CBAM prices for completed quarters and a user-adjustable forecast for unconfirmed quarters |
 | **Historical Baseline** | Year-by-year hypothetical exposure for 2023–2025 at current CBAM rules |
 | **CN Code Table** | Full row-level breakdown by regulation CN code with default values, tonnage, and CBAM cost |
 | **Exposure by Code** | Bar chart of CBAM exposure ranked by CN code |
@@ -27,7 +27,7 @@ This dashboard estimates what that levy would cost US exporters across five tabs
 
 - **Regulation:** EU Commission Implementing Regulation (EU) 2025/2621, Annex I (US-specific default values)
 - **Trade volumes:** [Eurostat Comext DS-045409](https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409) — matched at exact CN4/CN6/CN8 digit level as listed in the regulation
-- **CBAM certificate price:** Official quarterly price published by the [European Commission](https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en) — the weighted average of EU ETS auction clearing prices for the most recently completed quarter (Q1 2026: €75.36). Historical quarterly data from [ICAP Allowance Price Explorer](https://allowancepriceexplorer.icapcarbonaction.com) (secondary market). A slider allows scenario analysis.
+- **CBAM certificate price:** Official quarterly prices published by the [European Commission](https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en) — the weighted average of EU ETS auction clearing prices for each completed quarter. Confirmed quarters are locked (Q1 2026: €75.36, published 7 Apr 2026). Quarters not yet published use a user-adjustable forecast via slider. Historical data (pre-2026) from [ICAP Allowance Price Explorer](https://allowancepriceexplorer.icapcarbonaction.com) (secondary market).
 - **Exchange rate:** Fixed at $1.08/€ (2022–24 ECB average)
 
 ## How costs are calculated
@@ -38,9 +38,22 @@ CBAM exposure = Export tonnes × Default value (tCO₂e/t) × Mark-up × ETS pri
 
 - **Default value** — the regulation's Annex I value for each CN code and production route
 - **Mark-up** — 10% in 2026, 20% in 2027, 30% from 2028 (1% for fertilisers throughout)
-- **CBAM certificate price** — the official quarterly price published by the European Commission (auction-based); user-adjustable via slider
+- **CBAM certificate price** — official quarterly prices from the European Commission (weighted average of EU ETS auction clearing prices). Confirmed quarters are locked at the published value; unconfirmed quarters use the slider as a forecast. The Live Cost Clock integrates each period at its own price, so the accrued total automatically uses the locked rate for completed quarters and the forecast rate from the current quarter onward.
 
 These are **upper-bound estimates**: they use default (punitive) values. Exporters who provide verified facility-level emissions data would face lower levies.
+
+## Updating the CBAM certificate price
+
+The EU Commission publishes the official CBAM certificate price once per quarter (within the first week after each quarter ends). When a new price is published, add it to `src/data/ets_prices.json` under `quarterly`:
+
+```json
+"quarterly": {
+  "2026-Q1": 75.36,
+  "2026-Q2": XX.XX   ← add the new quarter here
+}
+```
+
+Also update `default` and `latest_period` to match. The dashboard will automatically lock that quarter's price in the Live Cost Clock and remove it from the user-adjustable forecast range.
 
 ## Updating trade data
 
