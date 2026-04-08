@@ -890,7 +890,7 @@ export default function App(){
                     <div style={{fontFamily:SERIF,fontSize:30,fontWeight:700,color:N.teal800,marginTop:4}}>{fmtM(y.total)}</div>
                     <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,marginTop:2}}>hypothetical CBAM exposure</div>
                     <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:4}}>
-                      {[...y.rows].sort((a,b)=>b.cbam-a.cbam).map(r=>(
+                      {y.rows.map(r=>(
                         <div key={r.sector} style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                           <span style={{fontFamily:SANS,fontSize:14,color:SC[r.sector],fontWeight:600}}>{r.sector}</span>
                           <span style={{fontFamily:SANS,fontSize:14,color:N.teal900,fontWeight:700}}>{fmtM(r.cbam)}</span>
@@ -950,7 +950,7 @@ export default function App(){
                       )}
                       <div style={{fontFamily:SANS,fontSize:14,fontWeight:800,color:N.teal600}}>{fmtM(y.total)}</div>
                       <div style={{height:300,width:"100%",maxWidth:110,display:"flex",flexDirection:"column-reverse",justifyContent:"flex-start",borderRadius:10,overflow:"hidden",background:"linear-gradient(180deg, rgba(12,42,48,0.04) 0%, rgba(12,42,48,0.10) 100%)",boxShadow:"inset 0 0 0 1px rgba(12,42,48,0.08)"}}>
-                        {y.rows.map(r=>{
+                        {[...y.rows].sort((a,b)=>b.cbam-a.cbam).map(r=>{
                           const isActive=!histHighlightedSector||histHighlightedSector===r.sector;
                           return(
                             <button
