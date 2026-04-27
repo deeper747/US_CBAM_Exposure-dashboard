@@ -13,7 +13,32 @@ const SC={"Iron & Steel":"#5b8ca8","Aluminium":"#348397","Cement":"#194852","Fer
 const SCL={"Iron & Steel":"#78a0a3","Aluminium":"#b7f6fc","Cement":"#fef0c7","Fertilisers":"#D7f881","Hydrogen":"#e0c6fc"};
 const fmtM=n=>{if(!n&&n!==0)return"—";const a=Math.abs(n);if(a>=1e9)return`$${(n/1e9).toFixed(2)}B`;if(a>=1e6)return`$${(n/1e6).toFixed(1)}M`;return`$${Math.round(n).toLocaleString()}`;};
 const fmtKt=n=>n?`${(n/1000).toFixed(0)}kt`:"—";
+const fmtT=n=>n==null?"—":Math.round(n).toLocaleString("en-US");
+const dvLevel=v=>{if(!v||v===0)return 0;return v>=3?4:v>=2?3:v>=1?2:1;};
 const pct=(n,d=1)=>n==null?"—":`${n>=0?"+":""}${n.toFixed(d)}%`;
+
+function DefaultValueMeter({value,extreme=false}){
+  const filled=dvLevel(value);
+  if(!filled)return"—";
+  return(
+    <span
+      title={`Default value: ${value.toFixed(2)} tCO₂e/t${extreme?" +":""}`}
+      aria-label={`Default value intensity ${filled} of 4${extreme?", plus":""}`}
+      style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-start",gap:5,lineHeight:1,width:78}}
+    >
+      {Array.from({length:4}).map((_,i)=>(
+        <span key={i} style={{
+          width:11,height:11,display:"inline-block",
+          clipPath:"polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%)",
+          background:i<filled?N.teal900:N.tealLight,
+          opacity:i<filled?1:0.45,
+          boxShadow:i<filled?"none":`inset 0 0 0 1px ${N.tealMid}`,
+        }}/>
+      ))}
+      {extreme&&<span style={{fontFamily:SANS,fontSize:14,fontWeight:800,color:N.orange500,marginLeft:2}}>+</span>}
+    </span>
+  );
+}
 
 // ── RAW CBAM DEFAULT VALUE DATA (EU IR 2025/2621 Annex I) ────────────────────
 function eu(v){if(v==null||v==="–"||v===""||v==="see below"||v==="N/A")return null;const s=String(v).trim().replace(/\s/g,"");if(!s||s==="–")return null;return parseFloat(s.replace(",","."));}
@@ -127,7 +152,6 @@ const RAW=[
 const CN_MAP = {
   "25070080":"25070080","25231000":"25231000","25232100":"25232100",
   "25232900":"25232900","25233000":"25233000","25239000":"25239000",
-  "25233000":"25233000",
   "28080000":"28080000","28141000":"28141000","28142000":"28142000",
   "28342100":"28342100",
   "31021012":"31021012","31021015":"31021015","31021019":"31021019",
@@ -148,10 +172,6 @@ const CN_MAP = {
   "76169910":"76169910","76169990":"76169990",
   "76091000":"76090000",  // 7609 00 00 → 76090000
   "76100000":"76101000",  // fallback
-  // Aluminium regulation codes with spaces stripped
-  "76091000":"76090000","76101000":"76101000","76110000":"76110000",
-  "76130000":"76130000","76161000":"76161000","76169100":"76169100",
-  "76169910":"76169910","76169990":"76169990",
   "28041000":"28041000",
   "26011200":"26011200",
   "7201":"7201","720211":"720211","720241":"720241",
@@ -173,7 +193,6 @@ const CN_MAP = {
   "73269098":"73269098",
   // Regulation codes that map to TRADE keys
   "72021100":"720211","72024100":"720241",
-  "72111300":"72111300",
   "72141000":"72142000",  // regulation 7214 20 00 → trade 72142000
   "72171000":"721710","72172000":"721720",
   "72230000":"722300","72241000":"722410",
@@ -240,14 +259,18 @@ const TODAY_IDX=Math.round(48+3+APR_FRAC); // ~Apr 2026
 
 const MONTH_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function LineChart({points,onChartHover,onChartLeave}){
+function LineChart({points,onChartHover,onChartLeave,viewStartYm="2024-07",viewEndYm="2028-06"}){
   const [hov,setHov]=useState(null);
   const svgRef=useRef(null);
 
-  const W=820,H=200,pad={l:8,r:8,t:18,b:22};
-  const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b,n=points.length;
-  const maxY=Math.max(...points.map(p=>p.v),0.01)*1.15;
-  const xp=i=>pad.l+i/(n-1)*cW;
+  const W=820,H=360,pad={l:12,r:12,t:29,b:41};
+  const visibleStartIdx=Math.max(0,points.findIndex(p=>p.ym>=viewStartYm));
+  const afterEndIdx=points.findIndex(p=>p.ym>viewEndYm);
+  const visibleEndIdx=afterEndIdx===-1?points.length-1:Math.max(visibleStartIdx,afterEndIdx-1);
+  const visiblePoints=points.slice(visibleStartIdx,visibleEndIdx+1);
+  const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b,n=visiblePoints.length;
+  const maxY=Math.max(...visiblePoints.map(p=>p.v),0.01)*1.15;
+  const xp=i=>pad.l+(n<=1?0:i/(n-1)*cW);
   const yp=v=>pad.t+cH*(1-Math.min(v/maxY,1));
 
   // Precompute annual sums for tooltip
@@ -282,23 +305,32 @@ function LineChart({points,onChartHover,onChartLeave}){
     const rect=svg.getBoundingClientRect();
     const svgX=(e.clientX-rect.left)/rect.width*W;
     const rawI=(svgX-pad.l)/cW*(n-1);
-    const idx=Math.max(0,Math.min(n-1,Math.round(rawI)));
+    const idx=visibleStartIdx+Math.max(0,Math.min(n-1,Math.round(rawI)));
     setHov({idx,sx:e.clientX,sy:e.clientY});
     if(onChartHover){const t=getTooltip(idx);onChartHover({hlTime:t.hlTime,hlVerb:t.hlVerb,hlAmt:t.hlAmt});}
-  },[cW,n,getTooltip,onChartHover]);
+  },[cW,n,pad.l,visibleStartIdx,getTooltip,onChartHover]);
 
-  // Three path segments
-  // 1. Historical dashed: 0..CBAM_IDX
-  const histD=points.slice(0,CBAM_IDX+1).map((p,i)=>`${i===0?"M":"L"}${xp(i).toFixed(1)},${yp(p.v).toFixed(1)}`).join(" ");
-  // 2. Solid: CBAM_IDX..CUT_IDX+1 (short segment of confirmed data)
-  const solidPts=points.slice(CBAM_IDX,CUT_IDX+2);
-  const solidD=solidPts.length>1?solidPts.map((p,i)=>`${i===0?"M":"L"}${xp(i+CBAM_IDX).toFixed(1)},${yp(p.v).toFixed(1)}`).join(" "):null;
-  // 3. Forecast dashed: CUT_IDX..end
-  const foreD=points.slice(CUT_IDX).map((p,i)=>`${i===0?"M":"L"}${xp(i+CUT_IDX).toFixed(1)},${yp(p.v).toFixed(1)}`).join(" ");
+  const pathFrom=(startIdx,endIdx)=>{
+    const s=Math.max(startIdx,visibleStartIdx);
+    const e=Math.min(endIdx,visibleEndIdx);
+    if(e<s)return null;
+    return points.slice(s,e+1).map((p,i)=>{
+      const idx=s+i;
+      return `${i===0?"M":"L"}${xp(idx-visibleStartIdx).toFixed(1)},${yp(p.v).toFixed(1)}`;
+    }).join(" ");
+  };
 
-  const cbamX=xp(CBAM_IDX);
-  const todayX=xp(TODAY_IDX);
-  const yrs=["2022","2023","2024","2025","2026","2027","2028"];
+  // Three path segments inside the visible 2024 H2-2028 window.
+  const histD=pathFrom(visibleStartIdx,CBAM_IDX);
+  const solidD=pathFrom(CBAM_IDX,CUT_IDX+1);
+  const foreD=pathFrom(CUT_IDX,visibleEndIdx);
+
+  const cbamX=CBAM_IDX>=visibleStartIdx&&CBAM_IDX<=visibleEndIdx?xp(CBAM_IDX-visibleStartIdx):null;
+  const todayX=TODAY_IDX>=visibleStartIdx&&TODAY_IDX<=visibleEndIdx?xp(TODAY_IDX-visibleStartIdx):null;
+  const yearMarks=[
+    {label:"2024 H2",idx:visibleStartIdx},
+    ...[2025,2026,2027,2028].map(y=>({label:String(y),idx:(y-2022)*12})),
+  ].filter(m=>m.idx>=visibleStartIdx&&m.idx<=visibleEndIdx);
   const tip=hov?getTooltip(hov.idx):null;
 
   return(
@@ -306,33 +338,41 @@ function LineChart({points,onChartHover,onChartLeave}){
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block",cursor:"crosshair"}}
            onMouseMove={handleMouseMove} onMouseLeave={()=>{setHov(null);if(onChartLeave)onChartLeave();}}>
         {/* CBAM start vertical marker */}
-        <line x1={cbamX} y1={pad.t} x2={cbamX} y2={H-pad.b} stroke={N.orange400} strokeWidth={1.2} strokeDasharray="4,3" opacity={0.7}/>
-        <text x={cbamX+4} y={pad.t+10} fill={N.orange400} fontSize={9} fontFamily={SANS} fontWeight={700}>CBAM start</text>
+        {cbamX!=null&&(
+          <>
+            <line x1={cbamX} y1={pad.t} x2={cbamX} y2={H-pad.b} stroke={N.orange400} strokeWidth={2.2} strokeDasharray="6,5" opacity={0.7}/>
+            <text x={cbamX+7} y={pad.t+16} fill={N.orange400} fontSize={14} fontFamily={SANS} fontWeight={700}>CBAM start</text>
+          </>
+        )}
         {/* Today vertical marker */}
-        <line x1={todayX} y1={pad.t} x2={todayX} y2={H-pad.b} stroke={N.teal400} strokeWidth={1.2} opacity={0.7}/>
-        <text x={todayX+4} y={pad.t+22} fill={N.teal400} fontSize={9} fontFamily={SANS} fontWeight={700}>Today</text>
+        {todayX!=null&&(
+          <>
+            <line x1={todayX} y1={pad.t} x2={todayX} y2={H-pad.b} stroke={N.teal400} strokeWidth={2.2} opacity={0.7}/>
+            <text x={todayX+7} y={pad.t+34} fill={N.teal400} fontSize={14} fontFamily={SANS} fontWeight={700}>Today</text>
+          </>
+        )}
         {/* Forecast dashed (drawn first, solid on top) */}
-        <path d={foreD} fill="none" stroke={N.teal600} strokeWidth={2} strokeLinejoin="round" strokeDasharray="10,6" opacity={0.75}/>
+        {foreD&&<path d={foreD} fill="none" stroke={N.teal600} strokeWidth={4.1} strokeLinejoin="round" strokeDasharray="16,10" opacity={0.75}/>}
         {/* Historical dashed */}
-        <path d={histD} fill="none" stroke={N.tealMid} strokeWidth={1.8} strokeLinejoin="round" strokeDasharray="4,5"/>
+        {histD&&<path d={histD} fill="none" stroke={N.tealMid} strokeWidth={3.4} strokeLinejoin="round" strokeDasharray="7,8"/>}
         {/* Solid (confirmed CBAM data) */}
-        {solidD&&<path d={solidD} fill="none" stroke={N.teal600} strokeWidth={2.8} strokeLinejoin="round"/>}
+        {solidD&&<path d={solidD} fill="none" stroke={N.teal600} strokeWidth={5} strokeLinejoin="round"/>}
         {/* Year labels */}
-        {yrs.map((yr,i)=>(
-          <text key={yr} x={xp(i*12)} y={H-4} textAnchor="middle" fill={yr==="2026"?N.teal200:N.tealMid} fontSize={10} fontFamily={SANS} fontWeight={yr==="2026"?700:400}>{yr}</text>
+        {yearMarks.map(({label,idx})=>(
+          <text key={label} x={xp(idx-visibleStartIdx)} y={H-8} textAnchor="middle" fill={label==="2026"?N.teal200:N.tealMid} fontSize={16} fontFamily={SANS} fontWeight={label==="2026"?700:500}>{label}</text>
         ))}
         {/* Legend */}
-        <g transform={`translate(${W-148},${pad.t})`}>
-          <line x1={0} y1={7} x2={22} y2={7} stroke={N.tealMid} strokeWidth={1.8} strokeDasharray="4,5"/>
-          <text x={26} y={11} fill={N.tealMid} fontSize={9} fontFamily={SANS}>2022–25 est.</text>
-          <line x1={0} y1={21} x2={22} y2={21} stroke={N.teal600} strokeWidth={2.8}/>
-          <text x={26} y={25} fill={N.tealMid} fontSize={9} fontFamily={SANS}>Confirmed data</text>
-          <line x1={0} y1={35} x2={22} y2={35} stroke={N.teal600} strokeWidth={2} strokeDasharray="10,6"/>
-          <text x={26} y={39} fill={N.tealMid} fontSize={9} fontFamily={SANS}>Projected</text>
+        <g transform={`translate(${W-198},${pad.t})`}>
+          <line x1={0} y1={10} x2={34} y2={10} stroke={N.tealMid} strokeWidth={3.4} strokeDasharray="7,8"/>
+          <text x={41} y={16} fill={N.tealMid} fontSize={13} fontFamily={SANS}>2024 H2–25 est.</text>
+          <line x1={0} y1={31} x2={34} y2={31} stroke={N.teal600} strokeWidth={5}/>
+          <text x={41} y={37} fill={N.tealMid} fontSize={13} fontFamily={SANS}>Confirmed data</text>
+          <line x1={0} y1={53} x2={34} y2={53} stroke={N.teal600} strokeWidth={4.1} strokeDasharray="16,10"/>
+          <text x={41} y={59} fill={N.tealMid} fontSize={13} fontFamily={SANS}>Projected</text>
         </g>
         {/* Hover dot */}
         {hov!=null&&(
-          <circle cx={xp(hov.idx)} cy={yp(points[hov.idx].v)} r={4.5} fill={N.teal600} stroke={N.white} strokeWidth={1.5}/>
+          <circle cx={xp(hov.idx-visibleStartIdx)} cy={yp(points[hov.idx].v)} r={7.8} fill={N.teal600} stroke={N.white} strokeWidth={2.4}/>
         )}
       </svg>
       {/* Hover tooltip */}
@@ -404,7 +444,6 @@ const SECTOR_INFO={
 
 // ── SECTOR MODAL ──────────────────────────────────────────────────────────────
 function SectorModal({sec,ets,onClose}){
-  if(!sec)return null;
   const info=SECTOR_INFO[sec]||{desc:"",extra:""};
   const color=SC[sec]||N.teal600;
   const lightColor=SCL[sec]||N.teal400;
@@ -447,6 +486,8 @@ function SectorModal({sec,ets,onClose}){
   const tot26=cnRows.reduce((s,r)=>s+r.c2026,0);
   const tot27=cnRows.reduce((s,r)=>s+r.c2027,0);
   const tot28=cnRows.reduce((s,r)=>s+r.c2028,0);
+
+  if(!sec)return null;
 
   return(
     <>
@@ -531,7 +572,7 @@ function SectorModal({sec,ets,onClose}){
                     <tr key={r.cn} style={{borderBottom:`1px solid rgba(255,255,255,0.06)`,background:i%2===0?"transparent":"rgba(255,255,255,0.03)"}}>
                       <td style={{padding:"8px 10px",color:lightColor,fontWeight:700,fontFamily:"monospace",fontSize:11,whiteSpace:"nowrap"}}>{r.cn}</td>
                       <td style={{padding:"8px 10px",color:N.tealLight,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.desc}</td>
-                      <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtKt(r.annT)}</td>
+                      <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtT(r.annT)}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",color:N.tealLight}}>{fmtM(r.ytdAvgUsd)}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",color:gCol}}>{gr==null?"—":`${gArr} ${pct(gr)}`}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",color:N.tealLight}}>{fmtM(r.taxQ1)}</td>
@@ -543,7 +584,7 @@ function SectorModal({sec,ets,onClose}){
               <tfoot>
                 <tr style={{background:"rgba(255,255,255,0.08)",fontWeight:700}}>
                   <td colSpan={2} style={{padding:"8px 10px",color:N.teal400}}>Total</td>
-                  <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtKt(totT)}</td>
+                  <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtT(totT)}</td>
                   <td style={{padding:"8px 10px",textAlign:"right",color:N.tealLight}}>{fmtM(totYtd)}</td>
                   <td/>
                   <td style={{padding:"8px 10px",textAlign:"right",color:N.tealLight}}>{fmtM(cnRows.reduce((s,r)=>s+r.taxQ1,0))}</td>
@@ -648,7 +689,6 @@ export default function V2App(){
   }),[ets]);
 
   const totTaxToday=tableRows.reduce((s,r)=>s+r.taxToday,0);
-  const totAnnUsd=tableRows.reduce((s,r)=>s+r.annUsd,0);
 
   // Sector proportions for right panel
   const sectorAnnCosts=useMemo(()=>{
@@ -667,7 +707,7 @@ export default function V2App(){
   };
 
   // Headline amounts by year range
-  const {hlTime,hlVerb,hlAmt}=useMemo(()=>{
+  const {hlVerb,hlAmt}=useMemo(()=>{
     if(rangeEnd==="today"){
       return{hlTime:"Since January 2026",hlVerb:"is paying an estimated",hlAmt:fmtM(totTaxToday)};
     }
@@ -698,34 +738,18 @@ export default function V2App(){
 
   return(
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Neuton:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}body{margin:0;background:${N.tealPale};}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Neuton:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}html,body,#root{margin:0;min-height:100%;width:100%;}body{background:${N.teal900};}`}</style>
 
-      <div style={{fontFamily:SANS,minHeight:"100vh",color:N.teal900,maxWidth:1400,margin:"0 auto"}}>
-
-        {/* HEADER */}
-        <div style={{background:N.teal900,color:N.white,padding:"14px 28px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div>
-            <img src="/US_CBAM_Exposure-dashboard/nc-logo-white.png" alt="Niskanen Center" style={{height:28,display:"block",marginBottom:10}}/>
-            <div style={{fontFamily:SANS,fontSize:16,fontWeight:700,color:N.white,letterSpacing:"0.01em"}}>US CBAM Exposure Dashboard <span style={{fontWeight:400,color:N.tealMid,fontSize:13}}>(Beta)</span></div>
-            <div style={{fontFamily:SANS,fontSize:12,color:N.tealMid,lineHeight:1.5}}>Maximum carbon costs for US exporters under the EU CBAM default values</div>
-            <div style={{fontFamily:SANS,fontSize:12,color:N.tealMid}}>A.K.A. Forgone revenue for the federal government</div>
-          </div>
-          <div style={{fontSize:12,color:N.tealMid,textAlign:"right",lineHeight:1.6}}>
-            <div>EU IR 2025/2621 · Eurostat Comext DS-045409</div>
-            <div>Last updated Apr 7, 2026</div>
-          </div>
-        </div>
+      <div style={{fontFamily:SANS,minHeight:"100vh",color:N.teal900,width:"100%",margin:0,background:N.teal900}}>
 
         {/* TOP SECTION */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 380px",gap:0,minHeight:380,borderBottom:`1px solid ${N.teal800}`,background:N.teal900,position:"relative",overflow:"hidden"}}>
-          {/* Brand motif overlay */}
-          <img src="/US_CBAM_Exposure-dashboard/nc-motif.png" alt="" aria-hidden="true" style={{position:"absolute",left:0,top:0,height:"100%",width:"auto",opacity:0.18,filter:"brightness(3) saturate(0.3)",pointerEvents:"none",userSelect:"none",zIndex:0}}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 380px",gap:0,borderBottom:`1px solid ${N.teal800}`,background:N.teal900,position:"relative",overflow:"hidden",width:"100%"}}>
           {/* LEFT: Headline + Chart */}
-          <div style={{padding:"32px 32px 24px",background:"transparent",position:"relative",zIndex:1}}>
+          <div style={{padding:"10px 28px 0",background:"transparent",position:"relative",zIndex:1,display:"flex",flexDirection:"column",minHeight:560}}>
             {/* Eyebrow: inline year selects (or hover override) */}
-            <div style={{margin:"0 0 10px",fontSize:14,fontWeight:700,color:N.teal400,fontFamily:SANS,textTransform:"uppercase",letterSpacing:"0.12em",display:"flex",alignItems:"baseline",flexWrap:"wrap",gap:"0 8px"}}>
+            <div style={{margin:"0 0 10px",fontSize:"clamp(32px,4vw,45px)",fontWeight:700,color:N.teal400,fontFamily:SANS,letterSpacing:0,lineHeight:1,display:"flex",alignItems:"baseline",flexWrap:"wrap",gap:"0 10px"}}>
               {chartHover?(
-                <span>{chartHover.hlTime}</span>
+                <span style={{fontFamily:SANS,fontSize:"clamp(32px,4vw,45px)",fontWeight:700,lineHeight:1,letterSpacing:0}}>{chartHover.hlTime}</span>
               ):(
                 <>
                   <span>From{" "}</span>
@@ -735,20 +759,32 @@ export default function V2App(){
                 </>
               )}
             </div>
-            <h1 style={{margin:"0 0 24px",fontFamily:SERIF,fontSize:"clamp(26px,3.5vw,46px)",fontWeight:700,lineHeight:1.15,color:N.white}}>
+            <div style={{margin:"0 0 6px",fontFamily:SERIF,fontSize:"clamp(43px,6vw,77px)",fontWeight:400,lineHeight:0.98,color:N.white}}>
               The US{" "}
               <span style={{color:N.teal400}}>{chartHover?chartHover.hlVerb:hlVerb}</span>{" "}
               <span style={{color:N.orange500,whiteSpace:"nowrap"}}>{chartHover?chartHover.hlAmt:hlAmt}</span>{" "}
-              to the EU for exporting emission&#8209;intensive products.
-            </h1>
-            <LineChart points={chartPoints} onChartHover={setChartHover} onChartLeave={()=>setChartHover(null)}/>
-            <p style={{margin:"8px 0 0",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
-              Estimated CBAM cost per month ($M) · Gray dashed = 2022–25 est. · Solid = Jan 2026 confirmed · Teal dashed = projected
-            </p>
+              to the EU
+            </div>
+            <div style={{margin:"0 0 8px",fontFamily:SANS,fontSize:"clamp(18px,2vw,23px)",fontWeight:400,lineHeight:1.4,color:N.tealMid}}>
+              for exporting emission&#8209;intensive products.
+            </div>
+            <div style={{marginTop:"auto"}}>
+              <LineChart points={chartPoints} onChartHover={setChartHover} onChartLeave={()=>setChartHover(null)} viewStartYm="2024-07"/>
+              <p style={{margin:"2px 0 0",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
+                Estimated CBAM cost per month ($M) · Gray dashed = 2024 H2–25 est. · Solid = Jan 2026 confirmed · Teal dashed = projected
+              </p>
+            </div>
           </div>
 
           {/* RIGHT: ETS + Sector panel */}
-          <div style={{background:N.teal900,color:N.white,padding:"28px 24px",display:"flex",flexDirection:"column",gap:20,position:"relative",zIndex:1}}>
+          <div style={{background:N.teal900,color:N.white,padding:"12px 28px 24px 24px",display:"flex",flexDirection:"column",gap:20,position:"relative",zIndex:1}}>
+            {/* Dashboard title */}
+            <div style={{paddingBottom:4,textAlign:"right"}}>
+              <div style={{fontFamily:SANS,fontSize:16,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Dashboard <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
+              <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated costs for US exporters under the EU CBAM default values</div>
+              <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. Forgone revenue for the federal government</div>
+              <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid}}>Author: Jia-Shen Tsai, Niskanen Center</div>
+            </div>
             {/* ETS Price */}
             <div>
               <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>EU ETS Carbon Price</div>
@@ -812,34 +848,49 @@ export default function V2App(){
         {/* SECTOR TABLE */}
         <div style={{background:N.white,padding:"0 0 4px"}}>
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontFamily:SANS,fontSize:13}}>
+            <table style={{width:"100%",minWidth:860,borderCollapse:"collapse",fontFamily:SANS,fontSize:15,tableLayout:"fixed"}}>
+              <colgroup>
+                <col style={{width:"20%"}}/>
+                <col style={{width:"20%"}}/>
+                <col style={{width:"20%"}}/>
+                <col style={{width:"12%"}}/>
+                <col style={{width:"22%"}}/>
+                <col style={{width:"6%"}}/>
+              </colgroup>
               <thead>
                 <tr style={{background:N.teal900,color:N.white}}>
-                  <th style={{padding:"10px 16px",textAlign:"left",fontWeight:700,whiteSpace:"nowrap",minWidth:130}}>Sector</th>
-                  <th style={{padding:"10px 10px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",...colHl("tonnes")}}>Proj. 2026<br/>Tonnes</th>
-                  <th style={{padding:"10px 10px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",...colHl("dv")}}>Default Value<br/>(tCO₂e/t)</th>
-                  <th style={{padding:"10px 10px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",...colHl("markup")}}>Mark-up<br/>Phase-in %</th>
-                  <th style={{padding:"10px 10px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>CBAM through<br/>Apr 24, 2026</th>
-                  <th style={{padding:"10px 16px",width:32,color:N.tealMid,fontSize:10,textAlign:"center"}}>detail</th>
+                  <th style={{padding:"8px 12px",textAlign:"left",fontWeight:700,whiteSpace:"nowrap",fontSize:16}}>Sector</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,...colHl("tonnes")}}>Proj. 2026 Tonnes</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,...colHl("dv")}}>
+                    <span style={{display:"inline-block",textAlign:"right",minWidth:170}}>Default Value (tCO₂e/t)</span>
+                  </th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,...colHl("markup")}}>Mark-up %</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>CBAM through Apr 24, 2026</th>
+                  <th style={{padding:"8px 8px",color:N.tealMid,fontSize:14,textAlign:"center"}}>detail</th>
                 </tr>
               </thead>
               <tbody>
                 {tableRows.map((r,i)=>(
                   <tr key={r.sec} style={{background:i%2===0?N.white:N.tealPale,borderBottom:`1px solid ${N.tealLight}`,cursor:"pointer"}}
                     onClick={()=>setSelectedSector(r.sec)}>
-                    <td style={{padding:"11px 16px",fontWeight:700,color:SC[r.sec],borderLeft:`4px solid ${SC[r.sec]}`}}>{r.sec}</td>
-                    <td style={{padding:"11px 10px",textAlign:"right",fontWeight:600,color:N.teal900,...colHl("tonnes")}}>{fmtKt(r.annT)}</td>
-                    <td style={{padding:"11px 10px",textAlign:"right",color:N.teal900,...colHl("dv")}}>{r.wDv>0?r.wDv.toFixed(3):"—"}</td>
-                    <td style={{padding:"11px 10px",textAlign:"right",fontWeight:700,color:N.teal600,...colHl("markup")}}>{markupPct(r.sec)}</td>
-                    <td style={{padding:"11px 10px",textAlign:"right",fontWeight:700,color:N.teal800,borderLeft:`3px solid ${N.tealLight}`,background:"rgba(61,131,151,0.04)"}}>{fmtM(r.taxToday)}</td>
-                    <td style={{padding:"11px 16px",textAlign:"center",color:N.tealMid,fontSize:14}}>›</td>
+                    <td style={{padding:"9px 12px",fontSize:17,fontWeight:800,color:SC[r.sec],borderLeft:`4px solid ${SC[r.sec]}`,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.sec}</td>
+                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",...colHl("tonnes")}}>{fmtT(r.annT)}</td>
+                    <td style={{padding:"9px 8px",color:N.teal800,...colHl("dv")}}>
+                      <span style={{display:"inline-grid",gridTemplateColumns:"78px 52px",alignItems:"center",columnGap:4,whiteSpace:"nowrap"}}>
+                        <DefaultValueMeter value={r.wDv} extreme={r.sec==="Hydrogen"}/>
+                        <span style={{fontSize:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",textAlign:"right"}}>{r.wDv>0?r.wDv.toFixed(3):"—"}</span>
+                      </span>
+                    </td>
+                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:700,color:N.teal600,...colHl("markup")}}>{markupPct(r.sec)}</td>
+                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:800,color:N.teal800,borderLeft:`3px solid ${N.tealLight}`,background:"rgba(61,131,151,0.04)",fontVariantNumeric:"tabular-nums"}}>{fmtM(r.taxToday)}</td>
+                    <td style={{padding:"9px 8px",textAlign:"center",color:N.tealMid,fontSize:16}}>›</td>
                   </tr>
                 ))}
                 <tr style={{background:N.teal900,color:N.white,fontWeight:700}}>
-                  <td style={{padding:"10px 16px"}}>Total</td>
-                  <td style={{padding:"10px 10px",textAlign:"right"}}>{fmtKt(tableRows.reduce((s,r)=>s+r.annT,0))}</td>
-                  <td colSpan={2} style={{padding:"10px 10px",textAlign:"center",color:N.tealMid,fontSize:12}}>weighted avg ↑</td>
-                  <td style={{padding:"10px 10px",textAlign:"right",borderLeft:`3px solid rgba(125,206,218,0.25)`}}>{fmtM(totTaxToday)}</td>
+                  <td style={{padding:"9px 12px",fontSize:16}}>Total</td>
+                  <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontVariantNumeric:"tabular-nums"}}>{fmtT(tableRows.reduce((s,r)=>s+r.annT,0))}</td>
+                  <td colSpan={2} style={{padding:"9px 8px",textAlign:"center",color:N.tealMid,fontSize:13}}>(weighted avg)</td>
+                  <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,borderLeft:`3px solid rgba(125,206,218,0.25)`,fontVariantNumeric:"tabular-nums"}}>{fmtM(totTaxToday)}</td>
                   <td/>
                 </tr>
               </tbody>
@@ -889,8 +940,11 @@ export default function V2App(){
         </div>
 
         {/* DATA NOTE */}
-        <div style={{background:N.tealPale,borderTop:`1px solid ${N.tealLight}`,padding:"10px 28px 60px",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
-          <b style={{color:N.teal800}}>Sources:</b> Default values: EU IR 2025/2621 Annex I (US). Trade: Eurostat Comext DS-045409 (2022–2025). ETS: ICAP + EU Commission. All figures in USD at $1.08/€. Figures represent maximum exposure using default values; actual CBAM costs for low-carbon producers may be lower.
+        <div style={{background:N.tealPale,borderTop:`1px solid ${N.tealLight}`,padding:"10px 28px 60px",fontFamily:SANS,fontSize:11,color:N.tealMid}}>
+          <div style={{textAlign:"right",lineHeight:1.7}}>
+            <div><b style={{color:N.teal800}}>Sources:</b> EU IR 2025/2621 Annex I (US) · Eurostat Comext DS-045409 (2022–2025) · ICAP + EU Commission · USD at $1.08/€</div>
+            <div>Last updated Apr 7, 2026</div>
+          </div>
         </div>
 
       </div>
