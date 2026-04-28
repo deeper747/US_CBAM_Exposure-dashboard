@@ -6,6 +6,6 @@ import V2App from './V2App.jsx'
 const v = new URLSearchParams(location.search).get('v')
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {v === '2' ? <V2App /> : <App />}
+    {v === '2' ? <App /> : <V2App />}
   </StrictMode>,
 )
