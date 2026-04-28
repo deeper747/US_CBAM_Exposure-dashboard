@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import ETS_PRICES from "./data/ets_prices.json";
 import { TRADE } from "./data/tradeData.js";
 
@@ -225,29 +225,60 @@ for(let y=2022;y<=2028;y++){
 
 // ── PRECOMPUTE SECTOR STATS ───────────────────────────────────────────────────
 const TODAY_MOS=["01","02","03"];
-const APR_FRAC=24/30;
+const APR_FRAC=28/30;
 const SECTOR_STATS={};
 for(const sec of SECTORS_LIST){
   const rows=RELEVANT.filter(d=>d.sector===sec);
-  let annT=0,annE=0,wtDv=0,wtMv=0,wtW=0,ytdUsd=0,ytd25=0,ytd24=0,cfQ1=0,cfApr=0;
+  let annT=0,annE=0,wtDv=0,wtMv=0,wtW=0,ytdUsd=0,ytd26=0,ytd25j=0,cfQ1=0,cfApr=0;
   for(const d of rows){
     const mv=d.mv2026||0,tot=d.total||0;
     for(let m=1;m<=12;m++){const mo=String(m).padStart(2,"0");const t=avgMonthTonnes(d.cn,mo),e=avgMonthEur(d.cn,mo);annT+=t;annE+=e;wtDv+=t*tot;wtMv+=t*mv;wtW+=t;}
-    // YTD (Jan–Apr24) avg across 2022-2025
+    // YTD (Jan–Apr avg) across 2022-2025
     let ytdS=0;
     for(const yr of["2022","2023","2024","2025"]){
       let e=0;for(const mo of TODAY_MOS){const v=TRADE[trKey(d.cn)]?.[`${yr}-${mo}`];if(v)e+=v[1];}
       const apr=TRADE[trKey(d.cn)]?.[`${yr}-04`];if(apr)e+=apr[1]*APR_FRAC;ytdS+=e;
     }
     ytdUsd+=ytdS/4*EUR_USD;
-    // 2025 vs 2024 YTD growth
-    const ytdE=(yr)=>{let e=0;for(const mo of TODAY_MOS){const v=TRADE[trKey(d.cn)]?.[`${yr}-${mo}`];if(v)e+=v[1];}const apr=TRADE[trKey(d.cn)]?.[`${yr}-04`];if(apr)e+=apr[1]*APR_FRAC;return e;};
-    ytd25+=ytdE("2025");ytd24+=ytdE("2024");
-    // 2026 projected cost factors
-    for(const mo of TODAY_MOS)cfQ1+=avgMonthTonnes(d.cn,mo)*mv;
+    // Jan growth 2026 vs 2025 (compare only confirmed Jan month)
+    ytd26+=TRADE[trKey(d.cn)]?.["2026-01"]?.[1]??0;
+    ytd25j+=TRADE[trKey(d.cn)]?.["2025-01"]?.[1]??0;
+    // YTD cost factors: use actual Jan 2026 trade if available, else 4yr avg
+    const jan26T=getMonthTonnes(d.cn,"2026-01");
+    cfQ1+=(jan26T>0?jan26T:avgMonthTonnes(d.cn,"01"))*mv;
+    cfQ1+=avgMonthTonnes(d.cn,"02")*mv;
+    cfQ1+=avgMonthTonnes(d.cn,"03")*mv;
     cfApr+=avgMonthTonnes(d.cn,"04")*mv*APR_FRAC;
   }
-  SECTOR_STATS[sec]={annT,annUsd:annE*EUR_USD,wDv:wtW>0?wtDv/wtW:0,wMv:wtW>0?wtMv/wtW:0,ytdAvgUsd:ytdUsd,ytdGrowth:ytd24>0?(ytd25-ytd24)/ytd24*100:null,cfQ1,cfApr};
+  SECTOR_STATS[sec]={annT,annUsd:annE*EUR_USD,wDv:wtW>0?wtDv/wtW:0,wMv:wtW>0?wtMv/wtW:0,ytdAvgUsd:ytdUsd,ytdGrowth:ytd25j>0?(ytd26-ytd25j)/ytd25j*100:null,cfQ1,cfApr};
+}
+
+function sectorYearCost(sec,yr,forecastEts,liveEntries=null){
+  const rows=RELEVANT.filter(d=>d.sector===sec);
+  let cost=0;
+  for(const d of rows){
+    const mv=yr>=2028?(d.mv2028||0):yr===2027?(d.mv2027||0):(d.mv2026||0);
+    for(let m=1;m<=12;m++){
+      const mo=String(m).padStart(2,"0"),ym=`${yr}-${mo}`;
+      const liveT=yr>=2026?liveEntries?.[trKey(d.cn)]?.[ym]?.[0]:null;
+      const tonnes=yr>=2026?(liveT!=null?liveT:avgMonthTonnes(d.cn,mo)):getMonthTonnes(d.cn,ym);
+      cost+=tonnes*mv*getQtrEts(ym,forecastEts);
+    }
+  }
+  return cost*EUR_USD;
+}
+
+function sectorYearTonnes(sec,yr,liveEntries=null){
+  const rows=RELEVANT.filter(d=>d.sector===sec);
+  let tonnes=0;
+  for(const d of rows){
+    for(let m=1;m<=12;m++){
+      const mo=String(m).padStart(2,"0"),ym=`${yr}-${mo}`;
+      const liveT=yr>=2026?liveEntries?.[trKey(d.cn)]?.[ym]?.[0]:null;
+      tonnes+=yr>=2026?(liveT!=null?liveT:avgMonthTonnes(d.cn,mo)):getMonthTonnes(d.cn,ym);
+    }
+  }
+  return tonnes;
 }
 
 // ── LINE CHART COMPONENT ─────────────────────────────────────────────────────
@@ -259,7 +290,7 @@ const TODAY_IDX=Math.round(48+3+APR_FRAC); // ~Apr 2026
 
 const MONTH_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function LineChart({points,onChartHover,onChartLeave,viewStartYm="2024-07",viewEndYm="2028-06"}){
+function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX,viewStartYm="2024-07",viewEndYm="2028-06"}){
   const [hov,setHov]=useState(null);
   const svgRef=useRef(null);
 
@@ -272,12 +303,22 @@ function LineChart({points,onChartHover,onChartLeave,viewStartYm="2024-07",viewE
   const maxY=Math.max(...visiblePoints.map(p=>p.v),0.01)*1.15;
   const xp=i=>pad.l+(n<=1?0:i/(n-1)*cW);
   const yp=v=>pad.t+cH*(1-Math.min(v/maxY,1));
+  const idxFromClientX=useCallback((clientX)=>{
+    const svg=svgRef.current;if(!svg||!n)return null;
+    const rect=svg.getBoundingClientRect();
+    const svgX=(clientX-rect.left)/rect.width*W;
+    const rawI=(svgX-pad.l)/cW*(n-1);
+    return visibleStartIdx+Math.max(0,Math.min(n-1,Math.round(rawI)));
+  },[cW,n,pad.l,visibleStartIdx]);
 
-  // Precompute annual sums for tooltip
-  const ann4yrAvg=["2022","2023","2024","2025"].reduce((s,_,i)=>s+points.slice(i*12,i*12+12).reduce((a,p)=>a+p.v,0),0)/4;
-  const ann2026=points.slice(48,60).reduce((s,p)=>s+p.v,0);
-  const ann2027=points.slice(60,72).reduce((s,p)=>s+p.v,0);
-  const ann2028=points.slice(72,84).reduce((s,p)=>s+p.v,0);
+  const annualTotals=useMemo(()=>{
+    const totals={};
+    for(const p of points){
+      const year=parseInt(p.ym.slice(0,4));
+      totals[year]=(totals[year]||0)+p.v;
+    }
+    return totals;
+  },[points]);
 
   const getTooltip=useCallback((idx)=>{
     const p=points[idx];
@@ -285,30 +326,37 @@ function LineChart({points,onChartHover,onChartLeave,viewStartYm="2024-07",viewE
     const moName=MONTH_NAMES[parseInt(mo)-1];
     const label=`${moName} ${yr}`;
     const val=`$${p.v.toFixed(2)}M`;
+    const year=parseInt(yr);
+    const annual=annualTotals[year]||0;
+    const annualAmt=`$${annual.toFixed(1)}M`;
+    const isConfirmed=idx>=CBAM_IDX&&idx<=cutIdx;
     if(idx<CBAM_IDX){
-      return{label,sub:"Pre-CBAM · hypothetical",value:val,note:"Historical trade data, hypothetical CBAM cost",hlTime:"2022–25 hypothetical",hlVerb:"would have paid",hlAmt:`$${ann4yrAvg.toFixed(1)}M / yr`};
+      return{label,sub:"Pre-CBAM · hypothetical",value:val,note:`${year} annual estimate: ${annualAmt}`,hlTime:`In ${year}`,hlVerb:"would have paid an estimated",hlAmt:annualAmt,year,isConfirmed:false};
     }
-    if(idx===CUT_IDX){
-      return{label:`${label} (confirmed)`,sub:"Actual Comext trade vol.",value:val,note:"Confirmed data · Q1 2026 ETS price",hlTime:"Since January 2026",hlVerb:"is paying an estimated",hlAmt:`$${(p.v*12).toFixed(1)}M / yr`};
+    if(isConfirmed){
+      return{label:`${label} (confirmed)`,sub:"Actual Comext trade vol.",value:val,note:`${year} annual estimate: ${annualAmt}`,hlTime:`In ${year}`,hlVerb:"is projected to pay",hlAmt:annualAmt,year,isConfirmed:true};
     }
-    if(parseInt(yr)===2026){
-      return{label,sub:"Projected (2022–25 avg trade)",value:val,note:`Est. monthly · 2026 total: $${ann2026.toFixed(1)}M`,hlTime:"In 2026",hlVerb:"is projected to pay",hlAmt:`$${ann2026.toFixed(1)}M`};
+    if(year===2026){
+      return{label,sub:"Projected (2022–25 avg trade)",value:val,note:`Est. monthly · 2026 total: ${annualAmt}`,hlTime:"In 2026",hlVerb:"is projected to pay",hlAmt:annualAmt,year,isConfirmed:false};
     }
-    if(parseInt(yr)===2027){
-      return{label,sub:"Projected (2022–25 avg · 20% mark-up)",value:val,note:`Est. monthly · 2027 total: $${ann2027.toFixed(1)}M`,hlTime:"In 2027",hlVerb:"is projected to pay",hlAmt:`$${ann2027.toFixed(1)}M`};
+    if(year===2027){
+      return{label,sub:"Projected (2022–25 avg · 20% mark-up)",value:val,note:`Est. monthly · 2027 total: ${annualAmt}`,hlTime:"In 2027",hlVerb:"is projected to pay",hlAmt:annualAmt,year,isConfirmed:false};
     }
-    return{label,sub:"Projected (2022–25 avg · 30% mark-up)",value:val,note:`Est. monthly · 2028 total: $${ann2028.toFixed(1)}M`,hlTime:"In 2028",hlVerb:"is projected to pay",hlAmt:`$${ann2028.toFixed(1)}M`};
-  },[points,ann4yrAvg,ann2026,ann2027,ann2028]);
+    return{label,sub:"Projected (2022–25 avg · 30% mark-up)",value:val,note:`Est. monthly · 2028 total: ${annualAmt}`,hlTime:"In 2028",hlVerb:"is projected to pay",hlAmt:annualAmt,year,isConfirmed:false};
+  },[points,annualTotals,cutIdx]);
 
   const handleMouseMove=useCallback((e)=>{
-    const svg=svgRef.current;if(!svg)return;
-    const rect=svg.getBoundingClientRect();
-    const svgX=(e.clientX-rect.left)/rect.width*W;
-    const rawI=(svgX-pad.l)/cW*(n-1);
-    const idx=visibleStartIdx+Math.max(0,Math.min(n-1,Math.round(rawI)));
+    const idx=idxFromClientX(e.clientX);if(idx==null)return;
     setHov({idx,sx:e.clientX,sy:e.clientY});
-    if(onChartHover){const t=getTooltip(idx);onChartHover({hlTime:t.hlTime,hlVerb:t.hlVerb,hlAmt:t.hlAmt});}
-  },[cW,n,pad.l,visibleStartIdx,getTooltip,onChartHover]);
+    if(onChartHover){const t=getTooltip(idx);onChartHover({hlTime:t.hlTime,hlVerb:t.hlVerb,hlAmt:t.hlAmt,year:t.year,isConfirmed:t.isConfirmed});}
+  },[idxFromClientX,getTooltip,onChartHover]);
+
+  const handleClick=useCallback((e)=>{
+    const idx=idxFromClientX(e.clientX);if(idx==null||!onChartClick)return;
+    const t=getTooltip(idx);
+    setHov({idx,sx:e.clientX,sy:e.clientY});
+    onChartClick(t.year,t);
+  },[idxFromClientX,getTooltip,onChartClick]);
 
   const pathFrom=(startIdx,endIdx)=>{
     const s=Math.max(startIdx,visibleStartIdx);
@@ -322,8 +370,8 @@ function LineChart({points,onChartHover,onChartLeave,viewStartYm="2024-07",viewE
 
   // Three path segments inside the visible 2024 H2-2028 window.
   const histD=pathFrom(visibleStartIdx,CBAM_IDX);
-  const solidD=pathFrom(CBAM_IDX,CUT_IDX+1);
-  const foreD=pathFrom(CUT_IDX,visibleEndIdx);
+  const solidD=pathFrom(CBAM_IDX,cutIdx+1);
+  const foreD=pathFrom(cutIdx,visibleEndIdx);
 
   const cbamX=CBAM_IDX>=visibleStartIdx&&CBAM_IDX<=visibleEndIdx?xp(CBAM_IDX-visibleStartIdx):null;
   const todayX=TODAY_IDX>=visibleStartIdx&&TODAY_IDX<=visibleEndIdx?xp(TODAY_IDX-visibleStartIdx):null;
@@ -336,7 +384,7 @@ function LineChart({points,onChartHover,onChartLeave,viewStartYm="2024-07",viewE
   return(
     <div style={{position:"relative"}}>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block",cursor:"crosshair"}}
-           onMouseMove={handleMouseMove} onMouseLeave={()=>{setHov(null);if(onChartLeave)onChartLeave();}}>
+           onMouseMove={handleMouseMove} onMouseLeave={()=>{setHov(null);if(onChartLeave)onChartLeave();}} onClick={handleClick}>
         {/* CBAM start vertical marker */}
         {cbamX!=null&&(
           <>
@@ -385,6 +433,7 @@ function LineChart({points,onChartHover,onChartLeave,viewStartYm="2024-07",viewE
           <div style={{fontSize:11,color:N.tealMid,marginTop:2}}>{tip.sub}</div>
           <div style={{fontSize:22,fontWeight:700,color:N.white,marginTop:6,fontFamily:SERIF}}>{tip.value}</div>
           <div style={{fontSize:11,color:N.tealMid,marginTop:3}}>{tip.note}</div>
+          {onChartClick&&<div style={{fontSize:10,color:N.teal400,marginTop:5,borderTop:`1px solid rgba(255,255,255,0.08)`,paddingTop:4}}>Click to select year</div>}
         </div>
       )}
     </div>
@@ -443,7 +492,7 @@ const SECTOR_INFO={
 };
 
 // ── SECTOR MODAL ──────────────────────────────────────────────────────────────
-function SectorModal({sec,ets,onClose}){
+function SectorModal({sec,ets,liveEntries,onClose}){
   const info=SECTOR_INFO[sec]||{desc:"",extra:""};
   const color=SC[sec]||N.teal600;
   const lightColor=SCL[sec]||N.teal400;
@@ -463,12 +512,14 @@ function SectorModal({sec,ets,onClose}){
         ytdEurSum+=e;
       }
       const ytdAvgUsd=ytdEurSum/4*EUR_USD;
-      // YTD growth 2025 vs 2024
-      const ytdE=yr=>{let e=0;for(const mo of TODAY_MOS){const v=TRADE[trKey(d.cn)]?.[`${yr}-${mo}`];if(v)e+=v[1];}const apr=TRADE[trKey(d.cn)]?.[`${yr}-04`];if(apr)e+=apr[1]*APR_FRAC;return e;};
-      const [y25,y24]=[ytdE("2025"),ytdE("2024")];
-      const ytdGrowth=y24>0?(y25-y24)/y24*100:null;
-      // CBAM Q1
-      const cfQ1=TODAY_MOS.reduce((s,mo)=>s+avgMonthTonnes(d.cn,mo)*mv,0);
+      // Jan growth 2026 vs 2025 (only confirmed month); prefer live data
+      const _k=trKey(d.cn);
+      const jan26Eur=liveEntries?.[_k]?.["2026-01"]?.[1]??(TRADE[_k]?.["2026-01"]?.[1]??0);
+      const jan25Eur=TRADE[_k]?.["2025-01"]?.[1]??0;
+      const ytdGrowth=jan25Eur>0?(jan26Eur-jan25Eur)/jan25Eur*100:null;
+      // CBAM Q1: use actual Jan 2026 live data if available, else 4yr avg
+      const jan26T=liveEntries?.[_k]?.["2026-01"]?.[0]??getMonthTonnes(d.cn,"2026-01");
+      const cfQ1=((jan26T>0?jan26T:avgMonthTonnes(d.cn,"01"))+avgMonthTonnes(d.cn,"02")+avgMonthTonnes(d.cn,"03"))*mv;
       const taxQ1=cfQ1*Q1_ETS*EUR_USD;
       // CBAM through today
       const cfApr=avgMonthTonnes(d.cn,"04")*mv*APR_FRAC;
@@ -478,7 +529,7 @@ function SectorModal({sec,ets,onClose}){
       const traj=(mvk)=>[1,2,3,4,5,6,7,8,9,10,11,12].reduce((s,m)=>s+avgMonthTonnes(d.cn,String(m).padStart(2,"0"))*mvFn(mvk),0)*ets*EUR_USD;
       return{cn:d.cn,desc:d.desc,total:d.total,mv2026:d.mv2026,annT,ytdAvgUsd,ytdGrowth,taxQ1,taxToday,c2026:traj("mv2026"),c2027:traj("mv2027"),c2028:traj("mv2028")};
     }).sort((a,b)=>b.taxToday-a.taxToday);
-  },[sec,ets]);
+  },[sec,ets,liveEntries]);
 
   const totT=cnRows.reduce((s,r)=>s+r.annT,0);
   const totYtd=cnRows.reduce((s,r)=>s+r.ytdAvgUsd,0);
@@ -519,7 +570,7 @@ function SectorModal({sec,ets,onClose}){
             {[
               {label:"Proj. Annual Tonnes",val:fmtKt(totT),sub:"2022–25 avg basis"},
               {label:"YTD Avg Trade Value",val:fmtM(totYtd),sub:"Jan–Apr avg · 4-year avg"},
-              {label:"CBAM through Apr 24",val:fmtM(totToday),sub:"Q1 confirmed + forecast"},
+              {label:"CBAM through Apr 28",val:fmtM(totToday),sub:"Q1 confirmed + forecast"},
             ].map(({label,val,sub})=>(
               <div key={label} style={{background:"rgba(255,255,255,0.05)",borderRadius:4,padding:"12px 14px",border:`1px solid rgba(255,255,255,0.08)`}}>
                 <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:6}}>{label}</div>
@@ -558,9 +609,9 @@ function SectorModal({sec,ets,onClose}){
                   <th style={{padding:"8px 10px",textAlign:"left",color:N.teal400,fontWeight:700,maxWidth:180}}>Description</th>
                   <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>Proj. 2026<br/>Tonnes</th>
                   <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>YTD Avg<br/>Trade (4yr)</th>
-                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>YTD Growth<br/>2025 vs 2024</th>
+                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>Jan Growth<br/>2026 vs 2025</th>
                   <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>CBAM Q1<br/>2026</th>
-                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>CBAM through<br/>Apr 24</th>
+                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>CBAM through<br/>Apr 28</th>
                 </tr>
               </thead>
               <tbody>
@@ -594,7 +645,7 @@ function SectorModal({sec,ets,onClose}){
             </table>
           </div>
           <div style={{marginTop:8,fontFamily:SANS,fontSize:11,color:N.tealMid}}>
-            Sorted by CBAM exposure. YTD = Jan–Apr 24, 2026 partial. YTD growth compares 2025 vs 2024. Trajectory uses €{ets.toFixed(0)}/tCO₂e for all months (indicative).
+            Sorted by CBAM exposure. YTD = Jan–Apr 28, 2026 partial. Jan growth compares Jan 2026 vs Jan 2025. Trajectory uses €{ets.toFixed(0)}/tCO₂e for all months (indicative).
           </div>
         </div>
       </div>
@@ -617,6 +668,59 @@ const METHODOLOGY=[
   {q:"Why is this an upper bound?",a:"Default values are set conservatively and may exceed actual emissions for lower-carbon producers. US steelmakers (predominantly EAF-based) likely have lower actual emissions than the default iron & steel values. Exporters may also report verified installation-level data to avoid defaults."},
 ];
 
+const KEY_TERMS=[
+  {
+    term:"CBAM (Carbon Border Adjustment Mechanism)",
+    def:<>A policy requiring importers of certain carbon-intensive goods to purchase certificates reflecting the carbon cost under EU climate rules. It is designed to prevent <b>carbon leakage</b> — the relocation of production to jurisdictions with weaker climate policies.</>,
+  },
+  {
+    term:"EU ETS (Emissions Trading System)",
+    def:"The EU's cap-and-trade carbon market, in operation since 2005. It sets a cap on total emissions from covered sectors and allows companies to buy and sell allowances. The ETS price directly determines the cost of CBAM certificates.",
+  },
+  {
+    term:"Allowance",
+    def:<>One EU ETS allowance equals the right to emit <b>one tonne of CO₂-equivalent</b>. Companies must surrender allowances to cover their verified emissions. CBAM certificate prices are linked to the weekly average auction price of these allowances.</>,
+  },
+  {
+    term:"CN Code (Combined Nomenclature)",
+    def:<>The EU's <b>8-digit product classification system</b>, building on the global 6-digit HS system. CBAM applies to specific CN codes covering steel, aluminium, cement, fertilizers, hydrogen, and electricity. The number of digits (4, 6, or 8) indicates the level of product specificity.</>,
+  },
+  {
+    term:"Default Value",
+    def:<>An EU-assigned emissions intensity (tCO₂e per tonne of product) used when verified emissions data is unavailable. Default values are typically <b>conservative and may exceed actual emissions</b>, incentivizing firms to report installation-level data.</>,
+  },
+  {
+    term:"Mark-up",
+    def:<>An additional percentage applied to CBAM default emissions values to ensure they are <b>conservative and do not underestimate actual emissions</b>. The mark-up increases over time and is designed to reflect variation across installations and incentivize reporting verified emissions data.</>,
+  },
+  {
+    term:"Benchmark Value",
+    def:"The emissions intensity of the most efficient EU installations, used to determine free allocation levels under the EU ETS. It differs from default values, which are conservative estimates applied when actual data is unavailable.",
+  },
+  {
+    term:"Free Allocation Adjustment",
+    def:"A factor reflecting the gradual phase-out of free EU ETS allowances. As free allocation declines from 2026 to 2034, CBAM obligations increase correspondingly.",
+  },
+  {
+    term:"Electric Arc Furnace (EAF)",
+    def:<>A steelmaking process that melts scrap steel or direct reduced iron using electricity. It is significantly less carbon-intensive than the blast furnace route. The US produces roughly <b>70–75% of its steel via EAF</b>, but CBAM default values for the US do not explicitly reflect this, potentially overstating emissions.</>,
+  },
+  {
+    term:"BF/BOF (Blast Furnace / Basic Oxygen Furnace)",
+    def:"The traditional coal-based steelmaking route, where iron ore is reduced in a blast furnace and converted to steel in a basic oxygen furnace. This process produces significantly higher CO₂ emissions per tonne than EAF.",
+  },
+];
+
+const NiskanenLogo=()=>(
+  <span style={{fontFamily:SERIF,fontSize:28,fontWeight:700,color:N.white,lineHeight:1}}>Niskanen Center</span>
+);
+
+const FOOTER_LINKS=[
+  {url:"https://www.niskanencenter.org/where-u-s-carbon-policy-is-being-decided-in-2026/",title:"Where U.S. Carbon Policy Is Being Decided in 2026",desc:"An overview of the key legislative and regulatory venues shaping U.S. carbon policy this year."},
+  {url:"https://www.niskanencenter.org/reforming-carbon-accounting-for-a-new-era-of-competition/",title:"Reforming Carbon Accounting for a New Era of Competition",desc:"The case for updating the Greenhouse Gas Protocol to reflect trade competitiveness realities."},
+  {url:"https://www.niskanencenter.org/carbon-border-adjustment-bills-how-do-the-u-s-proposals-compare-to-the-eu-one/",title:"Carbon Border Adjustment Bills: How Do the U.S. Proposals Compare to the EU One?",desc:"A comparative analysis of U.S. CBAM legislative proposals against the EU's implemented mechanism."},
+];
+
 function HamburgerMenu({open,setOpen}){
   const [tab,setTab]=React.useState("faq");
   if(!open)return(
@@ -625,11 +729,11 @@ function HamburgerMenu({open,setOpen}){
   return(
     <>
       <div onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,background:"rgba(12,42,48,0.6)",zIndex:199}}/>
-      <div style={{position:"fixed",bottom:0,right:0,width:"min(560px,100vw)",height:"70vh",background:N.teal900,borderRadius:"4px 0 0 0",zIndex:200,display:"flex",flexDirection:"column",boxShadow:"-8px -8px 40px rgba(12,42,48,0.45)"}}>
+      <div style={{position:"fixed",bottom:0,right:0,width:"min(640px,100vw)",height:"70vh",background:N.teal900,borderRadius:"4px 0 0 0",zIndex:200,display:"flex",flexDirection:"column",boxShadow:"-8px -8px 40px rgba(12,42,48,0.45)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 24px 0"}}>
           <div style={{display:"flex",gap:4,background:"rgba(255,255,255,0.07)",borderRadius:4,padding:4}}>
-            {[["faq","FAQ"],["methodology","Methodology"]].map(([k,l])=>(
-              <button key={k} onClick={()=>setTab(k)} style={{padding:"6px 16px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:14,fontWeight:600,borderRadius:2,background:tab===k?N.teal600:"transparent",color:tab===k?N.white:N.tealMid}}>{l}</button>
+            {[["faq","FAQ"],["methodology","Methodology"],["terms","Key Terms"]].map(([k,l])=>(
+              <button key={k} onClick={()=>setTab(k)} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:14,fontWeight:600,borderRadius:2,background:tab===k?N.teal600:"transparent",color:tab===k?N.white:N.tealMid,whiteSpace:"nowrap"}}>{l}</button>
             ))}
           </div>
           <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",color:N.tealMid,fontSize:22,cursor:"pointer",lineHeight:1}}>✕</button>
@@ -637,6 +741,16 @@ function HamburgerMenu({open,setOpen}){
         <div style={{flex:1,overflowY:"auto",padding:"16px 24px 24px"}}>
           {tab==="faq"&&<Accordion items={FAQ_ITEMS}/>}
           {tab==="methodology"&&<Accordion items={METHODOLOGY}/>}
+          {tab==="terms"&&(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12,fontFamily:SANS}}>
+              {KEY_TERMS.map(item=>(
+                <div key={item.term} style={{background:"rgba(255,255,255,0.05)",border:`1px solid rgba(255,255,255,0.08)`,borderLeft:`3px solid ${N.teal600}`,borderRadius:4,padding:"14px 16px"}}>
+                  <div style={{fontFamily:SERIF,fontSize:18,fontWeight:700,color:N.teal200,marginBottom:7,lineHeight:1.25}}>{item.term}</div>
+                  <div style={{fontSize:13,color:N.tealMid,lineHeight:1.65}}>{item.def}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -676,26 +790,153 @@ export default function V2App(){
   const [rangeEnd,setRangeEnd]=useState("today");
   const [menuOpen,setMenuOpen]=useState(false);
   const [chartHover,setChartHover]=useState(null);
+  const [chartHoverPinned,setChartHoverPinned]=useState(false);
+  const [chartPinnedYear,setChartPinnedYear]=useState(null);
   const [hoveredSector,setHoveredSector]=useState(null);
   const [selectedSector,setSelectedSector]=useState(null);
 
-  // Chart: monthly costs applying ETS prices
-  const chartPoints=useMemo(()=>CHART_DATA.map(m=>({...m,v:m.factor*getQtrEts(m.ym,ets)*EUR_USD/1e6})),[ets]);
+  // ── LIVE COMEXT FETCH ────────────────────────────────────────────────────────
+  const [liveData,setLiveData]=useState(null);
+  const [fetchStatus,setFetchStatus]=useState("idle");
+  const fetchedRef=useRef(false);
+
+  const fetchComext=useCallback(async()=>{
+    if(fetchedRef.current)return;
+    fetchedRef.current=true;
+    setFetchStatus("loading");
+    const BASE="https://ec.europa.eu/eurostat/api/comext/dissemination/sdmx/2.1/data/DS-045409";
+    const QUERIES={"Iron & Steel":"2601+7201+7202+7203+7205+7206+7208+7209+7210+7211+7212+7213+7214+7215+7216+7217+7218+7219+7221+7223+7224+7225+7301+7302+7303+7304+7305+7306+7307+7308+7309+7310+7311+7318+7326","Aluminium":"7601+7603+7604+7605+7606+7607+7608+7609+7610+7611+7612+7613+7614+7616","Fertilisers":"2808+2814+2834+3102+3105","Hydrogen":"28041000","Cement":"2507+2523"};
+    const raw={};let gotAny=false;
+    for(const codes of Object.values(QUERIES)){
+      try{
+        const r=await fetch(`${BASE}/M.EU27_2020.US.${codes}.1./?format=SDMX-CSV&startPeriod=2026-01&endPeriod=2026-12`,{signal:AbortSignal.timeout(15000)});
+        if(!r.ok)continue;
+        const txt=await r.text();
+        const lines=txt.split("\n").filter(l=>l.trim());
+        const hdrLine=lines.find(l=>l.startsWith("DATAFLOW"));
+        if(!hdrLine)continue;
+        const hdrs=hdrLine.split(",").map(h=>h.trim().replace(/"/g,"").toLowerCase());
+        const iInd=hdrs.indexOf("indicators"),iVal=hdrs.indexOf("obs_value"),iPer=hdrs.indexOf("time_period"),iProd=hdrs.indexOf("product");
+        if(iInd<0||iVal<0||iPer<0||iProd<0)continue;
+        for(const line of lines.filter(l=>!l.startsWith("DATAFLOW"))){
+          const c=line.split(",").map(x=>x.trim().replace(/"/g,""));
+          const ind=c[iInd],ym=c[iPer],cn=c[iProd],val=parseFloat(c[iVal]);
+          if(!cn||!ym||isNaN(val)||val<=0)continue;
+          const norm=cn.replace(/\s/g,"");
+          let key=CN_MAP[norm]||norm;
+          // Fallback: if not in TRADE, try 4-digit prefix (aggregate sub-codes)
+          if(!TRADE[key]){const k4=norm.slice(0,4);if(TRADE[k4])key=k4;}
+          if(!raw[key])raw[key]={};
+          if(!raw[key][ym])raw[key][ym]=[0,0];
+          if(ind==="QUANTITY_IN_100KG"){raw[key][ym][0]+=val/10;gotAny=true;}
+          if(ind==="VALUE_IN_EUROS")raw[key][ym][1]+=val;
+        }
+      }catch{/* network or parse error */}
+    }
+    setLiveData({entries:raw,gotAny});
+    setFetchStatus("done");
+  },[]);
+
+  useEffect(()=>{fetchComext();},[fetchComext]);
+
+  // Merge live API data with static baseline; null if nothing fetched yet
+  const mergedTrade=useMemo(()=>liveData?.gotAny?liveData.entries:null,[liveData]);
+
+  // Per-sector YTD cost factors using actual Jan 2026 trade where available
+  const ytdCostFactors=useMemo(()=>{
+    const f={};
+    for(const sec of SECTORS_LIST){
+      const s=SECTOR_STATS[sec];
+      const rows=RELEVANT.filter(d=>d.sector===sec);
+      let cfQ1=0;
+      for(const d of rows){
+        const mv=d.mv2026||0,k=trKey(d.cn);
+        const jan26T=mergedTrade?.[k]?.["2026-01"]?.[0];
+        cfQ1+=(jan26T>0?jan26T:avgMonthTonnes(d.cn,"01"))*mv;
+        cfQ1+=avgMonthTonnes(d.cn,"02")*mv;
+        cfQ1+=avgMonthTonnes(d.cn,"03")*mv;
+      }
+      f[sec]={cfQ1,cfApr:s.cfApr};
+    }
+    return f;
+  },[mergedTrade]);
+
+  // Chart factor overrides for months with confirmed live data
+  const liveChartOverrides=useMemo(()=>{
+    if(!mergedTrade)return{};
+    const confirmedYms=new Set(Object.values(mergedTrade).flatMap(m=>Object.keys(m)).filter(ym=>ym>="2026-01"));
+    const ov={};
+    for(const ym of confirmedYms){
+      const mo=ym.split("-")[1];
+      let factor=0;
+      for(const d of RELEVANT){
+        const k=trKey(d.cn),mv=d.mv2026||0;
+        const liveT=mergedTrade[k]?.[ym]?.[0];
+        factor+=(liveT!=null?liveT:avgMonthTonnes(d.cn,mo))*mv;
+      }
+      if(factor>0)ov[ym]=factor;
+    }
+    return ov;
+  },[mergedTrade]);
+
+  // Latest confirmed month index for line chart solid segment
+  const liveDataCutIdx=useMemo(()=>{
+    const yms=Object.keys(liveChartOverrides);
+    if(!yms.length)return CUT_IDX;
+    const latest=yms.sort().at(-1);
+    const idx=CHART_DATA.findIndex(p=>p.ym===latest);
+    return idx>CUT_IDX?idx:CUT_IDX;
+  },[liveChartOverrides]);
+
+  // Confirmed months list for caption display
+  const liveMonths=useMemo(()=>Object.keys(liveChartOverrides).sort(),[liveChartOverrides]);
+
+  // Chart: monthly costs applying ETS prices, with live overrides for confirmed months
+  const chartPoints=useMemo(()=>CHART_DATA.map(m=>({...m,v:(liveChartOverrides[m.ym]??m.factor)*getQtrEts(m.ym,ets)*EUR_USD/1e6})),[ets,liveChartOverrides]);
 
   // Table rows
   const tableRows=useMemo(()=>SECTORS_LIST.map(sec=>{
     const s=SECTOR_STATS[sec];
-    return{sec,...s,taxQ1:s.cfQ1*Q1_ETS*EUR_USD,taxToday:(s.cfQ1*Q1_ETS+s.cfApr*ets)*EUR_USD};
-  }),[ets]);
+    const{cfQ1,cfApr}=ytdCostFactors[sec];
+    return{sec,...s,taxQ1:cfQ1*Q1_ETS*EUR_USD,taxToday:(cfQ1*Q1_ETS+cfApr*ets)*EUR_USD};
+  }),[ets,ytdCostFactors]);
 
   const totTaxToday=tableRows.reduce((s,r)=>s+r.taxToday,0);
+  const activeSectorYear=chartHover?.year??chartPinnedYear;
+  const isHoverConfirmed=chartHover?.isConfirmed??false;
+  // Confirmed 2026 hover keeps YTD display (null = default); projected 2026 hover shows full-year estimate
+  const activeTableYear=(activeSectorYear&&!(activeSectorYear===2026&&isHoverConfirmed))?activeSectorYear:null;
+  const displayTableRows=useMemo(()=>tableRows.map(r=>{
+    if(!activeTableYear)return{...r,displayTonnes:r.annT,displayCbam:r.taxToday};
+    return{
+      ...r,
+      displayTonnes:sectorYearTonnes(r.sec,activeTableYear,mergedTrade),
+      displayCbam:sectorYearCost(r.sec,activeTableYear,ets,mergedTrade),
+    };
+  }),[tableRows,activeTableYear,ets,mergedTrade]);
+  const displayTableTonnesTotal=displayTableRows.reduce((s,r)=>s+r.displayTonnes,0);
+  const displayTableCbamTotal=displayTableRows.reduce((s,r)=>s+r.displayCbam,0);
+  const tonnesColumnLabel=activeTableYear
+    ?`${activeTableYear>=2026?"Proj.":"Act."} ${activeTableYear} Tonnes`
+    :"Proj. 2026 Tonnes";
+  const cbamColumnLabel=activeTableYear
+    ?(activeTableYear<2026
+      ?`Hyp. CBAM in ${activeTableYear}`
+      :`CBAM exposure (est.) in ${activeTableYear}`)
+    :"CBAM through Apr 28, 2026";
 
   // Sector proportions for right panel
   const sectorAnnCosts=useMemo(()=>{
-    const items=SECTORS_LIST.map(sec=>{const s=SECTOR_STATS[sec];return{sec,cost:s.annT*s.wMv*ets*EUR_USD};});
+    const yr=activeSectorYear;
+    const items=SECTORS_LIST.map(sec=>{
+      let cost;
+      if(yr){cost=sectorYearCost(sec,yr,ets,mergedTrade);}
+      else{const{cfQ1,cfApr}=ytdCostFactors[sec];cost=(cfQ1*Q1_ETS+cfApr*ets)*EUR_USD;}
+      return{sec,cost};
+    });
     const tot=items.reduce((s,d)=>s+d.cost,0);
     return items.map(d=>({...d,pct:tot>0?d.cost/tot*100:0})).sort((a,b)=>b.pct-a.pct);
-  },[ets]);
+  },[ets,activeSectorYear,mergedTrade,ytdCostFactors]);
 
   // Mark-up phase-in % for table column
   const markupPct=(sec)=>{
@@ -736,6 +977,28 @@ export default function V2App(){
     // Column highlight from formula hover
   const colHl=col=>hovered===col?{background:`${N.teal600}22`,outline:`1.5px solid ${N.teal600}`}:{};
 
+  const handleChartHover=useCallback((info)=>{
+    if(!chartHoverPinned)setChartHover(info);
+  },[chartHoverPinned]);
+
+  const handleChartLeave=useCallback(()=>{
+    setChartHover(null);
+  },[]);
+
+  const handleChartClick=useCallback((yr)=>{
+    setRangeStart(yr);
+    setRangeEnd(yr);
+    setChartHover(null);
+    setChartPinnedYear(yr);
+    setChartHoverPinned(true);
+  },[]);
+
+  const clearChartPinnedYear=useCallback(()=>{
+    setChartPinnedYear(null);
+    setChartHoverPinned(false);
+    setChartHover(null);
+  },[]);
+
   return(
     <>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Neuton:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}html,body,#root{margin:0;min-height:100%;width:100%;}body{background:${N.teal900};}`}</style>
@@ -747,15 +1010,15 @@ export default function V2App(){
           {/* LEFT: Headline + Chart */}
           <div style={{padding:"10px 28px 0",background:"transparent",position:"relative",zIndex:1,display:"flex",flexDirection:"column",minHeight:560}}>
             {/* Eyebrow: inline year selects (or hover override) */}
-            <div style={{margin:"0 0 10px",fontSize:"clamp(32px,4vw,45px)",fontWeight:700,color:N.teal400,fontFamily:SANS,letterSpacing:0,lineHeight:1,display:"flex",alignItems:"baseline",flexWrap:"wrap",gap:"0 10px"}}>
+            <div style={{margin:"0 0 10px",height:"clamp(46px,5vw,58px)",fontSize:"clamp(32px,4vw,45px)",fontWeight:700,color:N.teal400,fontFamily:SANS,letterSpacing:0,lineHeight:1,display:"flex",alignItems:"center",flexWrap:"wrap",gap:"0 10px",flexShrink:0}}>
               {chartHover?(
                 <span style={{fontFamily:SANS,fontSize:"clamp(32px,4vw,45px)",fontWeight:700,lineHeight:1,letterSpacing:0}}>{chartHover.hlTime}</span>
               ):(
                 <>
                   <span>From{" "}</span>
-                  <InlineSelect value={rangeStart} onChange={v=>{setRangeStart(v);if(v<=2025){if(rangeEnd==="today"||rangeEnd>2025||rangeEnd<v)setRangeEnd(v);}else{if(rangeEnd!=="today"&&rangeEnd<v)setRangeEnd(v);}}} options={[2022,2023,2024,2025,2026,2027,2028]} color={N.teal400}/>
+                  <InlineSelect value={rangeStart} onChange={v=>{clearChartPinnedYear();setRangeStart(v);if(v<=2025){if(rangeEnd==="today"||rangeEnd>2025||rangeEnd<v)setRangeEnd(v);}else{if(rangeEnd!=="today"&&rangeEnd<v)setRangeEnd(v);}}} options={[2022,2023,2024,2025,2026,2027,2028]} color={N.teal400}/>
                   <span>{" "}to{" "}</span>
-                  <InlineSelect value={rangeEnd} onChange={setRangeEnd} options={rangeStart<=2025?[2022,2023,2024,2025].filter(y=>y>=rangeStart):[...[2026,2027,2028].filter(y=>y>=rangeStart),"today"]} color={N.teal400}/>
+                  <InlineSelect value={rangeEnd} onChange={v=>{clearChartPinnedYear();setRangeEnd(v);}} options={rangeStart<=2025?[2022,2023,2024,2025].filter(y=>y>=rangeStart):[...[2026,2027,2028].filter(y=>y>=rangeStart),"today"]} color={N.teal400}/>
                 </>
               )}
             </div>
@@ -769,9 +1032,12 @@ export default function V2App(){
               for exporting emission&#8209;intensive products.
             </div>
             <div style={{marginTop:"auto"}}>
-              <LineChart points={chartPoints} onChartHover={setChartHover} onChartLeave={()=>setChartHover(null)} viewStartYm="2024-07"/>
+              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2024-07" onChartClick={handleChartClick} cutIdx={liveDataCutIdx}/>
               <p style={{margin:"2px 0 0",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
-                Estimated CBAM cost per month ($M) · Gray dashed = 2024 H2–25 est. · Solid = Jan 2026 confirmed · Teal dashed = projected
+                Estimated CBAM cost per month ($M) · Gray dashed = 2024 H2–25 est. · Solid = confirmed · Teal dashed = projected
+                {fetchStatus==="loading"&&<span style={{color:N.teal400}}> · Fetching live 2026 data…</span>}
+                {fetchStatus==="done"&&liveMonths.length>0&&<span style={{color:N.teal400}}> · Live: {liveMonths.join(", ")}</span>}
+                {fetchStatus==="done"&&liveMonths.length===0&&<span style={{color:N.tealMid}}> · (live 2026 data not yet available)</span>}
               </p>
             </div>
           </div>
@@ -810,8 +1076,8 @@ export default function V2App(){
 
             {/* Sector breakdown */}
             <div>
-              <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>Annual CBAM Exposure by Sector</div>
-              <div style={{fontSize:12,color:N.tealMid,marginBottom:10}}>at €{ets.toFixed(0)} forecast · 2022–25 avg trade</div>
+              <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>{activeSectorYear?`${activeSectorYear} `:"YTD "}CBAM Exposure by Sector</div>
+              <div style={{fontSize:12,color:N.tealMid,marginBottom:10}}>{activeSectorYear?(activeSectorYear<2026?`${activeSectorYear} hypothetical`:`${activeSectorYear} projected`):"YTD · Jan–Apr"} · at €{ets.toFixed(0)}</div>
               {sectorAnnCosts.map(({sec,cost,pct})=>(
                 <div key={sec} style={{marginBottom:10,cursor:"pointer"}}
                   onMouseEnter={()=>setHoveredSector(sec)} onMouseLeave={()=>setHoveredSector(null)}>
@@ -860,49 +1126,49 @@ export default function V2App(){
               <thead>
                 <tr style={{background:N.teal900,color:N.white}}>
                   <th style={{padding:"8px 12px",textAlign:"left",fontWeight:700,whiteSpace:"nowrap",fontSize:16}}>Sector</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,...colHl("tonnes")}}>Proj. 2026 Tonnes</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,...colHl("tonnes")}}>{tonnesColumnLabel}</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,...colHl("dv")}}>
                     <span style={{display:"inline-block",textAlign:"right",minWidth:170}}>Default Value (tCO₂e/t)</span>
                   </th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,...colHl("markup")}}>Mark-up %</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>CBAM through Apr 24, 2026</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>{cbamColumnLabel}</th>
                   <th style={{padding:"8px 8px",color:N.tealMid,fontSize:14,textAlign:"center"}}>detail</th>
                 </tr>
               </thead>
               <tbody>
-                {tableRows.map((r,i)=>(
+                {displayTableRows.map((r,i)=>(
                   <tr key={r.sec} style={{background:i%2===0?N.white:N.tealPale,borderBottom:`1px solid ${N.tealLight}`,cursor:"pointer"}}
                     onClick={()=>setSelectedSector(r.sec)}>
                     <td style={{padding:"9px 12px",fontSize:17,fontWeight:800,color:SC[r.sec],borderLeft:`4px solid ${SC[r.sec]}`,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.sec}</td>
-                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",...colHl("tonnes")}}>{fmtT(r.annT)}</td>
-                    <td style={{padding:"9px 8px",color:N.teal800,...colHl("dv")}}>
+                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",...colHl("tonnes")}}>{fmtT(r.displayTonnes)}</td>
+                    <td style={{padding:"9px 8px",color:N.teal800,textAlign:"right",...colHl("dv")}}>
                       <span style={{display:"inline-grid",gridTemplateColumns:"78px 52px",alignItems:"center",columnGap:4,whiteSpace:"nowrap"}}>
                         <DefaultValueMeter value={r.wDv} extreme={r.sec==="Hydrogen"}/>
                         <span style={{fontSize:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",textAlign:"right"}}>{r.wDv>0?r.wDv.toFixed(3):"—"}</span>
                       </span>
                     </td>
                     <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:700,color:N.teal600,...colHl("markup")}}>{markupPct(r.sec)}</td>
-                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:800,color:N.teal800,borderLeft:`3px solid ${N.tealLight}`,background:"rgba(61,131,151,0.04)",fontVariantNumeric:"tabular-nums"}}>{fmtM(r.taxToday)}</td>
+                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:800,color:N.teal800,borderLeft:`3px solid ${N.tealLight}`,background:"rgba(61,131,151,0.04)",fontVariantNumeric:"tabular-nums"}}>{fmtM(r.displayCbam)}</td>
                     <td style={{padding:"9px 8px",textAlign:"center",color:N.tealMid,fontSize:16}}>›</td>
                   </tr>
                 ))}
                 <tr style={{background:N.teal900,color:N.white,fontWeight:700}}>
                   <td style={{padding:"9px 12px",fontSize:16}}>Total</td>
-                  <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontVariantNumeric:"tabular-nums"}}>{fmtT(tableRows.reduce((s,r)=>s+r.annT,0))}</td>
+                  <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontVariantNumeric:"tabular-nums"}}>{fmtT(displayTableTonnesTotal)}</td>
                   <td colSpan={2} style={{padding:"9px 8px",textAlign:"center",color:N.tealMid,fontSize:13}}>(weighted avg)</td>
-                  <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,borderLeft:`3px solid rgba(125,206,218,0.25)`,fontVariantNumeric:"tabular-nums"}}>{fmtM(totTaxToday)}</td>
+                  <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,borderLeft:`3px solid rgba(125,206,218,0.25)`,fontVariantNumeric:"tabular-nums"}}>{fmtM(displayTableCbamTotal)}</td>
                   <td/>
                 </tr>
               </tbody>
             </table>
           </div>
           <div style={{padding:"6px 16px 8px",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
-            Click any sector row for CN-code breakdown. Projected 2026 trade from 2022–25 monthly avg. CBAM costs use Q1 confirmed price (€{Q1_ETS}) and forecast for partial Apr.
+            Click any sector row for CN-code breakdown. Hover the line chart to shift the tonnage and CBAM exposure columns by year. Projected trade uses 2022–25 monthly averages where live data is unavailable.
           </div>
         </div>
         {/* FORMULA */}
         <div style={{background:N.teal900,padding:"32px 28px 72px",position:"relative"}}>
-          <div style={{fontFamily:SANS,fontSize:12,fontWeight:700,letterSpacing:"0.12em",color:N.teal400,textTransform:"uppercase",marginBottom:16}}>CBAM Cost Formula — hover each term</div>
+          <div style={{fontFamily:SANS,fontSize:12,fontWeight:700,letterSpacing:"0.12em",color:N.teal400,textTransform:"uppercase",marginBottom:16}}>CBAM Cost Formula</div>
           <div style={{display:"flex",flexWrap:"wrap",alignItems:"flex-end",gap:"12px 8px",userSelect:"none"}}>
             <span style={{fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,color:N.teal200}}>CBAM Cost ($)</span>
             <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>=</span>
@@ -939,18 +1205,40 @@ export default function V2App(){
           </div>
         </div>
 
-        {/* DATA NOTE */}
-        <div style={{background:N.tealPale,borderTop:`1px solid ${N.tealLight}`,padding:"10px 28px 60px",fontFamily:SANS,fontSize:11,color:N.tealMid}}>
-          <div style={{textAlign:"right",lineHeight:1.7}}>
-            <div><b style={{color:N.teal800}}>Sources:</b> EU IR 2025/2621 Annex I (US) · Eurostat Comext DS-045409 (2022–2025) · ICAP + EU Commission · USD at $1.08/€</div>
-            <div>Last updated Apr 7, 2026</div>
+        {/* FOOTER */}
+        <footer style={{background:N.teal900,color:N.tealLight,borderTop:`3px solid ${N.teal600}`}}>
+          <div style={{padding:"28px 28px 20px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20,paddingBottom:16,borderBottom:`1px solid rgba(125,206,218,0.2)`}}>
+              <NiskanenLogo/>
+              <div style={{borderLeft:`1px solid ${N.tealMid}`,paddingLeft:16}}>
+                <div style={{fontFamily:SANS,fontSize:14,fontWeight:700,color:N.teal400,letterSpacing:"0.1em",textTransform:"uppercase"}}>Climate & Energy</div>
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
+              {FOOTER_LINKS.map((lnk,i)=>(
+                <a key={i} href={lnk.url} target="_blank" rel="noopener noreferrer"
+                  style={{display:"block",background:"rgba(255,255,255,0.05)",border:`1px solid rgba(125,206,218,0.18)`,borderRadius:8,padding:"14px 16px",textDecoration:"none"}}
+                  onMouseEnter={e=>e.currentTarget.style.background="rgba(125,206,218,0.1)"}
+                  onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.05)"}
+                >
+                  <div style={{fontFamily:SERIF,fontSize:16,fontWeight:700,color:N.white,lineHeight:1.4,marginBottom:8}}>{lnk.title}</div>
+                  <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,lineHeight:1.5}}>{lnk.desc}</div>
+                  <div style={{marginTop:10,fontFamily:SANS,fontSize:13,color:N.teal400,fontWeight:600}}>Read →</div>
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
+          <div style={{borderTop:`1px solid rgba(125,206,218,0.15)`,padding:"12px 28px"}}>
+            <span style={{fontFamily:SANS,color:N.tealMid,fontSize:13}}>
+              <b style={{color:N.tealLight}}>Sources:</b> EU IR 2025/2621 Annex I (US) · Eurostat Comext DS-045409 (2022–2025) · ICAP + EU Commission · USD at $1.08/€
+            </span>
+          </div>
+        </footer>
 
       </div>
 
       <HamburgerMenu open={menuOpen} setOpen={setMenuOpen}/>
-      {selectedSector&&<SectorModal sec={selectedSector} ets={ets} onClose={()=>setSelectedSector(null)}/>}
+      {selectedSector&&<SectorModal sec={selectedSector} ets={ets} liveEntries={mergedTrade} onClose={()=>setSelectedSector(null)}/>}
     </>
   );
 }
