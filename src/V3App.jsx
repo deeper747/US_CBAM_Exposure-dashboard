@@ -867,7 +867,7 @@ export default function V3App(){
     if(rangeEnd<=2025){
       const hist=CHART_DATA.filter(m=>m.ym>=startYm&&m.ym<=endYm).reduce((s,m)=>s+m.factor*getQtrEts(m.ym,ets),0)/(rangeEnd-rangeStart+1)*EUR_USD;
       const label=rangeStart===rangeEnd?`${rangeStart}`:`${rangeStart}–${rangeEnd}`;
-      return{hlTime:`In ${label}`,hlVerb:"would have paid",hlAmt:fmtM(hist)+" / year (est.)"};
+      return{hlTime:`In ${label}`,hlVerb:"would have paid",hlAmt:fmtM(hist)+" / year"};
     }
     const tot=CHART_DATA.filter(m=>m.ym>=startYm&&m.ym<=endYm).reduce((s,m)=>s+m.factor*getQtrEts(m.ym,ets),0)*EUR_USD;
     const hlLabel=rangeStart===rangeEnd?`In ${rangeStart}`:`Through ${rangeEnd}`;
