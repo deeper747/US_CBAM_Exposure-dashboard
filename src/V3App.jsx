@@ -664,115 +664,6 @@ function SectorModal({sec,ets,liveEntries,onClose}){
   );
 }
 
-// ── HAMBURGER MENU ────────────────────────────────────────────────────────────
-const FAQ_ITEMS=[
-  {q:"When are CBAM prices set, and when do importers actually pay?",a:"CBAM certificate prices are based on the weekly average auction price of EU ETS allowances. Importers must purchase and surrender certificates annually — for goods imported in 2026, the deadline is September 30, 2027."},
-  {q:"Why does the fertilizer sector have a lower phase-in rate?",a:"Fertilizers have a lower initial phase-in rate starting at 1%, due to high exposure to carbon leakage, global competition, and importance for agricultural supply chains."},
-  {q:"Why does the mark-up increase over time?",a:"The mark-up applied to CBAM default values increases over time (10% in 2026, rising to 30% in 2028) to ensure estimates remain conservative and to incentivize importers to report verified, installation-level emissions data instead of relying on defaults."},
-  {q:"What has the EU carbon price been in recent years?",a:"EU ETS prices peaked near €100/tCO₂ in early 2023, then fell — averaging €66/tCO₂ in 2024. Prices averaged €74/tCO₂ in 2025. In Q1 2026, the official CBAM certificate price was confirmed at €75.36/tCO₂."},
-  {q:"Are other countries implementing their own CBAM?",a:"The UK plans a CBAM starting in 2027. Canada has explored border carbon adjustments but not committed to a design. Australia's 2026 carbon leakage review recommended a CBAM-like scheme. Taiwan passed a carbon border charge framework in late 2025."},
-];
-const METHODOLOGY=[
-  {q:"What data is used?",a:"Trade volumes are from Eurostat Comext DS-045409 (EU imports from US, CN4/CN6/CN8 level, matched exactly to CBAM regulation codes). Default emissions values are from EU Implementing Regulation 2025/2621, Annex I (US-specific). Historical ETS prices are from ICAP Allowance Price Explorer; the 2026-Q1 price (€75.36) is the official CBAM certificate price published by the European Commission."},
-  {q:"How is the CBAM cost calculated?",a:"CBAM Cost (€) = Exported Tonnes × Default Value (tCO₂e/t, incl. mark-up) × ETS Price (€/tCO₂e). Converted to USD at a fixed rate of $1.08/€. Trade volumes for 2026+ are projected from the 2022–2025 monthly average. This represents a maximum exposure — exporters with verified emissions below the default value would pay less."},
-  {q:"What does 'mark-up' mean?",a:"The EU adds a percentage mark-up to default values to ensure they are conservative. For 2026, this is 10% (shown as mv2026 = total × 1.10). The mark-up rises to 20% in 2027 and 30% in 2028. This tool uses the 2026 mark-up for all projections."},
-  {q:"Why is this an upper bound?",a:"Default values are set conservatively and may exceed actual emissions for lower-carbon producers. US steelmakers (predominantly EAF-based) likely have lower actual emissions than the default iron & steel values. Exporters may also report verified installation-level data to avoid defaults."},
-];
-
-const KEY_TERMS=[
-  {
-    term:"CBAM (Carbon Border Adjustment Mechanism)",
-    def:<>A policy requiring importers of certain carbon-intensive goods to purchase certificates reflecting the carbon cost under EU climate rules. It is designed to prevent <b>carbon leakage</b> — the relocation of production to jurisdictions with weaker climate policies.</>,
-  },
-  {
-    term:"EU ETS (Emissions Trading System)",
-    def:"The EU's cap-and-trade carbon market, in operation since 2005. It sets a cap on total emissions from covered sectors and allows companies to buy and sell allowances. The ETS price directly determines the cost of CBAM certificates.",
-  },
-  {
-    term:"Allowance",
-    def:<>One EU ETS allowance equals the right to emit <b>one tonne of CO₂-equivalent</b>. Companies must surrender allowances to cover their verified emissions. CBAM certificate prices are linked to the weekly average auction price of these allowances.</>,
-  },
-  {
-    term:"CN Code (Combined Nomenclature)",
-    def:<>The EU's <b>8-digit product classification system</b>, building on the global 6-digit HS system. CBAM applies to specific CN codes covering steel, aluminium, cement, fertilizers, hydrogen, and electricity. The number of digits (4, 6, or 8) indicates the level of product specificity.</>,
-  },
-  {
-    term:"Default Value",
-    def:<>An EU-assigned emissions intensity (tCO₂e per tonne of product) used when verified emissions data is unavailable. Default values are typically <b>conservative and may exceed actual emissions</b>, incentivizing firms to report installation-level data.</>,
-  },
-  {
-    term:"Mark-up",
-    def:<>An additional percentage applied to CBAM default emissions values to ensure they are <b>conservative and do not underestimate actual emissions</b>. The mark-up increases over time and is designed to reflect variation across installations and incentivize reporting verified emissions data.</>,
-  },
-  {
-    term:"Benchmark Value",
-    def:"The emissions intensity of the most efficient EU installations, used to determine free allocation levels under the EU ETS. It differs from default values, which are conservative estimates applied when actual data is unavailable.",
-  },
-  {
-    term:"Free Allocation Adjustment",
-    def:"A factor reflecting the gradual phase-out of free EU ETS allowances. As free allocation declines from 2026 to 2034, CBAM obligations increase correspondingly.",
-  },
-  {
-    term:"Electric Arc Furnace (EAF)",
-    def:<>A steelmaking process that melts scrap steel or direct reduced iron using electricity. It is significantly less carbon-intensive than the blast furnace route. The US produces roughly <b>70–75% of its steel via EAF</b>, but CBAM default values for the US do not explicitly reflect this, potentially overstating emissions.</>,
-  },
-  {
-    term:"BF/BOF (Blast Furnace / Basic Oxygen Furnace)",
-    def:"The traditional coal-based steelmaking route, where iron ore is reduced in a blast furnace and converted to steel in a basic oxygen furnace. This process produces significantly higher CO₂ emissions per tonne than EAF.",
-  },
-];
-
-const NiskanenLogo=()=>(
-  <span style={{fontFamily:SERIF,fontSize:28,fontWeight:700,color:N.white,lineHeight:1}}>Niskanen Center</span>
-);
-
-const FOOTER_LINKS=[
-  {url:"https://www.niskanencenter.org/where-u-s-carbon-policy-is-being-decided-in-2026/",title:"Where U.S. Carbon Policy Is Being Decided in 2026",desc:"An overview of the key legislative and regulatory venues shaping U.S. carbon policy this year."},
-  {url:"https://www.niskanencenter.org/reforming-carbon-accounting-for-a-new-era-of-competition/",title:"Reforming Carbon Accounting for a New Era of Competition",desc:"The case for updating the Greenhouse Gas Protocol to reflect trade competitiveness realities."},
-  {url:"https://www.niskanencenter.org/carbon-border-adjustment-bills-how-do-the-u-s-proposals-compare-to-the-eu-one/",title:"Carbon Border Adjustment Bills: How Do the U.S. Proposals Compare to the EU One?",desc:"A comparative analysis of U.S. CBAM legislative proposals against the EU's implemented mechanism."},
-];
-
-function HamburgerMenu({open,setOpen}){
-  const [tab,setTab]=React.useState("faq");
-  useEffect(()=>{
-    if(!open)return;
-    const h=e=>{if(e.key==="Escape")setOpen(false);};
-    document.addEventListener("keydown",h);
-    return()=>document.removeEventListener("keydown",h);
-  },[open]);
-  if(!open)return(
-    <button onClick={()=>setOpen(true)} aria-label="Open methodology and FAQ menu" style={{position:"fixed",bottom:28,right:28,width:52,height:52,borderRadius:"50%",background:N.teal800,border:`2px solid ${N.teal600}`,color:N.white,fontSize:22,cursor:"pointer",boxShadow:"0 4px 16px rgba(12,42,48,0.35)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,fontFamily:SANS}}><span style={{display:"block",marginBottom:3}} aria-hidden="true">≡</span></button>
-  );
-  return(
-    <>
-      <div onClick={()=>setOpen(false)} aria-hidden="true" style={{position:"fixed",inset:0,background:"rgba(12,42,48,0.6)",zIndex:199}}/>
-      <div role="dialog" aria-modal="true" aria-label="Methodology and FAQ" style={{position:"fixed",bottom:0,right:0,width:"min(640px,100vw)",height:"70vh",background:N.teal900,borderRadius:"4px 0 0 0",zIndex:200,display:"flex",flexDirection:"column",boxShadow:"-8px -8px 40px rgba(12,42,48,0.45)"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 24px 0"}}>
-          <div style={{display:"flex",gap:4,background:"rgba(255,255,255,0.07)",borderRadius:4,padding:4}}>
-            {[["faq","FAQ"],["methodology","Methodology"],["terms","Key Terms"]].map(([k,l])=>(
-              <button key={k} onClick={()=>setTab(k)} style={{padding:"6px 14px",border:"none",cursor:"pointer",fontFamily:SANS,fontSize:14,fontWeight:600,borderRadius:2,background:tab===k?N.teal600:"transparent",color:tab===k?N.white:N.tealMid,whiteSpace:"nowrap"}}>{l}</button>
-            ))}
-          </div>
-          <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",color:N.tealMid,fontSize:22,cursor:"pointer",lineHeight:1}}>✕</button>
-        </div>
-        <div style={{flex:1,overflowY:"auto",padding:"16px 24px 24px"}}>
-          {tab==="faq"&&<Accordion items={FAQ_ITEMS}/>}
-          {tab==="methodology"&&<Accordion items={METHODOLOGY}/>}
-          {tab==="terms"&&(
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(240px,1fr))",gap:12,fontFamily:SANS}}>
-              {KEY_TERMS.map(item=>(
-                <div key={item.term} style={{background:"rgba(255,255,255,0.05)",border:`1px solid rgba(255,255,255,0.08)`,borderLeft:`3px solid ${N.teal600}`,borderRadius:4,padding:"14px 16px"}}>
-                  <div style={{fontFamily:SERIF,fontSize:18,fontWeight:700,color:N.teal200,marginBottom:7,lineHeight:1.25}}>{item.term}</div>
-                  <div style={{fontSize:13,color:N.tealMid,lineHeight:1.65}}>{item.def}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
 
 // ── TERM DEFINITIONS FOR FORMULA PANEL ──────────────────────────────────────
 const TERM_DEFS={
@@ -800,12 +691,11 @@ function InlineSelect({value,onChange,options,color}){
 }
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
-export default function V2App(){
+export default function V3App(){
   const [ets,setEts]=useState(ETS_PRICES.default||75.36);
   const [hovered,setHovered]=useState(null);
   const [rangeStart,setRangeStart]=useState(2026);
   const [rangeEnd,setRangeEnd]=useState("today");
-  const [menuOpen,setMenuOpen]=useState(false);
   const [vw,setVw]=useState(typeof window!=="undefined"?window.innerWidth:1280);
   useEffect(()=>{const h=()=>setVw(window.innerWidth);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
   const isMobile=vw<640;
@@ -1244,39 +1134,9 @@ export default function V2App(){
           </div>
         </div>
 
-        {/* FOOTER */}
-        <footer style={{background:N.teal900,color:N.tealLight,borderTop:`3px solid ${N.teal600}`}}>
-          <div style={{padding:isMobile?"20px 16px 16px":"28px 28px 20px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20,paddingBottom:16,borderBottom:`1px solid rgba(125,206,218,0.2)`}}>
-              <NiskanenLogo/>
-              <div style={{borderLeft:`1px solid ${N.tealMid}`,paddingLeft:16}}>
-                <div style={{fontFamily:SANS,fontSize:14,fontWeight:700,color:N.teal400,letterSpacing:"0.1em",textTransform:"uppercase"}}>Climate & Energy</div>
-              </div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
-              {FOOTER_LINKS.map((lnk,i)=>(
-                <a key={i} href={lnk.url} target="_blank" rel="noopener noreferrer"
-                  style={{display:"block",background:"rgba(255,255,255,0.05)",border:`1px solid rgba(125,206,218,0.18)`,borderRadius:8,padding:"14px 16px",textDecoration:"none"}}
-                  onMouseEnter={e=>e.currentTarget.style.background="rgba(125,206,218,0.1)"}
-                  onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.05)"}
-                >
-                  <div style={{fontFamily:SERIF,fontSize:16,fontWeight:700,color:N.white,lineHeight:1.4,marginBottom:8}}>{lnk.title}</div>
-                  <div style={{fontFamily:SANS,fontSize:13,color:N.tealMid,lineHeight:1.5}}>{lnk.desc}</div>
-                  <div style={{marginTop:10,fontFamily:SANS,fontSize:13,color:N.teal400,fontWeight:600}}>Read →</div>
-                </a>
-              ))}
-            </div>
-          </div>
-          <div style={{borderTop:`1px solid rgba(125,206,218,0.15)`,padding:"12px 28px"}}>
-            <span style={{fontFamily:SANS,color:N.tealMid,fontSize:13}}>
-              <b style={{color:N.tealLight}}>Sources:</b> EU IR 2025/2621 Annex I (US) · Eurostat Comext DS-045409 (2022–2025) · ICAP + EU Commission · USD at $1.08/€
-            </span>
-          </div>
-        </footer>
 
       </div>
 
-      <HamburgerMenu open={menuOpen} setOpen={setMenuOpen}/>
       {selectedSector&&<SectorModal sec={selectedSector} ets={ets} liveEntries={mergedTrade} onClose={()=>setSelectedSector(null)}/>}
     </>
   );
