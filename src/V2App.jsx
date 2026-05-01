@@ -559,14 +559,14 @@ function SectorModal({sec,ets,liveEntries,onClose}){
         </div>
 
         {/* Scrollable body */}
-        <div style={{overflowY:"auto",flex:1,padding:"20px 24px 28px"}}>
+        <div style={{overflowY:"auto",flex:1,padding:"16px 16px 24px"}}>
 
           {/* Description */}
           <p style={{fontFamily:SANS,fontSize:14,color:N.tealLight,lineHeight:1.65,margin:"0 0 6px"}}>{info.desc}</p>
           <p style={{fontFamily:SANS,fontSize:13,color:N.tealMid,lineHeight:1.6,margin:"0 0 20px",fontStyle:"italic"}}>{info.extra}</p>
 
           {/* KPI cards */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
             {[
               {label:"Proj. Annual Tonnes",val:fmtKt(totT),sub:"2022–25 avg basis"},
               {label:"YTD Avg Trade Value",val:fmtM(totYtd),sub:"Jan–Apr avg · 4-year avg"},
@@ -583,13 +583,13 @@ function SectorModal({sec,ets,liveEntries,onClose}){
           {/* Cost trajectory */}
           <div style={{marginBottom:20}}>
             <div style={{fontFamily:SANS,fontSize:10,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>Projected Annual Cost Trajectory (at €{ets.toFixed(0)}/tCO₂e)</div>
-            <div style={{display:"flex",gap:12}}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
               {[
                 {year:"2026",cost:tot26,markup:sec==="Fertilisers"?"1%":"10%",col:N.orange400},
                 {year:"2027",cost:tot27,markup:sec==="Fertilisers"?"1%":"20%",col:N.orange500},
                 {year:"2028",cost:tot28,markup:sec==="Fertilisers"?"1%":"30%",col:"#c0392b"},
               ].map(({year,cost,markup,col})=>(
-                <div key={year} style={{flex:1,background:"rgba(255,255,255,0.04)",borderRadius:4,padding:"12px 14px",borderTop:`3px solid ${col}`}}>
+                <div key={year} style={{flex:"1 1 120px",background:"rgba(255,255,255,0.04)",borderRadius:4,padding:"12px 14px",borderTop:`3px solid ${col}`}}>
                   <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginBottom:4}}>{year} · {markup} mark-up</div>
                   <div style={{fontFamily:SERIF,fontSize:20,fontWeight:700,color:N.white}}>{fmtM(cost)}</div>
                 </div>
@@ -607,11 +607,11 @@ function SectorModal({sec,ets,liveEntries,onClose}){
                 <tr style={{background:"rgba(255,255,255,0.06)"}}>
                   <th style={{padding:"8px 10px",textAlign:"left",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>CN Code</th>
                   <th style={{padding:"8px 10px",textAlign:"left",color:N.teal400,fontWeight:700,maxWidth:180}}>Description</th>
+                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>Default Value<br/>(tCO₂e/t)</th>
                   <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>Proj. 2026<br/>Tonnes</th>
                   <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>YTD Avg<br/>Trade (4yr)</th>
                   <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>Jan Growth<br/>2026 vs 2025</th>
-                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>CBAM Q1<br/>2026</th>
-                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>CBAM through<br/>Apr 28</th>
+                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>CBAM YTD</th>
                 </tr>
               </thead>
               <tbody>
@@ -623,10 +623,10 @@ function SectorModal({sec,ets,liveEntries,onClose}){
                     <tr key={r.cn} style={{borderBottom:`1px solid rgba(255,255,255,0.06)`,background:i%2===0?"transparent":"rgba(255,255,255,0.03)"}}>
                       <td style={{padding:"8px 10px",color:lightColor,fontWeight:700,fontFamily:"monospace",fontSize:11,whiteSpace:"nowrap"}}>{r.cn}</td>
                       <td style={{padding:"8px 10px",color:N.tealLight,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.desc}</td>
+                      <td style={{padding:"8px 10px",textAlign:"right",color:N.tealMid}}>{r.total!=null?r.total.toFixed(2):"—"}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtT(r.annT)}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",color:N.tealLight}}>{fmtM(r.ytdAvgUsd)}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",color:gCol}}>{gr==null?"—":`${gArr} ${pct(gr)}`}</td>
-                      <td style={{padding:"8px 10px",textAlign:"right",color:N.tealLight}}>{fmtM(r.taxQ1)}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",fontWeight:700,color:N.white}}>{fmtM(r.taxToday)}</td>
                     </tr>
                   );
@@ -634,11 +634,10 @@ function SectorModal({sec,ets,liveEntries,onClose}){
               </tbody>
               <tfoot>
                 <tr style={{background:"rgba(255,255,255,0.08)",fontWeight:700}}>
-                  <td colSpan={2} style={{padding:"8px 10px",color:N.teal400}}>Total</td>
+                  <td colSpan={3} style={{padding:"8px 10px",color:N.teal400}}>Total</td>
                   <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtT(totT)}</td>
                   <td style={{padding:"8px 10px",textAlign:"right",color:N.tealLight}}>{fmtM(totYtd)}</td>
                   <td/>
-                  <td style={{padding:"8px 10px",textAlign:"right",color:N.tealLight}}>{fmtM(cnRows.reduce((s,r)=>s+r.taxQ1,0))}</td>
                   <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtM(totToday)}</td>
                 </tr>
               </tfoot>
@@ -789,6 +788,10 @@ export default function V2App(){
   const [rangeStart,setRangeStart]=useState(2026);
   const [rangeEnd,setRangeEnd]=useState("today");
   const [menuOpen,setMenuOpen]=useState(false);
+  const [vw,setVw]=useState(typeof window!=="undefined"?window.innerWidth:1280);
+  useEffect(()=>{const h=()=>setVw(window.innerWidth);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
+  const isMobile=vw<640;
+  const isTablet=vw<1024;
   const [chartHover,setChartHover]=useState(null);
   const [chartHoverPinned,setChartHoverPinned]=useState(false);
   const [chartPinnedYear,setChartPinnedYear]=useState(null);
@@ -1001,14 +1004,14 @@ export default function V2App(){
 
   return(
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Neuton:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}html,body,#root{margin:0;min-height:100%;width:100%;}body{background:${N.teal900};}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Neuton:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}html,body,#root{margin:0;min-height:100%;width:100%;max-width:100%;}body{background:${N.teal900};overflow-x:hidden;}`}</style>
 
       <div style={{fontFamily:SANS,minHeight:"100vh",color:N.teal900,width:"100%",margin:0,background:N.teal900}}>
 
         {/* TOP SECTION */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 380px",gap:0,borderBottom:`1px solid ${N.teal800}`,background:N.teal900,position:"relative",overflow:"hidden",width:"100%"}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":isTablet?"1fr 300px":"1fr 380px",gap:0,borderBottom:`1px solid ${N.teal800}`,background:N.teal900,position:"relative",width:"100%"}}>
           {/* LEFT: Headline + Chart */}
-          <div style={{padding:"10px 28px 0",background:"transparent",position:"relative",zIndex:1,display:"flex",flexDirection:"column",minHeight:560}}>
+          <div style={{padding:isMobile?"10px 16px 0":"10px 28px 0",background:"transparent",position:"relative",zIndex:1,display:"flex",flexDirection:"column",minHeight:isMobile?0:560}}>
             {/* Eyebrow: inline year selects (or hover override) */}
             <div style={{margin:"0 0 10px",height:"clamp(46px,5vw,58px)",fontSize:"clamp(32px,4vw,45px)",fontWeight:700,color:N.teal400,fontFamily:SANS,letterSpacing:0,lineHeight:1,display:"flex",alignItems:"center",flexWrap:"wrap",gap:"0 10px",flexShrink:0}}>
               {chartHover?(
@@ -1043,9 +1046,9 @@ export default function V2App(){
           </div>
 
           {/* RIGHT: ETS + Sector panel */}
-          <div style={{background:N.teal900,color:N.white,padding:"12px 28px 24px 24px",display:"flex",flexDirection:"column",gap:20,position:"relative",zIndex:1}}>
+          <div style={{background:N.teal900,color:N.white,padding:isMobile?"16px 16px 24px":isTablet?"12px 20px 24px 16px":"12px 28px 24px 24px",display:"flex",flexDirection:"column",gap:20,position:"relative",zIndex:1,borderTop:isMobile?`1px solid ${N.teal800}`:"none"}}>
             {/* Dashboard title */}
-            <div style={{paddingBottom:4,textAlign:"right"}}>
+            <div style={{paddingBottom:4,textAlign:isMobile?"left":"right"}}>
               <div style={{fontFamily:SANS,fontSize:16,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Dashboard <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
               <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated costs for US exporters under the EU CBAM default values</div>
               <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. Forgone revenue for the federal government</div>
@@ -1114,7 +1117,7 @@ export default function V2App(){
         {/* SECTOR TABLE */}
         <div style={{background:N.white,padding:"0 0 4px"}}>
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",minWidth:860,borderCollapse:"collapse",fontFamily:SANS,fontSize:15,tableLayout:"fixed"}}>
+            <table style={{width:"100%",minWidth:isMobile?520:860,borderCollapse:"collapse",fontFamily:SANS,fontSize:isMobile?13:15,tableLayout:"fixed"}}>
               <colgroup>
                 <col style={{width:"20%"}}/>
                 <col style={{width:"20%"}}/>
@@ -1125,31 +1128,31 @@ export default function V2App(){
               </colgroup>
               <thead>
                 <tr style={{background:N.teal900,color:N.white}}>
-                  <th style={{padding:"8px 12px",textAlign:"left",fontWeight:700,whiteSpace:"nowrap",fontSize:16}}>Sector</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,...colHl("tonnes")}}>{tonnesColumnLabel}</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,...colHl("dv")}}>
-                    <span style={{display:"inline-block",textAlign:"right",minWidth:170}}>Default Value (tCO₂e/t)</span>
+                  <th style={{padding:isMobile?"8px 8px":"8px 12px",textAlign:"left",fontWeight:700,whiteSpace:"nowrap",fontSize:isMobile?13:16}}>Sector</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:isMobile?13:16,...colHl("tonnes")}}>{tonnesColumnLabel}</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:isMobile?13:16,...colHl("dv")}}>
+                    <span style={{display:"inline-block",textAlign:"right",minWidth:isMobile?120:170}}>Default Value (tCO₂e/t)</span>
                   </th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,...colHl("markup")}}>Mark-up %</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:16,borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>{cbamColumnLabel}</th>
-                  <th style={{padding:"8px 8px",color:N.tealMid,fontSize:14,textAlign:"center"}}>detail</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:isMobile?13:16,...colHl("markup")}}>Mark-up %</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,whiteSpace:"nowrap",fontSize:isMobile?13:16,borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>{cbamColumnLabel}</th>
+                  <th style={{padding:"8px 8px",color:N.tealMid,fontSize:isMobile?12:14,textAlign:"center"}}>detail</th>
                 </tr>
               </thead>
               <tbody>
                 {displayTableRows.map((r,i)=>(
                   <tr key={r.sec} style={{background:i%2===0?N.white:N.tealPale,borderBottom:`1px solid ${N.tealLight}`,cursor:"pointer"}}
                     onClick={()=>setSelectedSector(r.sec)}>
-                    <td style={{padding:"9px 12px",fontSize:17,fontWeight:800,color:SC[r.sec],borderLeft:`4px solid ${SC[r.sec]}`,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.sec}</td>
-                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",...colHl("tonnes")}}>{fmtT(r.displayTonnes)}</td>
+                    <td style={{padding:isMobile?"9px 8px":"9px 12px",fontSize:isMobile?14:17,fontWeight:800,color:SC[r.sec],borderLeft:`4px solid ${SC[r.sec]}`,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.sec}</td>
+                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:isMobile?13:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",...colHl("tonnes")}}>{fmtT(r.displayTonnes)}</td>
                     <td style={{padding:"9px 8px",color:N.teal800,textAlign:"right",...colHl("dv")}}>
-                      <span style={{display:"inline-grid",gridTemplateColumns:"78px 52px",alignItems:"center",columnGap:4,whiteSpace:"nowrap"}}>
+                      <span style={{display:"inline-grid",gridTemplateColumns:isMobile?"52px 44px":"78px 52px",alignItems:"center",columnGap:4,whiteSpace:"nowrap"}}>
                         <DefaultValueMeter value={r.wDv} extreme={r.sec==="Hydrogen"}/>
-                        <span style={{fontSize:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",textAlign:"right"}}>{r.wDv>0?r.wDv.toFixed(3):"—"}</span>
+                        <span style={{fontSize:isMobile?13:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",textAlign:"right"}}>{r.wDv>0?r.wDv.toFixed(3):"—"}</span>
                       </span>
                     </td>
-                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:700,color:N.teal600,...colHl("markup")}}>{markupPct(r.sec)}</td>
-                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontWeight:800,color:N.teal800,borderLeft:`3px solid ${N.tealLight}`,background:"rgba(61,131,151,0.04)",fontVariantNumeric:"tabular-nums"}}>{fmtM(r.displayCbam)}</td>
-                    <td style={{padding:"9px 8px",textAlign:"center",color:N.tealMid,fontSize:16}}>›</td>
+                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:isMobile?13:16,fontWeight:700,color:N.teal600,...colHl("markup")}}>{markupPct(r.sec)}</td>
+                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:isMobile?13:16,fontWeight:800,color:N.teal800,borderLeft:`3px solid ${N.tealLight}`,background:"rgba(61,131,151,0.04)",fontVariantNumeric:"tabular-nums"}}>{fmtM(r.displayCbam)}</td>
+                    <td style={{padding:"9px 8px",textAlign:"center",color:N.tealMid,fontSize:isMobile?13:16}}>›</td>
                   </tr>
                 ))}
                 <tr style={{background:N.teal900,color:N.white,fontWeight:700}}>
@@ -1167,7 +1170,7 @@ export default function V2App(){
           </div>
         </div>
         {/* FORMULA */}
-        <div style={{background:N.teal900,padding:"32px 28px 72px",position:"relative"}}>
+        <div style={{background:N.teal900,padding:isMobile?"24px 16px 60px":"32px 28px 72px",position:"relative"}}>
           <div style={{fontFamily:SANS,fontSize:12,fontWeight:700,letterSpacing:"0.12em",color:N.teal400,textTransform:"uppercase",marginBottom:16}}>CBAM Cost Formula</div>
           <div style={{display:"flex",flexWrap:"wrap",alignItems:"flex-end",gap:"12px 8px",userSelect:"none"}}>
             <span style={{fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,color:N.teal200}}>CBAM Cost ($)</span>
@@ -1207,7 +1210,7 @@ export default function V2App(){
 
         {/* FOOTER */}
         <footer style={{background:N.teal900,color:N.tealLight,borderTop:`3px solid ${N.teal600}`}}>
-          <div style={{padding:"28px 28px 20px"}}>
+          <div style={{padding:isMobile?"20px 16px 16px":"28px 28px 20px"}}>
             <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:20,paddingBottom:16,borderBottom:`1px solid rgba(125,206,218,0.2)`}}>
               <NiskanenLogo/>
               <div style={{borderLeft:`1px solid ${N.tealMid}`,paddingLeft:16}}>
