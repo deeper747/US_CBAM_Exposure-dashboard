@@ -390,14 +390,14 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
         {/* CBAM start vertical marker */}
         {cbamX!=null&&(
           <>
-            <line x1={cbamX} y1={pad.t} x2={cbamX} y2={H-pad.b} stroke={N.orange400} strokeWidth={2.2} strokeDasharray="6,5" opacity={0.7}/>
+            <line x1={cbamX} y1={pad.t} x2={cbamX} y2={H-pad.b} stroke={N.orange400} strokeWidth={2.2} opacity={0.7}/>
             <text x={cbamX+7} y={pad.t+16} fill={N.orange400} fontSize={14} fontFamily={SANS} fontWeight={700}>CBAM start</text>
           </>
         )}
         {/* Today vertical marker */}
         {todayX!=null&&(
           <>
-            <line x1={todayX} y1={pad.t} x2={todayX} y2={H-pad.b} stroke={N.teal400} strokeWidth={2.2} opacity={0.7}/>
+            <line x1={todayX} y1={pad.t} x2={todayX} y2={H-pad.b} stroke={N.teal400} strokeWidth={2.2} strokeDasharray="6,5" opacity={0.7}/>
             <text x={todayX+7} y={pad.t+34} fill={N.teal400} fontSize={14} fontFamily={SANS} fontWeight={700}>Today</text>
           </>
         )}
@@ -1108,14 +1108,14 @@ export default function V3App(){
             <Term id="markup" label="(1 + Mark-up)" hovered={hovered} setHovered={setHovered} color={N.teal400}/>
             <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>×</span>
             {/* ETS Price — interactive inline */}
-            <span style={{display:"inline-block",position:"relative"}}>
+            <span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:8}}>
               <span style={{display:"inline-block",fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,color:N.orange400,background:"rgba(241,125,58,0.1)",borderRadius:4,padding:"4px 10px",border:`2px solid ${N.orange400}`}}>
                 €{ets.toFixed(1)}/tCO₂e
               </span>
-              <span style={{position:"absolute",top:"calc(100% + 8px)",left:"50%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:2,whiteSpace:"nowrap"}}>
+              <span style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
                 <input type="range" min={30} max={130} value={ets} onChange={e=>setEts(+e.target.value)}
                   style={{width:120,accentColor:N.orange400,cursor:"pointer"}}/>
-                <span style={{fontFamily:SANS,fontSize:11,color:N.tealMid}}>ETS Price — drag to adjust</span>
+                <span style={{fontFamily:SANS,fontSize:11,color:N.tealMid,whiteSpace:"nowrap"}}>ETS Price — drag to adjust</span>
               </span>
             </span>
             <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>×</span>
