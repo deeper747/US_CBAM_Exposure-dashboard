@@ -212,6 +212,37 @@ function avgMonthEur(cn,mo){const td=TRADE[trKey(cn)];if(!td)return 0;return["20
 function getMonthTonnes(cn,ym){const td=TRADE[trKey(cn)];return td?.[ym]?.[0]??0;}
 function getQtrEts(ym,forecastEts){const[y,m]=ym.split("-");const q=Math.ceil(parseInt(m)/3);return ETS_PRICES.quarterly[`${y}-Q${q}`]??forecastEts;}
 
+const BASELINE_YEARS=["2022","2023","2024","2025"];
+const YTD_YEAR="2026";
+const YTD_FULL_MONTHS=["01","02","03"];
+const YTD_PARTIAL_MONTH="04";
+const YTD_PARTIAL_MONTH_FRACTION=28/30;
+const YTD_MONTHS=[...YTD_FULL_MONTHS,YTD_PARTIAL_MONTH];
+function ytdMonthFraction(mo){return mo===YTD_PARTIAL_MONTH?YTD_PARTIAL_MONTH_FRACTION:1;}
+function ytdAvgEur(cn){
+  let sum=0;
+  for(const yr of BASELINE_YEARS){
+    for(const mo of YTD_MONTHS){
+      const v=TRADE[trKey(cn)]?.[`${yr}-${mo}`];
+      if(v)sum+=v[1]*ytdMonthFraction(mo);
+    }
+  }
+  return sum/BASELINE_YEARS.length;
+}
+function ytdCostFactorsForRows(rows,liveEntries=null){
+  let cfQ1=0,cfApr=0;
+  for(const d of rows){
+    const mv=d.mv2026||0,k=trKey(d.cn);
+    for(const mo of YTD_MONTHS){
+      const liveT=liveEntries?.[k]?.[`${YTD_YEAR}-${mo}`]?.[0];
+      const tonnes=(liveT>0?liveT:avgMonthTonnes(d.cn,mo))*ytdMonthFraction(mo);
+      if(YTD_FULL_MONTHS.includes(mo))cfQ1+=tonnes*mv;
+      else cfApr+=tonnes*mv;
+    }
+  }
+  return{cfQ1,cfApr};
+}
+
 // ── PRECOMPUTE CHART DATA (2022-01 to 2028-12) ────────────────────────────────
 const CHART_DATA=[];
 for(let y=2022;y<=2028;y++){
@@ -224,8 +255,6 @@ for(let y=2022;y<=2028;y++){
 }
 
 // ── PRECOMPUTE SECTOR STATS ───────────────────────────────────────────────────
-const TODAY_MOS=["01","02","03"];
-const APR_FRAC=28/30;
 const SECTOR_STATS={};
 for(const sec of SECTORS_LIST){
   const rows=RELEVANT.filter(d=>d.sector===sec);
@@ -233,22 +262,13 @@ for(const sec of SECTORS_LIST){
   for(const d of rows){
     const mv=d.mv2026||0,tot=d.total||0;
     for(let m=1;m<=12;m++){const mo=String(m).padStart(2,"0");const t=avgMonthTonnes(d.cn,mo),e=avgMonthEur(d.cn,mo);annT+=t;annE+=e;wtDv+=t*tot;wtMv+=t*mv;wtW+=t;}
-    // YTD (Jan–Apr avg) across 2022-2025
-    let ytdS=0;
-    for(const yr of["2022","2023","2024","2025"]){
-      let e=0;for(const mo of TODAY_MOS){const v=TRADE[trKey(d.cn)]?.[`${yr}-${mo}`];if(v)e+=v[1];}
-      const apr=TRADE[trKey(d.cn)]?.[`${yr}-04`];if(apr)e+=apr[1]*APR_FRAC;ytdS+=e;
-    }
-    ytdUsd+=ytdS/4*EUR_USD;
+    ytdUsd+=ytdAvgEur(d.cn)*EUR_USD;
     // Jan growth 2026 vs 2025 (compare only confirmed Jan month)
     ytd26+=TRADE[trKey(d.cn)]?.["2026-01"]?.[1]??0;
     ytd25j+=TRADE[trKey(d.cn)]?.["2025-01"]?.[1]??0;
-    // YTD cost factors: use actual Jan 2026 trade if available, else 4yr avg
-    const jan26T=getMonthTonnes(d.cn,"2026-01");
-    cfQ1+=(jan26T>0?jan26T:avgMonthTonnes(d.cn,"01"))*mv;
-    cfQ1+=avgMonthTonnes(d.cn,"02")*mv;
-    cfQ1+=avgMonthTonnes(d.cn,"03")*mv;
-    cfApr+=avgMonthTonnes(d.cn,"04")*mv*APR_FRAC;
+    const ytdFactors=ytdCostFactorsForRows([d]);
+    cfQ1+=ytdFactors.cfQ1;
+    cfApr+=ytdFactors.cfApr;
   }
   SECTOR_STATS[sec]={annT,annUsd:annE*EUR_USD,wDv:wtW>0?wtDv/wtW:0,wMv:wtW>0?wtMv/wtW:0,ytdAvgUsd:ytdUsd,ytdGrowth:ytd25j>0?(ytd26-ytd25j)/ytd25j*100:null,cfQ1,cfApr};
 }
@@ -286,7 +306,7 @@ function sectorYearTonnes(sec,yr,liveEntries=null){
 const DATA_CUTOFF_YM="2026-01";
 const CBAM_IDX=48; // Jan 2026 index in CHART_DATA (0 = 2022-01)
 const CUT_IDX=48;  // same as CBAM_IDX while only Jan 2026 is confirmed
-const TODAY_IDX=Math.round(48+3+APR_FRAC); // ~Apr 2026
+const TODAY_IDX=Math.round(48+3+YTD_PARTIAL_MONTH_FRACTION); // ~Apr 2026
 
 const MONTH_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -376,17 +396,28 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
   const cbamX=CBAM_IDX>=visibleStartIdx&&CBAM_IDX<=visibleEndIdx?xp(CBAM_IDX-visibleStartIdx):null;
   const todayX=TODAY_IDX>=visibleStartIdx&&TODAY_IDX<=visibleEndIdx?xp(TODAY_IDX-visibleStartIdx):null;
   const yearMarks=[
-    {label:"2024 H2",idx:visibleStartIdx},
+    {label:"’24",idx:visibleStartIdx},
     ...[2025,2026,2027,2028].map(y=>({label:String(y),idx:(y-2022)*12})),
   ].filter(m=>m.idx>=visibleStartIdx&&m.idx<=visibleEndIdx);
+  const lineLabel=(idx,text,color,dx=0,dy=-14,anchor="middle")=>idx>=visibleStartIdx&&idx<=visibleEndIdx
+    ?{x:xp(idx-visibleStartIdx)+dx,y:yp(points[idx].v)+dy,text,color,anchor}
+    :null;
+  const graphLabels=[
+    lineLabel(Math.min(CBAM_IDX-4,visibleStartIdx+9),"historic trade",N.tealLight,0,-15),
+    lineLabel(Math.min(Math.max(CBAM_IDX,visibleStartIdx),Math.min(cutIdx,visibleEndIdx)),"confirmed trade",N.teal200,24,22,"start"),
+    lineLabel(Math.min(Math.max(cutIdx+18,CBAM_IDX+9),visibleEndIdx-5),"projected data",N.teal400,0,-16),
+  ].filter(Boolean);
   const tip=hov?getTooltip(hov.idx):null;
 
   return(
     <div style={{position:"relative"}}>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block",cursor:"crosshair"}}
-           role="img" aria-label="Line chart showing estimated monthly CBAM costs for US exports to the EU from mid-2024 through 2028. Solid line shows confirmed trade data; dashed teal line shows projected costs. Hover or click to explore by month or year."
+           role="img" aria-label="Line chart showing estimated monthly CBAM costs for US exports to the EU from mid-2024 through 2028. On-chart labels distinguish estimates based on historic trade, confirmed trade, and projected data. Hover or click to explore by month or year."
            onMouseMove={handleMouseMove} onMouseLeave={()=>{setHov(null);if(onChartLeave)onChartLeave();}} onClick={handleClick}>
         <title>US CBAM Exposure — Estimated Monthly Cost, 2024–2028</title>
+        <text x={pad.l+3} y={16} fill={N.tealMid} fontSize={12} fontFamily={SANS} fontWeight={700} letterSpacing={0}>
+          Estimated cost based on
+        </text>
         {/* CBAM start vertical marker */}
         {cbamX!=null&&(
           <>
@@ -411,15 +442,10 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
         {yearMarks.map(({label,idx})=>(
           <text key={label} x={xp(idx-visibleStartIdx)} y={H-8} textAnchor="middle" fill={label==="2026"?N.teal200:N.tealMid} fontSize={16} fontFamily={SANS} fontWeight={label==="2026"?700:500}>{label}</text>
         ))}
-        {/* Legend */}
-        <g transform={`translate(${W-198},${pad.t})`}>
-          <line x1={0} y1={10} x2={34} y2={10} stroke={N.tealMid} strokeWidth={3.4} strokeDasharray="7,8"/>
-          <text x={41} y={16} fill={N.tealMid} fontSize={13} fontFamily={SANS}>2024 H2–25 est.</text>
-          <line x1={0} y1={31} x2={34} y2={31} stroke={N.teal600} strokeWidth={5}/>
-          <text x={41} y={37} fill={N.tealMid} fontSize={13} fontFamily={SANS}>Confirmed data</text>
-          <line x1={0} y1={53} x2={34} y2={53} stroke={N.teal600} strokeWidth={4.1} strokeDasharray="16,10"/>
-          <text x={41} y={59} fill={N.tealMid} fontSize={13} fontFamily={SANS}>Projected</text>
-        </g>
+        {/* Direct labels */}
+        {graphLabels.map(({x,y,text,color,anchor})=>(
+          <text key={text} x={x} y={y} textAnchor={anchor} fill={color} stroke={N.teal900} strokeWidth={5} paintOrder="stroke" fontSize={13} fontFamily={SANS} fontWeight={800} letterSpacing={0} pointerEvents="none">{text}</text>
+        ))}
         {/* Hover dot */}
         {hov!=null&&(
           <circle cx={xp(hov.idx-visibleStartIdx)} cy={yp(points[hov.idx].v)} r={7.8} fill={N.teal600} stroke={N.white} strokeWidth={2.4}/>
@@ -448,11 +474,11 @@ function Term({id,label,hovered,setHovered,color,style={}}){
   return(
     <span
       tabIndex={0} role="button" aria-pressed={active} aria-label={label}
-      style={{display:"inline-block",cursor:"pointer",borderRadius:4,padding:"4px 10px",border:`2px solid ${active?color:N.tealLight}`,background:active?"rgba(255,255,255,0.12)":"transparent",color:active?color:N.white,transition:"all 0.15s",...style}}
+      style={{display:"inline-flex",alignItems:"center",minHeight:36,cursor:"pointer",borderRadius:4,padding:"4px 10px",border:`2px solid ${active?color:N.tealLight}`,background:active?"rgba(255,255,255,0.12)":"transparent",color:active?color:N.white,transition:"all 0.15s",...style}}
       onMouseEnter={()=>setHovered(id)} onMouseLeave={()=>setHovered(null)}
       onFocus={()=>setHovered(id)} onBlur={()=>setHovered(null)}
     >
-      <span style={{fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,letterSpacing:"-0.01em"}}>{label}</span>
+      <span style={{fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,letterSpacing:0,lineHeight:1.1}}>{label}</span>
     </span>
   );
 }
@@ -511,29 +537,16 @@ function SectorModal({sec,ets,liveEntries,onClose}){
   const cnRows=useMemo(()=>{
     if(!sec)return[];
     return RELEVANT.filter(d=>d.sector===sec).map(d=>{
-      const mv=d.mv2026||0;
       // Annual projected tonnes
       const annT=[1,2,3,4,5,6,7,8,9,10,11,12].reduce((s,m)=>s+avgMonthTonnes(d.cn,String(m).padStart(2,"0")),0);
-      // YTD avg trade (4yr)
-      let ytdEurSum=0;
-      for(const yr of["2022","2023","2024","2025"]){
-        let e=0;
-        for(const mo of TODAY_MOS){const v=TRADE[trKey(d.cn)]?.[`${yr}-${mo}`];if(v)e+=v[1];}
-        const apr=TRADE[trKey(d.cn)]?.[`${yr}-04`];if(apr)e+=apr[1]*APR_FRAC;
-        ytdEurSum+=e;
-      }
-      const ytdAvgUsd=ytdEurSum/4*EUR_USD;
+      const ytdAvgUsd=ytdAvgEur(d.cn)*EUR_USD;
       // Jan growth 2026 vs 2025 (only confirmed month); prefer live data
       const _k=trKey(d.cn);
       const jan26Eur=liveEntries?.[_k]?.["2026-01"]?.[1]??(TRADE[_k]?.["2026-01"]?.[1]??0);
       const jan25Eur=TRADE[_k]?.["2025-01"]?.[1]??0;
       const ytdGrowth=jan25Eur>0?(jan26Eur-jan25Eur)/jan25Eur*100:null;
-      // CBAM Q1: use actual Jan 2026 live data if available, else 4yr avg
-      const jan26T=liveEntries?.[_k]?.["2026-01"]?.[0]??getMonthTonnes(d.cn,"2026-01");
-      const cfQ1=((jan26T>0?jan26T:avgMonthTonnes(d.cn,"01"))+avgMonthTonnes(d.cn,"02")+avgMonthTonnes(d.cn,"03"))*mv;
+      const {cfQ1,cfApr}=ytdCostFactorsForRows([d],liveEntries);
       const taxQ1=cfQ1*Q1_ETS*EUR_USD;
-      // CBAM through today
-      const cfApr=avgMonthTonnes(d.cn,"04")*mv*APR_FRAC;
       const taxToday=(cfQ1*Q1_ETS+cfApr*ets)*EUR_USD;
       // Cost trajectory (using forecast ets for simplicity)
       const mvFn=mvk=>RELEVANT.find(x=>x.cn===d.cn)?.[mvk]||0;
@@ -582,7 +595,7 @@ function SectorModal({sec,ets,liveEntries,onClose}){
             {[
               {label:"Proj. Annual Tonnes",val:fmtKt(totT),sub:"2022–25 avg basis"},
               {label:"YTD Avg Trade Value",val:fmtM(totYtd),sub:"Jan–Apr avg · 4-year avg"},
-              {label:"CBAM through Apr 28",val:fmtM(totToday),sub:"Q1 confirmed + forecast"},
+              {label:"CBAM YTD",val:fmtM(totToday),sub:"Jan–Apr 28 · Q1 price + Q2 forecast"},
             ].map(({label,val,sub})=>(
               <div key={label} style={{background:"rgba(255,255,255,0.05)",borderRadius:4,padding:"12px 14px",border:`1px solid rgba(255,255,255,0.08)`}}>
                 <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:6}}>{label}</div>
@@ -739,7 +752,7 @@ function HamburgerMenu({open,setOpen}){
     const h=e=>{if(e.key==="Escape")setOpen(false);};
     document.addEventListener("keydown",h);
     return()=>document.removeEventListener("keydown",h);
-  },[open]);
+  },[open,setOpen]);
   if(!open)return(
     <button onClick={()=>setOpen(true)} aria-label="Open methodology and FAQ menu" style={{position:"fixed",bottom:28,right:28,width:52,height:52,borderRadius:"50%",background:N.teal800,border:`2px solid ${N.teal600}`,color:N.white,fontSize:22,cursor:"pointer",boxShadow:"0 4px 16px rgba(12,42,48,0.35)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,fontFamily:SANS}}><span style={{display:"block",marginBottom:3}} aria-hidden="true">≡</span></button>
   );
@@ -776,10 +789,11 @@ function HamburgerMenu({open,setOpen}){
 
 // ── TERM DEFINITIONS FOR FORMULA PANEL ──────────────────────────────────────
 const TERM_DEFS={
-  tonnes:{title:"Exported Tonnes",def:"Annual quantity of US goods exported to the EU under CBAM, sourced from Eurostat Comext DS-045409. Projected 2026+ values use 2022–25 monthly averages.",source:"Eurostat Comext DS-045409"},
-  dv:{title:"Default Value (tCO₂e/t)",def:"The carbon intensity assigned to each product by EU IR 2025/2621 Annex I, without mark-up. Represents tonnes of CO₂-equivalent emitted per tonne of product exported.",source:"EU IR 2025/2621, Annex I (US-specific)"},
-  markup:{title:"Mark-up / Phase-in %",def:"Added to the base default value to account for gradual phase-in of CBAM. Most sectors: 10% in 2026, 20% in 2027, 30% in 2028. Fertilisers: 1% throughout (carbon leakage risk).",source:"EU CBAM Implementing Regulation"},
-  fxrate:{title:"Exchange Rate (USD/EUR)",def:"Fixed at $1.08/€, calculated as the simple average of weekly ECB EUR/USD reference rates over calendar year 2024.",source:"European Central Bank (ECB) Statistical Data Warehouse — EUR/USD reference rates, 2024 annual average"},
+  tonnes:{title:"Exported Tonnes",def:"How much CBAM-covered product the US ships to the EU. Past years use reported Comext tonnage; future and not-yet-confirmed months use the 2022–25 monthly average as the trade baseline.",source:"Eurostat Comext DS-045409"},
+  dv:{title:"Default Value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one tonne of product into estimated tonnes of CO₂-equivalent.",source:"EU IR 2025/2621, Annex I (US-specific)"},
+  markup:{title:"Mark-up / Phase-in %",def:"The penalty add-on in the default-value design. It nudges exporters toward submitting actual emissions data and grows over time for most sectors: 10% in 2026, 20% in 2027, and 30% in 2028. Fertilisers stay at 1% in this model.",source:"EU CBAM Implementing Regulation"},
+  ets:{title:"EU ETS Carbon Price",def:"The carbon price used to turn embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the adjustable forecast so you can test different carbon-market assumptions.",source:"European Commission CBAM certificate price; adjustable dashboard forecast"},
+  fxrate:{title:"Exchange Rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.08 per euro, based on the 2024 average.",source:"European Central Bank (ECB) Statistical Data Warehouse — EUR/USD reference rates, 2024 annual average"},
 };
 
 // ── INLINE SELECT (underline + arrow, no border) ─────────────────────────────
@@ -863,21 +877,12 @@ export default function V2App(){
   // Merge live API data with static baseline; null if nothing fetched yet
   const mergedTrade=useMemo(()=>liveData?.gotAny?liveData.entries:null,[liveData]);
 
-  // Per-sector YTD cost factors using actual Jan 2026 trade where available
+  // Per-sector YTD cost factors use confirmed 2026 trade where available, otherwise the monthly baseline.
   const ytdCostFactors=useMemo(()=>{
     const f={};
     for(const sec of SECTORS_LIST){
-      const s=SECTOR_STATS[sec];
       const rows=RELEVANT.filter(d=>d.sector===sec);
-      let cfQ1=0;
-      for(const d of rows){
-        const mv=d.mv2026||0,k=trKey(d.cn);
-        const jan26T=mergedTrade?.[k]?.["2026-01"]?.[0];
-        cfQ1+=(jan26T>0?jan26T:avgMonthTonnes(d.cn,"01"))*mv;
-        cfQ1+=avgMonthTonnes(d.cn,"02")*mv;
-        cfQ1+=avgMonthTonnes(d.cn,"03")*mv;
-      }
-      f[sec]={cfQ1,cfApr:s.cfApr};
+      f[sec]=ytdCostFactorsForRows(rows,mergedTrade);
     }
     return f;
   },[mergedTrade]);
@@ -944,7 +949,7 @@ export default function V2App(){
     ?(activeTableYear<2026
       ?`Hyp. CBAM in ${activeTableYear}`
       :`CBAM exposure (est.) in ${activeTableYear}`)
-    :"CBAM through Apr 28, 2026";
+    :"CBAM YTD";
 
   // Sector proportions for right panel
   const sectorAnnCosts=useMemo(()=>{
@@ -1031,7 +1036,7 @@ export default function V2App(){
           <div style={{padding:"14px 16px 10px",borderBottom:`1px solid ${N.teal800}`}}>
             <div style={{fontFamily:SANS,fontSize:16,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Dashboard <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
             <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated costs for US exporters under the EU CBAM default values</div>
-            <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. Forgone revenue for the federal government</div>
+            <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. <span style={{color:N.orange400,fontWeight:800}}>Forgone revenue</span> for the federal government</div>
             <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid}}>Author: Jia-Shen Tsai, Niskanen Center</div>
           </div>
         )}
@@ -1065,7 +1070,7 @@ export default function V2App(){
             <div style={{marginTop:"auto"}}>
               <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2024-07" onChartClick={handleChartClick} cutIdx={liveDataCutIdx}/>
               <p style={{margin:"2px 0 0",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
-                Estimated CBAM cost per month ($M) · Gray dashed = 2024 H2–25 est. · Solid = confirmed · Teal dashed = projected
+                Estimated CBAM cost per month ($M), labeled by historic trade, confirmed trade, and projected data
                 {fetchStatus==="loading"&&<span style={{color:N.teal400}}> · Fetching live 2026 data…</span>}
                 {fetchStatus==="done"&&liveMonths.length>0&&<span style={{color:N.teal400}}> · Live: {liveMonths.join(", ")}</span>}
                 {fetchStatus==="done"&&liveMonths.length===0&&<span style={{color:N.tealMid}}> · (live 2026 data not yet available)</span>}
@@ -1080,7 +1085,7 @@ export default function V2App(){
               <div style={{paddingBottom:4,textAlign:"right"}}>
                 <div style={{fontFamily:SANS,fontSize:16,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Dashboard <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
                 <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated costs for US exporters under the EU CBAM default values</div>
-                <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. Forgone revenue for the federal government</div>
+                <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. <span style={{color:N.orange400,fontWeight:800}}>Forgone revenue</span> for the federal government</div>
                 <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid}}>Author: Jia-Shen Tsai, Niskanen Center</div>
               </div>
             )}
@@ -1112,7 +1117,7 @@ export default function V2App(){
             {/* Sector breakdown */}
             <div>
               <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>{activeSectorYear?`${activeSectorYear} `:"YTD "}CBAM Exposure by Sector</div>
-              <div style={{fontSize:12,color:N.tealMid,marginBottom:10}}>{activeSectorYear?(activeSectorYear<2026?`${activeSectorYear} hypothetical`:`${activeSectorYear} projected`):"YTD · Jan–Apr"} · at €{ets.toFixed(0)}</div>
+              <div style={{fontSize:12,color:N.tealMid,marginBottom:10}}>{activeSectorYear?(activeSectorYear<2026?`${activeSectorYear} hypothetical`:`${activeSectorYear} projected`):"YTD · Jan–Apr 28"} · at €{ets.toFixed(0)}</div>
               {sectorAnnCosts.map(({sec,cost,pct})=>(
                 <div key={sec} style={{marginBottom:10,cursor:"pointer"}}
                   onMouseEnter={()=>setHoveredSector(sec)} onMouseLeave={()=>setHoveredSector(null)}>
@@ -1208,7 +1213,7 @@ export default function V2App(){
         {/* FORMULA */}
         <div style={{background:N.teal900,padding:isMobile?"24px 16px 60px":"32px 28px 72px",position:"relative"}}>
           <div style={{fontFamily:SANS,fontSize:12,fontWeight:700,letterSpacing:"0.12em",color:N.teal400,textTransform:"uppercase",marginBottom:16}}>CBAM Cost Formula</div>
-          <div style={{display:"flex",flexWrap:"wrap",alignItems:"flex-end",gap:"12px 8px",userSelect:"none"}}>
+          <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"10px 8px",userSelect:"none"}}>
             <span style={{fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,color:N.teal200}}>CBAM Cost ($)</span>
             <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>=</span>
             <Term id="tonnes" label="Exported Tonnes" hovered={hovered} setHovered={setHovered} color={N.teal400}/>
@@ -1217,19 +1222,24 @@ export default function V2App(){
             <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>×</span>
             <Term id="markup" label="(1 + Mark-up)" hovered={hovered} setHovered={setHovered} color={N.teal400}/>
             <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>×</span>
-            {/* ETS Price — interactive inline */}
-            <span style={{display:"inline-flex",flexDirection:"column",alignItems:"center",gap:8}}>
-              <span style={{display:"inline-block",fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,color:N.orange400,background:"rgba(241,125,58,0.1)",borderRadius:4,padding:"4px 10px",border:`2px solid ${N.orange400}`}}>
-                €{ets.toFixed(1)}/tCO₂e
-              </span>
-              <span style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                <input type="range" min={30} max={130} value={ets} onChange={e=>setEts(+e.target.value)}
-                  style={{width:120,accentColor:N.orange400,cursor:"pointer"}}/>
-                <span style={{fontFamily:SANS,fontSize:11,color:N.tealMid,whiteSpace:"nowrap"}}>ETS Price — drag to adjust</span>
-              </span>
+            <span
+              tabIndex={0} role="button" aria-pressed={hovered==="ets"} aria-label="EU ETS carbon price"
+              onMouseEnter={()=>setHovered("ets")} onMouseLeave={()=>setHovered(null)}
+              onFocus={()=>setHovered("ets")} onBlur={()=>setHovered(null)}
+              style={{display:"inline-flex",alignItems:"center",minHeight:36,cursor:"pointer",fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,lineHeight:1.1,color:hovered==="ets"?N.white:N.orange400,background:hovered==="ets"?"rgba(241,125,58,0.18)":"rgba(241,125,58,0.1)",borderRadius:4,padding:"4px 10px",border:`2px solid ${N.orange400}`}}>
+              €{ets.toFixed(1)}/tCO₂e
             </span>
             <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>×</span>
             <Term id="fxrate" label="$1.08 / €" hovered={hovered} setHovered={setHovered} color={N.teal400}/>
+          </div>
+          <div
+            onMouseEnter={()=>setHovered("ets")} onMouseLeave={()=>setHovered(null)}
+            onFocusCapture={()=>setHovered("ets")} onBlurCapture={()=>setHovered(null)}
+            style={{marginTop:12,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",fontFamily:SANS}}>
+            <input type="range" min={30} max={130} value={ets} onChange={e=>setEts(+e.target.value)}
+              aria-label="Adjust EU ETS carbon price"
+              style={{width:isMobile?"min(220px,100%)":180,accentColor:N.orange400,cursor:"pointer"}}/>
+            <span style={{fontSize:11,color:N.tealMid,whiteSpace:"nowrap"}}>ETS Price - drag to adjust</span>
           </div>
           <div style={{marginTop:16,borderTop:`1px solid rgba(255,255,255,0.1)`,paddingTop:12,minHeight:76,fontFamily:SANS}}>
             {hovered&&TERM_DEFS[hovered]?(
