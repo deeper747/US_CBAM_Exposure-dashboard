@@ -6,7 +6,7 @@ import { TRADE } from "./data/tradeData.js";
 const N={teal900:"#0c2a30",teal800:"#194852",teal600:"#348397",teal400:"#7dceda",teal200:"#b7f6fc",tealMid:"#78a0a3",tealLight:"#d0dbdd",tealPale:"#edf1f2",white:"#ffffff",yellow200:"#fef0c7",yellow600:"#bca45e",yellow900:"#52482a",orange400:"#f17d3a",orange500:"#da5831",green200:"#D7f881",green600:"#709628",green900:"#2c3811",purple200:"#e0c6fc",purple600:"#8655b2"};
 const SERIF="'Neuton',Georgia,serif";
 const SANS="'Hanken Grotesk','Inter',sans-serif";
-const EUR_USD=1.08;
+const EUR_USD=1.13;
 const Q1_ETS=ETS_PRICES.quarterly["2026-Q1"]||75.36;
 const SECTORS_LIST=["Iron & Steel","Aluminium","Cement","Fertilisers","Hydrogen"];
 const SC={"Iron & Steel":"#5b8ca8","Aluminium":"#348397","Cement":"#194852","Fertilisers":"#709628","Hydrogen":"#8655b2"};
@@ -403,9 +403,9 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
     ?{x:xp(idx-visibleStartIdx)+dx,y:yp(points[idx].v)+dy,text,color,anchor}
     :null;
   const graphLabels=[
-    lineLabel(Math.min(CBAM_IDX-4,visibleStartIdx+9),"historic trade",N.tealLight,0,-15),
-    lineLabel(Math.min(Math.max(CBAM_IDX,visibleStartIdx),Math.min(cutIdx,visibleEndIdx)),"confirmed trade",N.teal200,24,22,"start"),
-    lineLabel(Math.min(Math.max(cutIdx+18,CBAM_IDX+9),visibleEndIdx-5),"projected data",N.teal400,0,-16),
+    lineLabel(Math.min(CBAM_IDX-4,visibleStartIdx+9),"historic trade",N.tealLight,0,-25),
+    lineLabel(Math.min(Math.max(CBAM_IDX,visibleStartIdx),Math.min(cutIdx,visibleEndIdx)),"confirmed trade",N.tealLight,5,22,"start"),
+    lineLabel(Math.min(Math.max(cutIdx+18,CBAM_IDX+9),visibleEndIdx-5),"projected data",N.tealLight,80,-16),
   ].filter(Boolean);
   const tip=hov?getTooltip(hov.idx):null;
 
@@ -415,8 +415,8 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
            role="img" aria-label="Line chart showing estimated monthly CBAM costs for US exports to the EU from mid-2024 through 2028. On-chart labels distinguish estimates based on historic trade, confirmed trade, and projected data. Hover or click to explore by month or year."
            onMouseMove={handleMouseMove} onMouseLeave={()=>{setHov(null);if(onChartLeave)onChartLeave();}} onClick={handleClick}>
         <title>US CBAM Exposure — Estimated Monthly Cost, 2024–2028</title>
-        <text x={pad.l+3} y={16} fill={N.tealMid} fontSize={12} fontFamily={SANS} fontWeight={700} letterSpacing={0}>
-          Estimated cost based on
+        <text x={pad.l+3} y={260} fill={N.tealLight} fontSize={12} fontFamily={SANS} fontWeight={700} letterSpacing={0}>
+          Estimated CBAM cost based on
         </text>
         {/* CBAM start vertical marker */}
         {cbamX!=null&&(
@@ -595,7 +595,7 @@ function SectorModal({sec,ets,liveEntries,onClose}){
             {[
               {label:"Proj. Annual Tonnes",val:fmtKt(totT),sub:"2022–25 avg basis"},
               {label:"YTD Avg Trade Value",val:fmtM(totYtd),sub:"Jan–Apr avg · 4-year avg"},
-              {label:"CBAM YTD",val:fmtM(totToday),sub:"Jan–Apr 28 · Q1 price + Q2 forecast"},
+              {label:"CBAM Exposure YTD",val:fmtM(totToday),sub:"Jan–Apr 28 · Q1 price + Q2 forecast"},
             ].map(({label,val,sub})=>(
               <div key={label} style={{background:"rgba(255,255,255,0.05)",borderRadius:4,padding:"12px 14px",border:`1px solid rgba(255,255,255,0.08)`}}>
                 <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:6}}>{label}</div>
@@ -684,7 +684,7 @@ const TERM_DEFS={
   dv:{title:"Default Value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one tonne of product into estimated tonnes of CO₂-equivalent.",source:"EU IR 2025/2621, Annex I (US-specific)"},
   markup:{title:"Mark-up / Phase-in %",def:"The penalty add-on in the default-value design. It nudges exporters toward submitting actual emissions data and grows over time for most sectors: 10% in 2026, 20% in 2027, and 30% in 2028. Fertilisers stay at 1% in this model.",source:"EU CBAM Implementing Regulation"},
   ets:{title:"EU ETS Carbon Price",def:"The carbon price used to turn embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the adjustable forecast so you can test different carbon-market assumptions.",source:"European Commission CBAM certificate price; adjustable dashboard forecast"},
-  fxrate:{title:"Exchange Rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.08 per euro, based on the 2024 average.",source:"European Central Bank (ECB) Statistical Data Warehouse — EUR/USD reference rates, 2024 annual average"},
+  fxrate:{title:"Exchange Rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.",source:"European Central Bank (ECB) Statistical Data Warehouse — EUR/USD reference rates, 2025 annual average"},
 };
 
 // ── INLINE SELECT (underline + arrow, no border) ─────────────────────────────
@@ -712,6 +712,7 @@ export default function V3App(){
   const [rangeEnd,setRangeEnd]=useState("today");
   const [vw,setVw]=useState(typeof window!=="undefined"?window.innerWidth:1280);
   useEffect(()=>{const h=()=>setVw(window.innerWidth);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
+  useEffect(()=>{const send=()=>window.parent.postMessage({cbam_height:document.documentElement.scrollHeight},"*");const ro=new ResizeObserver(send);ro.observe(document.body);send();return()=>ro.disconnect();},[]);
   const isMobile=vw<640;
   const isTablet=vw<1024;
   const [chartHover,setChartHover]=useState(null);
@@ -838,7 +839,7 @@ export default function V3App(){
   const cbamColumnLabel=activeTableYear
     ?(activeTableYear<2026
       ?`Hyp. CBAM in ${activeTableYear}`
-      :`CBAM exposure (est.) in ${activeTableYear}`)
+      :`Proj. CBAM exposure in ${activeTableYear}`)
     :"CBAM YTD";
 
   // Sector proportions for right panel
@@ -1097,7 +1098,7 @@ export default function V3App(){
             </table>
           </div>
           <div style={{padding:"6px 16px 8px",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
-            Click any sector row for CN-code breakdown. Hover the line chart to shift the tonnage and CBAM exposure columns by year. Projected trade uses 2022–25 monthly averages where live data is unavailable.
+            Click any sector row for CN-code breakdown. Hover the line chart to shift the data display by year. Projected trade uses 2022–25 monthly averages where live data is unavailable.
           </div>
         </div>
         {/* FORMULA */}
@@ -1120,7 +1121,7 @@ export default function V3App(){
               €{ets.toFixed(1)}/tCO₂e
             </span>
             <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>×</span>
-            <Term id="fxrate" label="$1.08 / €" hovered={hovered} setHovered={setHovered} color={N.teal400}/>
+            <Term id="fxrate" label="$1.13 / €" hovered={hovered} setHovered={setHovered} color={N.teal400}/>
           </div>
           <div
             onMouseEnter={()=>setHovered("ets")} onMouseLeave={()=>setHovered(null)}
