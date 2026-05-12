@@ -843,8 +843,8 @@ export default function V3App(){
   const displayTableTonnesTotal=displayTableRows.reduce((s,r)=>s+r.displayTonnes,0);
   const displayTableCbamTotal=displayTableRows.reduce((s,r)=>s+r.displayCbam,0);
   const tonnesColumnLabel=activeTableYear
-    ?`${activeTableYear>=2026?"Proj.":"Act."} ${activeTableYear} Tonnes`
-    :"Proj. 2026 Tonnes";
+    ?`${activeTableYear>=2026?"Projected":"Actual"} ${activeTableYear} Tonnes`
+    :"Projected 2026 Tonnes";
   const cbamColumnLabel=activeTableYear
     ?(activeTableYear<2026
       ?`Hyp. CBAM in ${activeTableYear}`
@@ -856,13 +856,21 @@ export default function V3App(){
     const yr=activeSectorYear;
     const items=SECTORS_LIST.map(sec=>{
       let cost;
-      if(yr){cost=sectorYearCost(sec,yr,ets,mergedTrade);}
-      else{const{cfQ1,cfApr}=ytdCostFactors[sec];cost=(cfQ1*Q1_ETS+cfApr*ets)*EUR_USD;}
+      if(yr){
+        cost=sectorYearCost(sec,yr,ets,mergedTrade);
+      } else if(rangeEnd!=="today"){
+        // Multi-year range: sum across selected years (ratios are range-independent)
+        let sum=0;
+        for(let y=rangeStart;y<=Number(rangeEnd);y++) sum+=sectorYearCost(sec,y,ets,mergedTrade);
+        cost=sum;
+      } else{
+        const{cfQ1,cfApr}=ytdCostFactors[sec];cost=(cfQ1*Q1_ETS+cfApr*ets)*EUR_USD;
+      }
       return{sec,cost};
     });
     const tot=items.reduce((s,d)=>s+d.cost,0);
     return items.map(d=>({...d,pct:tot>0?d.cost/tot*100:0})).sort((a,b)=>b.pct-a.pct);
-  },[ets,activeSectorYear,mergedTrade,ytdCostFactors]);
+  },[ets,activeSectorYear,mergedTrade,ytdCostFactors,rangeStart,rangeEnd]);
 
   // Mark-up phase-in % for table column
   const markupPct=(sec)=>{
@@ -1002,7 +1010,7 @@ export default function V3App(){
               <div style={isMobile?{display:"flex",gap:8}:{}}>
                 <div style={{flex:isMobile?"1 1 0":undefined,background:"rgba(255,255,255,0.06)",borderRadius:4,padding:"12px 14px",marginBottom:isMobile?0:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:4}}>
-                    <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>Q1 2026 (confirmed)</span>
+                    <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>Q1 2026 (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>confirmed</a>)</span>
                     <span style={{fontFamily:SERIF,fontSize:20,fontWeight:700,color:N.teal200}}>€{Q1_ETS.toFixed(2)}</span>
                   </div>
                   {!isMobile&&<div style={{fontSize:12,color:N.tealMid,marginTop:2}}>Official CBAM certificate price, EU Commission</div>}
@@ -1023,8 +1031,17 @@ export default function V3App(){
 
             {/* Sector breakdown */}
             <div>
-              <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>{activeSectorYear?`${activeSectorYear} `:"YTD "}CBAM Exposure by Sector</div>
-              <div style={{fontSize:12,color:N.tealMid,marginBottom:10}}>{activeSectorYear?(activeSectorYear<2026?`${activeSectorYear} hypothetical`:`${activeSectorYear} projected`):`YTD · ${YTD_LABEL}`} · at €{ets.toFixed(0)}</div>
+              <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>
+                {activeSectorYear?`${activeSectorYear} `:rangeEnd!=="today"?`${rangeStart}${Number(rangeEnd)>rangeStart?`–${rangeEnd}`:""} `:"YTD "}CBAM Exposure by Sector
+              </div>
+              <div style={{fontSize:12,color:N.tealMid,marginBottom:10}}>
+                {activeSectorYear
+                  ?(activeSectorYear<2026?`${activeSectorYear} hypothetical`:`${activeSectorYear} projected`)
+                  :rangeEnd!=="today"
+                    ?`${rangeStart}${Number(rangeEnd)>rangeStart?`–${rangeEnd}`:""} · sector mix`
+                    :`YTD · ${YTD_LABEL}`
+                } · at €{ets.toFixed(0)}
+              </div>
               {sectorAnnCosts.map(({sec,cost,pct})=>(
                 <div key={sec} style={{marginBottom:10,cursor:"pointer"}}
                   onMouseEnter={()=>setHoveredSector(sec)} onMouseLeave={()=>setHoveredSector(null)}>
