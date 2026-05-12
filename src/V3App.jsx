@@ -214,11 +214,16 @@ function getQtrEts(ym,forecastEts){const[y,m]=ym.split("-");const q=Math.ceil(pa
 
 const BASELINE_YEARS=["2022","2023","2024","2025"];
 const YTD_YEAR="2026";
-const YTD_FULL_MONTHS=["01","02","03"];
-const YTD_PARTIAL_MONTH="04";
-const YTD_PARTIAL_MONTH_FRACTION=28/30;
+// Dynamic YTD: Jan 1 → today. Actual Comext data used where confirmed; 2022-25 avg otherwise.
+const _td=new Date(),_tdMo=_td.getMonth(),_tdDay=_td.getDate();
+const _tdDIM=new Date(_td.getFullYear(),_tdMo+1,0).getDate();
+const _MO_ABB=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const YTD_FULL_MONTHS=Array.from({length:_tdMo},(_,i)=>String(i+1).padStart(2,"0"));
+const YTD_PARTIAL_MONTH=String(_tdMo+1).padStart(2,"0");
+const YTD_PARTIAL_FRACTION=_tdDay/_tdDIM;
 const YTD_MONTHS=[...YTD_FULL_MONTHS,YTD_PARTIAL_MONTH];
-function ytdMonthFraction(mo){return mo===YTD_PARTIAL_MONTH?YTD_PARTIAL_MONTH_FRACTION:1;}
+const YTD_LABEL=`Jan–${_MO_ABB[_tdMo]} ${_tdDay}`;
+function ytdMonthFraction(mo){return mo===YTD_PARTIAL_MONTH?YTD_PARTIAL_FRACTION:1;}
 function ytdAvgEur(cn){
   let sum=0;
   for(const yr of BASELINE_YEARS){
@@ -236,8 +241,8 @@ function ytdCostFactorsForRows(rows,liveEntries=null){
     for(const mo of YTD_MONTHS){
       const liveT=liveEntries?.[k]?.[`${YTD_YEAR}-${mo}`]?.[0];
       const tonnes=(liveT>0?liveT:avgMonthTonnes(d.cn,mo))*ytdMonthFraction(mo);
-      if(YTD_FULL_MONTHS.includes(mo))cfQ1+=tonnes*mv;
-      else cfApr+=tonnes*mv;
+      if(mo<="03")cfQ1+=tonnes*mv; // Q1 2026: official CBAM cert price
+      else cfApr+=tonnes*mv;        // post-Q1: adjustable forecast
     }
   }
   return{cfQ1,cfApr};
@@ -306,7 +311,7 @@ function sectorYearTonnes(sec,yr,liveEntries=null){
 const DATA_CUTOFF_YM="2026-01";
 const CBAM_IDX=48; // Jan 2026 index in CHART_DATA (0 = 2022-01)
 const CUT_IDX=48;  // same as CBAM_IDX while only Jan 2026 is confirmed
-const TODAY_IDX=Math.round(48+3+YTD_PARTIAL_MONTH_FRACTION); // ~Apr 2026
+const TODAY_IDX=Math.round(48+_tdMo+_tdDay/_tdDIM);
 
 const MONTH_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -469,16 +474,17 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
 }
 
 // ── FORMULA TERM COMPONENT ────────────────────────────────────────────────────
-function Term({id,label,hovered,setHovered,color,style={}}){
-  const active=hovered===id;
+function Term({id,label,hovered,setHovered,pinnedTerm,setPinnedTerm,color,style={}}){
+  const active=hovered===id||pinnedTerm===id;
   return(
     <span
       tabIndex={0} role="button" aria-pressed={active} aria-label={label}
-      style={{display:"inline-flex",alignItems:"center",minHeight:36,cursor:"pointer",borderRadius:4,padding:"4px 10px",border:`2px solid ${active?color:N.tealLight}`,background:active?"rgba(255,255,255,0.12)":"transparent",color:active?color:N.white,transition:"all 0.15s",...style}}
+      style={{display:"inline-flex",alignItems:"center",minHeight:32,cursor:"pointer",borderRadius:4,padding:"4px 10px",border:`2px solid ${active?color:N.tealLight}`,background:active?"rgba(255,255,255,0.12)":"transparent",color:active?color:N.white,transition:"all 0.15s",...style}}
       onMouseEnter={()=>setHovered(id)} onMouseLeave={()=>setHovered(null)}
       onFocus={()=>setHovered(id)} onBlur={()=>setHovered(null)}
+      onClick={()=>setPinnedTerm(p=>p===id?null:id)}
     >
-      <span style={{fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,letterSpacing:0,lineHeight:1.1}}>{label}</span>
+      <span style={{fontFamily:SERIF,fontSize:"clamp(14px,2vw,24px)",fontWeight:700,letterSpacing:0,lineHeight:1.1}}>{label}</span>
     </span>
   );
 }
@@ -594,8 +600,8 @@ function SectorModal({sec,ets,liveEntries,onClose}){
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
             {[
               {label:"Proj. Annual Tonnes",val:fmtKt(totT),sub:"2022–25 avg basis"},
-              {label:"YTD Avg Trade Value",val:fmtM(totYtd),sub:"Jan–Apr avg · 4-year avg"},
-              {label:"CBAM Exposure YTD",val:fmtM(totToday),sub:"Jan–Apr 28 · Q1 price + Q2 forecast"},
+              {label:"YTD Avg Trade Value",val:fmtM(totYtd),sub:`${YTD_LABEL} avg · 4-year avg`},
+              {label:"CBAM Exposure YTD",val:fmtM(totToday),sub:`${YTD_LABEL} · Q1 price + forecast`},
             ].map(({label,val,sub})=>(
               <div key={label} style={{background:"rgba(255,255,255,0.05)",borderRadius:4,padding:"12px 14px",border:`1px solid rgba(255,255,255,0.08)`}}>
                 <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:6}}>{label}</div>
@@ -669,7 +675,7 @@ function SectorModal({sec,ets,liveEntries,onClose}){
             </table>
           </div>
           <div style={{marginTop:8,fontFamily:SANS,fontSize:11,color:N.tealMid}}>
-            Sorted by CBAM exposure. YTD = Jan–Apr 28, 2026 partial. Jan growth compares Jan 2026 vs Jan 2025. Trajectory uses €{ets.toFixed(0)}/tCO₂e for all months (indicative).
+            Sorted by CBAM exposure. YTD = {YTD_LABEL}, 2026. Confirmed Comext months use actual data; remaining months use 2022–25 avg. Trajectory uses €{ets.toFixed(0)}/tCO₂e for all months (indicative).
           </div>
         </div>
       </div>
@@ -679,12 +685,13 @@ function SectorModal({sec,ets,liveEntries,onClose}){
 
 
 // ── TERM DEFINITIONS FOR FORMULA PANEL ──────────────────────────────────────
+const LS={color:N.teal200,textDecoration:"underline"};
 const TERM_DEFS={
-  tonnes:{title:"Exported Tonnes",def:"How much CBAM-covered product the US ships to the EU. Past years use reported Comext tonnage; future and not-yet-confirmed months use the 2022–25 monthly average as the trade baseline.",source:"Eurostat Comext DS-045409"},
-  dv:{title:"Default Value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one tonne of product into estimated tonnes of CO₂-equivalent.",source:"EU IR 2025/2621, Annex I (US-specific)"},
-  markup:{title:"Mark-up / Phase-in %",def:"The penalty add-on in the default-value design. It nudges exporters toward submitting actual emissions data and grows over time for most sectors: 10% in 2026, 20% in 2027, and 30% in 2028. Fertilisers stay at 1% in this model.",source:"EU CBAM Implementing Regulation"},
-  ets:{title:"EU ETS Carbon Price",def:"The carbon price used to turn embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the adjustable forecast so you can test different carbon-market assumptions.",source:"European Commission CBAM certificate price; adjustable dashboard forecast"},
-  fxrate:{title:"Exchange Rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.",source:"European Central Bank (ECB) Statistical Data Warehouse — EUR/USD reference rates, 2025 annual average"},
+  tonnes:{title:"Exported Tonnes",def:"How much CBAM-covered product the US ships to the EU. Past years use reported Comext tonnage; future and not-yet-confirmed months use the 2022–25 monthly average as the trade baseline.",source:<>Source: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Comext database</a>, which publishes monthly with a six-to-eight week lag.</>},
+  dv:{title:"Default Value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one tonne of product into estimated tonnes of CO₂-equivalent.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
+  markup:{title:"Mark-up / Phase-in %",def:"The penalty add-on in the default-value design. It nudges exporters toward submitting actual emissions data and grows over time for most sectors: 10% in 2026, 20% in 2027, and 30% in 2028. Fertilisers stay at 1% in this model.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
+  ets:{title:"EU ETS Carbon Price",def:"The carbon price used to turn embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the adjustable forecast so you can test different carbon-market assumptions.",source:<>Source: <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={LS}>CBAM certificate price</a>.</>},
+  fxrate:{title:"Exchange Rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.",source:"Source: European Central Bank (ECB) Statistical Data Warehouse"},
 };
 
 // ── INLINE SELECT (underline + arrow, no border) ─────────────────────────────
@@ -708,6 +715,7 @@ function InlineSelect({value,onChange,options,color}){
 export default function V3App(){
   const [ets,setEts]=useState(ETS_PRICES.default||75.36);
   const [hovered,setHovered]=useState(null);
+  const [pinnedTerm,setPinnedTerm]=useState(null);
   const [rangeStart,setRangeStart]=useState(2026);
   const [rangeEnd,setRangeEnd]=useState("today");
   const [vw,setVw]=useState(typeof window!=="undefined"?window.innerWidth:1280);
@@ -720,6 +728,7 @@ export default function V3App(){
   const [chartPinnedYear,setChartPinnedYear]=useState(null);
   const [hoveredSector,setHoveredSector]=useState(null);
   const [selectedSector,setSelectedSector]=useState(null);
+  const [hoveredRow,setHoveredRow]=useState(null);
 
   // ── LIVE COMEXT FETCH ────────────────────────────────────────────────────────
   const [liveData,setLiveData]=useState(null);
@@ -892,7 +901,14 @@ export default function V3App(){
   },[rangeStart,rangeEnd,ets,totTaxToday]);
 
     // Column highlight from formula hover
-  const colHl=col=>hovered===col?{background:`${N.teal600}22`,outline:`1.5px solid ${N.teal600}`}:{};
+  const colHl=(col,pos='mid')=>{
+    if(hovered!==col)return{};
+    const c=N.teal600,bg={background:`${c}22`};
+    const lr=`inset 2px 0 0 0 ${c}, inset -2px 0 0 0 ${c}`;
+    if(pos==='top')return{...bg,boxShadow:`${lr}, inset 0 2px 0 0 ${c}`};
+    if(pos==='bot')return{...bg,boxShadow:`${lr}, inset 0 -2px 0 0 ${c}`};
+    return{...bg,boxShadow:lr};
+  };
 
   const handleChartHover=useCallback((info)=>{
     if(!chartHoverPinned)setChartHover(info);
@@ -925,10 +941,10 @@ export default function V3App(){
         {/* MOBILE-ONLY: title at top */}
         {isMobile&&(
           <div style={{padding:"14px 16px 10px",borderBottom:`1px solid ${N.teal800}`}}>
-            <div style={{fontFamily:SANS,fontSize:16,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Dashboard <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
-            <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated costs for US exporters under the EU CBAM default values</div>
-            <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. <span style={{color:N.orange400,fontWeight:800}}>Forgone revenue</span> for the federal government</div>
-            <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid}}>Author: Jia-Shen Tsai, Niskanen Center</div>
+            <div style={{fontFamily:SANS,fontSize:20,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Dashboard <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
+            <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated costs for US exporters under the EU CBAM default values</div>
+            <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. <span style={{color:N.orange400,fontWeight:800}}>Forgone revenue</span> for the federal government</div>
+            <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid}}>Author: Jia-Shen Tsai, Niskanen Center</div>
           </div>
         )}
 
@@ -955,7 +971,7 @@ export default function V3App(){
               <span style={{color:N.orange500,whiteSpace:"nowrap"}}>{chartHover?chartHover.hlAmt:hlAmt}</span>{" "}
               to the EU
             </div>
-            <div style={{margin:"0 0 8px",fontFamily:SANS,fontSize:isMobile?14:"clamp(18px,2vw,23px)",fontWeight:400,lineHeight:1.4,color:N.tealMid}}>
+            <div style={{margin:"0 0 8px",fontFamily:SANS,fontSize:isMobile?20:"clamp(18px,2vw,23px)",fontWeight:400,lineHeight:1.4,color:N.tealMid}}>
               for exporting emission&#8209;intensive products.
             </div>
             <div style={{marginTop:"auto"}}>
@@ -1008,7 +1024,7 @@ export default function V3App(){
             {/* Sector breakdown */}
             <div>
               <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>{activeSectorYear?`${activeSectorYear} `:"YTD "}CBAM Exposure by Sector</div>
-              <div style={{fontSize:12,color:N.tealMid,marginBottom:10}}>{activeSectorYear?(activeSectorYear<2026?`${activeSectorYear} hypothetical`:`${activeSectorYear} projected`):"YTD · Jan–Apr 28"} · at €{ets.toFixed(0)}</div>
+              <div style={{fontSize:12,color:N.tealMid,marginBottom:10}}>{activeSectorYear?(activeSectorYear<2026?`${activeSectorYear} hypothetical`:`${activeSectorYear} projected`):`YTD · ${YTD_LABEL}`} · at €{ets.toFixed(0)}</div>
               {sectorAnnCosts.map(({sec,cost,pct})=>(
                 <div key={sec} style={{marginBottom:10,cursor:"pointer"}}
                   onMouseEnter={()=>setHoveredSector(sec)} onMouseLeave={()=>setHoveredSector(null)}>
@@ -1047,32 +1063,39 @@ export default function V3App(){
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",minWidth:isMobile?520:860,borderCollapse:"collapse",fontFamily:SANS,fontSize:isMobile?13:15,tableLayout:"fixed"}}>
               <colgroup>
-                <col style={{width:"20%"}}/>
-                <col style={{width:"20%"}}/>
-                <col style={{width:"20%"}}/>
-                <col style={{width:"12%"}}/>
                 <col style={{width:"22%"}}/>
-                <col style={{width:"6%"}}/>
+                <col style={{width:"20%"}}/>
+                <col style={{width:"20%"}}/>
+                <col style={{width:"14%"}}/>
+                <col style={{width:"24%"}}/>
               </colgroup>
               <thead>
                 <tr style={{background:N.teal900,color:N.white,verticalAlign:"bottom"}}>
                   <th style={{padding:isMobile?"8px 8px":"8px 12px",textAlign:"left",fontWeight:700,fontSize:isMobile?13:16}}>Sector</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("tonnes")}}>{tonnesColumnLabel}</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("dv")}}>Default Value<br/>(tCO₂e/t)</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("markup")}}>Mark-up %</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("tonnes","top")}}>{tonnesColumnLabel}</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("dv","top")}}>Default Value<br/>(tCO₂e/t)</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("markup","top")}}>Mark-up %</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>{cbamColumnLabel}</th>
-                  <th style={{padding:"8px 8px",color:N.tealMid,fontSize:isMobile?12:14,textAlign:"center"}}>detail</th>
                 </tr>
               </thead>
               <tbody>
-                {displayTableRows.map((r,i)=>(
+                {displayTableRows.map((r,i)=>{
+                  const isLast=i===displayTableRows.length-1;
+                  const pos=isLast?"bot":"mid";
+                  return(
                   <tr key={r.sec} tabIndex={0} role="button" aria-label={`Open ${r.sec} sector detail`}
                     style={{background:i%2===0?N.white:N.tealPale,borderBottom:`1px solid ${N.tealLight}`,cursor:"pointer"}}
                     onClick={()=>setSelectedSector(r.sec)}
+                    onMouseEnter={()=>setHoveredRow(i)} onMouseLeave={()=>setHoveredRow(null)}
                     onKeyDown={e=>(e.key==="Enter"||e.key===" ")&&(e.preventDefault(),setSelectedSector(r.sec))}>
-                    <td style={{padding:isMobile?"9px 8px":"9px 12px",fontSize:isMobile?14:17,fontWeight:800,color:SC[r.sec],borderLeft:`4px solid ${SC[r.sec]}`,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.sec}</td>
-                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:isMobile?13:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",...colHl("tonnes")}}>{fmtT(r.displayTonnes)}</td>
-                    <td style={{padding:"9px 8px",color:N.teal800,textAlign:"right",...colHl("dv")}}>
+                    <td style={{padding:isMobile?"9px 8px":"9px 12px",fontSize:isMobile?14:17,fontWeight:800,color:SC[r.sec],borderLeft:`4px solid ${SC[r.sec]}`}}>
+                      <span style={{display:"flex",alignItems:"center",overflow:"hidden",whiteSpace:"nowrap"}}>
+                        <span style={{overflow:"hidden",textOverflow:"ellipsis"}}>{r.sec}</span>
+                        <span style={{flexShrink:0,opacity:hoveredRow===i?1:0,transition:"opacity 0.15s",fontSize:10,lineHeight:1,marginLeft:5,color:SC[r.sec]}} aria-hidden="true">▶︎</span>
+                      </span>
+                    </td>
+                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:isMobile?13:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",...colHl("tonnes",pos)}}>{fmtT(r.displayTonnes)}</td>
+                    <td style={{padding:"9px 8px",color:N.teal800,textAlign:"right",...colHl("dv",pos)}}>
                       {isMobile?(
                         <span style={{fontSize:13,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums"}}>{r.wDv>0?r.wDv.toFixed(3):"—"}</span>
                       ):(
@@ -1082,17 +1105,16 @@ export default function V3App(){
                         </span>
                       )}
                     </td>
-                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:isMobile?13:16,fontWeight:700,color:N.teal800,...colHl("markup")}}>{markupPct(r.sec)}</td>
+                    <td style={{padding:"9px 8px",textAlign:"right",fontSize:isMobile?13:16,fontWeight:700,color:N.teal800,...colHl("markup",pos)}}>{markupPct(r.sec)}</td>
                     <td style={{padding:"9px 8px",textAlign:"right",fontSize:isMobile?13:16,fontWeight:800,color:N.teal800,borderLeft:`3px solid ${N.tealLight}`,background:"rgba(61,131,151,0.04)",fontVariantNumeric:"tabular-nums"}}>{fmtM(r.displayCbam)}</td>
-                    <td style={{padding:"9px 8px",textAlign:"center",color:N.teal800,fontSize:isMobile?13:16}} aria-hidden="true">›</td>
                   </tr>
-                ))}
+                  );
+                })}
                 <tr style={{background:N.teal900,color:N.white,fontWeight:700}}>
                   <td style={{padding:"9px 12px",fontSize:16}}>Total</td>
                   <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontVariantNumeric:"tabular-nums"}}>{fmtT(displayTableTonnesTotal)}</td>
                   <td colSpan={2} style={{padding:"9px 8px",textAlign:"center",color:N.tealMid,fontSize:13}}>(weighted avg)</td>
                   <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,borderLeft:`3px solid rgba(125,206,218,0.25)`,fontVariantNumeric:"tabular-nums"}}>{fmtM(displayTableCbamTotal)}</td>
-                  <td/>
                 </tr>
               </tbody>
             </table>
@@ -1105,43 +1127,35 @@ export default function V3App(){
         <div style={{background:N.teal900,padding:isMobile?"24px 16px 60px":"32px 28px 72px",position:"relative"}}>
           <div style={{fontFamily:SANS,fontSize:12,fontWeight:700,letterSpacing:"0.12em",color:N.teal400,textTransform:"uppercase",marginBottom:16}}>CBAM Cost Formula</div>
           <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"10px 8px",userSelect:"none"}}>
-            <span style={{fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,color:N.teal200}}>CBAM Cost ($)</span>
-            <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>=</span>
-            <Term id="tonnes" label="Exported Tonnes" hovered={hovered} setHovered={setHovered} color={N.teal400}/>
-            <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>×</span>
-            <Term id="dv" label="Default Value (tCO₂e/t)" hovered={hovered} setHovered={setHovered} color={N.teal400}/>
-            <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>×</span>
-            <Term id="markup" label="(1 + Mark-up)" hovered={hovered} setHovered={setHovered} color={N.teal400}/>
-            <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>×</span>
+            <span style={{fontFamily:SERIF,fontSize:"clamp(14px,2vw,24px)",fontWeight:700,color:N.teal200}}>CBAM Cost ($)</span>
+            <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>=</span>
+            <Term id="tonnes" label="Exported Tonnes" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
+            <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>×</span>
+            <Term id="dv" label="Default Value (tCO₂e/t)" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
+            <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>×</span>
+            <Term id="markup" label="(1 + Mark-up)" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
+            <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>×</span>
             <span
-              tabIndex={0} role="button" aria-pressed={hovered==="ets"} aria-label="EU ETS carbon price"
+              tabIndex={0} role="button" aria-pressed={hovered==="ets"||pinnedTerm==="ets"} aria-label="EU ETS carbon price"
               onMouseEnter={()=>setHovered("ets")} onMouseLeave={()=>setHovered(null)}
               onFocus={()=>setHovered("ets")} onBlur={()=>setHovered(null)}
-              style={{display:"inline-flex",alignItems:"center",minHeight:36,cursor:"pointer",fontFamily:SERIF,fontSize:"clamp(16px,2vw,26px)",fontWeight:700,lineHeight:1.1,color:hovered==="ets"?N.white:N.orange400,background:hovered==="ets"?"rgba(241,125,58,0.18)":"rgba(241,125,58,0.1)",borderRadius:4,padding:"4px 10px",border:`2px solid ${N.orange400}`}}>
+              onClick={()=>setPinnedTerm(p=>p==="ets"?null:"ets")}
+              style={{display:"inline-flex",alignItems:"center",minHeight:32,cursor:"pointer",fontFamily:SERIF,fontSize:"clamp(14px,2vw,24px)",fontWeight:700,lineHeight:1.1,color:(hovered==="ets"||pinnedTerm==="ets")?N.white:N.orange400,background:(hovered==="ets"||pinnedTerm==="ets")?"rgba(241,125,58,0.18)":"rgba(241,125,58,0.1)",borderRadius:4,padding:"4px 10px",border:`2px solid ${N.orange400}`}}>
               €{ets.toFixed(1)}/tCO₂e
             </span>
-            <span style={{fontFamily:SANS,fontSize:20,color:N.tealMid,fontWeight:300}}>×</span>
-            <Term id="fxrate" label="$1.13 / €" hovered={hovered} setHovered={setHovered} color={N.teal400}/>
-          </div>
-          <div
-            onMouseEnter={()=>setHovered("ets")} onMouseLeave={()=>setHovered(null)}
-            onFocusCapture={()=>setHovered("ets")} onBlurCapture={()=>setHovered(null)}
-            style={{marginTop:12,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",fontFamily:SANS}}>
-            <input type="range" min={30} max={130} value={ets} onChange={e=>setEts(+e.target.value)}
-              aria-label="Adjust EU ETS carbon price"
-              style={{width:isMobile?"min(220px,100%)":180,accentColor:N.orange400,cursor:"pointer"}}/>
-            <span style={{fontSize:11,color:N.tealMid,whiteSpace:"nowrap"}}>ETS Price - drag to adjust</span>
+            <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>×</span>
+            <Term id="fxrate" label="$1.13 / €" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
           </div>
           <div style={{marginTop:16,borderTop:`1px solid rgba(255,255,255,0.1)`,paddingTop:12,minHeight:76,fontFamily:SANS}}>
-            {hovered&&TERM_DEFS[hovered]?(
+            {(()=>{const active=hovered||pinnedTerm;return active&&TERM_DEFS[active]?(
               <div>
-                <div style={{fontSize:11,color:N.teal400,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>{TERM_DEFS[hovered].title}</div>
-                <div style={{fontSize:13,color:N.tealLight,lineHeight:1.55,maxWidth:700}}>{TERM_DEFS[hovered].def}</div>
-                <div style={{fontSize:11,color:N.tealMid,marginTop:6}}>Source: {TERM_DEFS[hovered].source}</div>
+                <div style={{fontSize:11,color:N.teal400,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>{TERM_DEFS[active].title}</div>
+                <div style={{fontSize:13,color:N.tealLight,lineHeight:1.55,maxWidth:700}}>{TERM_DEFS[active].def}</div>
+                <div style={{fontSize:11,color:N.tealMid,marginTop:6}}>{TERM_DEFS[active].source}</div>
               </div>
             ):(
-              <div style={{fontSize:13,color:N.tealMid,fontStyle:"italic"}}>Hover a term above to see its definition and data source.</div>
-            )}
+              <div style={{fontSize:13,color:N.tealMid,fontStyle:"italic"}}>Hover a term to preview its definition. Click to keep it open.</div>
+            );})()}
           </div>
         </div>
 
