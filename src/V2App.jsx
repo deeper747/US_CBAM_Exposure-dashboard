@@ -456,11 +456,11 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
         )}
         {/* Cumulative CBAM cost from Jan 2026 — clipped at chart top, drawn behind main lines */}
         {cumD&&<path d={cumD} fill="none" stroke={N.teal200} strokeWidth={4} strokeLinejoin="round" opacity={0.35} clipPath="url(#cum-clip)"/>}
-        {cumD&&cumStart<=visibleEndIdx&&(()=>{const labelIdx=Math.min(cumStart+5,visibleEndIdx);return(
-          <text x={xp(labelIdx-visibleStartIdx)+6} y={ypRaw(cumValues[labelIdx])-10}
+        {cumD&&(()=>{const labelIdx=Math.min(CBAM_IDX+15,visibleEndIdx);return labelIdx>=visibleStartIdx?(
+          <text x={xp(labelIdx-visibleStartIdx)+8} y={pad.t+14}
             fill={N.teal200} fontSize={11} fontFamily={SANS} fontWeight={700} opacity={0.6}
             stroke={N.teal900} strokeWidth={4} paintOrder="stroke" pointerEvents="none">Cumulative CBAM cost</text>
-        );})()}
+        ):null;})()}
         {/* Forecast dashed (drawn first, solid on top) */}
         {foreD&&<path d={foreD} fill="none" stroke={N.teal600} strokeWidth={4.1} strokeLinejoin="round" strokeDasharray="16,10" opacity={0.75}/>}
         {/* Historical dashed */}
