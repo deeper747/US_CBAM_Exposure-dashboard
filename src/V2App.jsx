@@ -325,9 +325,16 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
   const visibleEndIdx=afterEndIdx===-1?points.length-1:Math.max(visibleStartIdx,afterEndIdx-1);
   const visiblePoints=points.slice(visibleStartIdx,visibleEndIdx+1);
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b,n=visiblePoints.length;
-  const maxY=Math.max(...visiblePoints.map(p=>p.v),0.01)*1.15;
+  const cumValues=useMemo(()=>{
+    const arr=new Array(points.length).fill(0);
+    let running=0;
+    for(let i=CBAM_IDX;i<points.length;i++){running+=points[i].v;arr[i]=running;}
+    return arr;
+  },[points]);
+  const maxY=500;
   const xp=i=>pad.l+(n<=1?0:i/(n-1)*cW);
   const yp=v=>pad.t+cH*(1-Math.min(v/maxY,1));
+  const ypRaw=v=>pad.t+cH*(1-v/maxY); // unclamped — used with clipPath for cumulative line
   const idxFromClientX=useCallback((clientX)=>{
     const svg=svgRef.current;if(!svg||!n)return null;
     const rect=svg.getBoundingClientRect();
@@ -344,16 +351,6 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
     }
     return totals;
   },[points]);
-
-  // Cumulative CBAM cost accumulating from Jan 2026 onward
-  const cumValues=useMemo(()=>{
-    const arr=new Array(points.length).fill(0);
-    let running=0;
-    for(let i=CBAM_IDX;i<points.length;i++){running+=points[i].v;arr[i]=running;}
-    return arr;
-  },[points]);
-  const maxCum=cumValues[points.length-1]||1;
-  const ypCum=v=>pad.t+cH*(1-Math.min(v/maxCum,1));
 
   const getTooltip=useCallback((idx)=>{
     const p=points[idx];
@@ -414,7 +411,7 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
   const cumStart=Math.max(CBAM_IDX,visibleStartIdx);
   const cumD=cumStart<=visibleEndIdx?points.slice(cumStart,visibleEndIdx+1).map((p,i)=>{
     const idx=cumStart+i;
-    return`${i===0?"M":"L"}${xp(idx-visibleStartIdx).toFixed(1)},${ypCum(cumValues[idx]).toFixed(1)}`;
+    return`${i===0?"M":"L"}${xp(idx-visibleStartIdx).toFixed(1)},${ypRaw(cumValues[idx]).toFixed(1)}`;
   }).join(" "):null;
 
   const cbamX=CBAM_IDX>=visibleStartIdx&&CBAM_IDX<=visibleEndIdx?xp(CBAM_IDX-visibleStartIdx):null;
@@ -438,6 +435,7 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block",cursor:"crosshair"}}
            role="img" aria-label="Line chart showing estimated monthly CBAM costs for US exports to the EU from mid-2024 through 2028. On-chart labels distinguish estimates based on historic trade, confirmed trade, and projected data. Hover or click to explore by month or year."
            onMouseMove={handleMouseMove} onMouseLeave={()=>{setHov(null);if(onChartLeave)onChartLeave();}} onClick={handleClick}>
+        <defs><clipPath id="cum-clip"><rect x={pad.l} y={pad.t} width={cW} height={cH}/></clipPath></defs>
         <title>US CBAM Exposure — Estimated Monthly Cost, 2024–2028</title>
         <text x={pad.l+3} y={260} fill={N.tealLight} fontSize={12} fontFamily={SANS} fontWeight={700} letterSpacing={0}>
           Estimated CBAM cost based on
@@ -456,8 +454,13 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
             <text x={todayX+7} y={pad.t+34} fill={N.teal400} fontSize={14} fontFamily={SANS} fontWeight={700}>Today</text>
           </>
         )}
-        {/* Cumulative CBAM cost from Jan 2026 — secondary scale, drawn behind main lines */}
-        {cumD&&<path d={cumD} fill="none" stroke={N.teal200} strokeWidth={1.8} strokeLinejoin="round" opacity={0.35}/>}
+        {/* Cumulative CBAM cost from Jan 2026 — clipped at chart top, drawn behind main lines */}
+        {cumD&&<path d={cumD} fill="none" stroke={N.teal200} strokeWidth={4} strokeLinejoin="round" opacity={0.35} clipPath="url(#cum-clip)"/>}
+        {cumD&&cumStart<=visibleEndIdx&&(()=>{const labelIdx=Math.min(cumStart+5,visibleEndIdx);return(
+          <text x={xp(labelIdx-visibleStartIdx)+6} y={ypRaw(cumValues[labelIdx])-10}
+            fill={N.teal200} fontSize={11} fontFamily={SANS} fontWeight={700} opacity={0.6}
+            stroke={N.teal900} strokeWidth={4} paintOrder="stroke" pointerEvents="none">Cumulative CBAM cost</text>
+        );})()}
         {/* Forecast dashed (drawn first, solid on top) */}
         {foreD&&<path d={foreD} fill="none" stroke={N.teal600} strokeWidth={4.1} strokeLinejoin="round" strokeDasharray="16,10" opacity={0.75}/>}
         {/* Historical dashed */}
