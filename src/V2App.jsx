@@ -8,9 +8,11 @@ const SERIF="'Neuton',Georgia,serif";
 const SANS="'Hanken Grotesk','Inter',sans-serif";
 const EUR_USD=1.13;
 const Q1_ETS=ETS_PRICES.quarterly["2026-Q1"]||75.36;
-const SECTORS_LIST=["Iron & Steel","Aluminium","Cement","Fertilisers","Hydrogen"];
-const SC={"Iron & Steel":"#5b8ca8","Aluminium":"#348397","Cement":"#194852","Fertilisers":"#709628","Hydrogen":"#8655b2"};
-const SCL={"Iron & Steel":"#78a0a3","Aluminium":"#b7f6fc","Cement":"#fef0c7","Fertilisers":"#D7f881","Hydrogen":"#e0c6fc"};
+const FORECAST_FROM="Apr 2026";         // ← update together when next quarter is confirmed
+const ETS_CONFIRMED_THROUGH="Mar 2026"; // ← update together with FORECAST_FROM
+const SECTORS_LIST=["Iron & Steel","Aluminum","Cement","Fertilizers","Hydrogen"];
+const SC={"Iron & Steel":"#b05c38","Aluminum":"#348397","Cement":"#bca45e","Fertilizers":"#709628","Hydrogen":"#8655b2"};
+const SCL={"Iron & Steel":"#f0c4a8","Aluminum":"#b7f6fc","Cement":"#fef0c7","Fertilizers":"#D7f881","Hydrogen":"#e0c6fc"};
 const fmtM=n=>{if(!n&&n!==0)return"—";const a=Math.abs(n);if(a>=1e9)return`$${(n/1e9).toFixed(2)}B`;if(a>=1e6)return`$${(n/1e6).toFixed(1)}M`;return`$${Math.round(n).toLocaleString()}`;};
 const fmtKt=n=>n?`${(n/1000).toFixed(0)}kt`:"—";
 const fmtT=n=>n==null?"—":Math.round(n).toLocaleString("en-US");
@@ -51,54 +53,54 @@ const RAW=[
   ["2523 90 00","White hydraulic cements","Cement","1,290","0,160","1,450","1,595","1,740","1,885","B"],
   ["2523 90 00","Grey hydraulic cements","Cement","1,100","0,060","1,160","1,276","1,392","1,508","A"],
   ["2523 30 00","Aluminous cement","Cement","1,800","0,140","1,940","2,134","2,328","2,522",""],
-  ["2808 00 00","Nitric acid","Fertilisers","1,870","0,030","1,900","1,919","1,919","1,919",""],
-  ["2814 10 00","Anhydrous ammonia","Fertilisers","3,320","0,090","3,410","3,444","3,444","3,444",""],
-  ["2814 20 00","Ammonia in aqueous solution","Fertilisers","1","0,030","1,020","1,030","1,030","1,030",""],
-  ["2834 21 00","Nitrate of potassium","Fertilisers","1,860","0,040","1,910","1,929","1,929","1,929",""],
-  ["3102 10 12","Urea aq. sol. >45%N, 31.8–33.2%","Fertilisers","0,740","0,020","0,760","0,768","0,768","0,768",""],
-  ["3102 10 15","Urea aq. sol. >45%N, 33.2–55%","Fertilisers","1,220","0,020","1,240","1,252","1,252","1,252",""],
-  ["3102 10 19","Urea >45%N solid","Fertilisers","2,220","0,070","2,290","2,313","2,313","2,313",""],
-  ["3102 10 90","Urea ≤45%N","Fertilisers","2,170","0,070","2,240","2,262","2,262","2,262",""],
-  ["3102 21 00","Ammonium sulphate","Fertilisers","0,970","0,060","1,030","1,040","1,040","1,040",""],
-  ["3102 29 00","Double salts: ammonium sulphate/nitrate","Fertilisers","1,460","0,060","1,530","1,545","1,545","1,545",""],
-  ["3102 30 10","Ammonium nitrate aqueous","Fertilisers","1,430","0,050","1,470","1,485","1,485","1,485",""],
-  ["3102 30 90","Ammonium nitrate solid","Fertilisers","2,190","0,070","2,270","2,293","2,293","2,293",""],
-  ["3102 40 10","AN+CaCO₃ ≤28%N","Fertilisers","1,910","0,070","1,980","2","2","2",""],
-  ["3102 40 90","AN+CaCO₃ >28%N","Fertilisers","1,910","0,070","1,980","2","2","2",""],
-  ["3102 50 00","Sodium nitrate","Fertilisers","2,920","0,050","2,970","3","3","3",""],
-  ["3102 60 00","Calcium nitrate/ammonium nitrate mix","Fertilisers","1,840","0,060","1,910","1,929","1,929","1,929",""],
-  ["3102 80 00","UAN solution","Fertilisers","1,680","0,060","1,740","1,757","1,757","1,757",""],
-  ["3102 90 00","Other N-fertilisers","Fertilisers","1,950","0,070","2,020","2,040","2,040","2,040",""],
-  ["3105 10 00","NPK packaged ≤10kg","Fertilisers","0,900","0,060","0,960","0,970","0,970","0,970",""],
-  ["3105 20 10","NPK >10%N","Fertilisers","1","0,070","1,060","1,071","1,071","1,071",""],
-  ["3105 20 90","NPK ≤10%N","Fertilisers","0,680","0,050","0,740","0,747","0,747","0,747",""],
-  ["3105 30 00","DAP","Fertilisers","0,780","0,040","0,820","0,828","0,828","0,828",""],
-  ["3105 40 00","MAP","Fertilisers","0,500","0,030","0,530","0,535","0,535","0,535",""],
-  ["3105 51 00","NP nitrates+phosphates","Fertilisers","1,340","0,090","1,420","1,434","1,434","1,434",""],
-  ["3105 59 00","NP other","Fertilisers","0,900","0,100","1,010","1,020","1,020","1,020",""],
-  ["3105 90 20","NK >10%N","Fertilisers","1,280","0,050","1,340","1,353","1,353","1,353",""],
-  ["3105 90 80","NK ≤10%N","Fertilisers","0,670","0,040","0,710","0,717","0,717","0,717",""],
-  ["7601","Unwrought aluminium","Aluminium","1,700",null,"1,700","1,870","2,040","2,210","K"],
-  ["7603","Al powders and flakes","Aluminium","2,032",null,"2,032","2,235","2,439","2,642","K"],
-  ["7604 10 10","Al bars and rods","Aluminium","2,258",null,"2,258","2,484","2,709","2,935","K"],
-  ["7604 10 90","Al profiles","Aluminium","2,278",null,"2,278","2,506","2,734","2,962","K"],
-  ["7604 21 00","Al hollow profiles","Aluminium","2,278",null,"2,278","2,506","2,734","2,962","K"],
-  ["7604 29 10","Al bars and rods (other)","Aluminium","2,258",null,"2,258","2,484","2,709","2,935","K"],
-  ["7604 29 90","Al profiles (other)","Aluminium","2,278",null,"2,278","2,506","2,734","2,962","K"],
-  ["7605","Aluminium wire","Aluminium","2,258",null,"2,258","2,484","2,709","2,935","K"],
-  ["7606","Al plates, sheets, strip >0.2mm","Aluminium","2,730",null,"2,730","3,003","3,276","3,549","K"],
-  ["7607","Aluminium foil ≤0.2mm","Aluminium","2,730",null,"2,730","3,003","3,276","3,549","K"],
-  ["7608","Aluminium tubes and pipes","Aluminium","2,278",null,"2,278","2,506","2,734","2,962","K"],
-  ["7609 00 00","Al tube/pipe fittings","Aluminium","2,278",null,"2,278","2,506","2,734","2,962","K"],
-  ["7610 10 00","Al doors, windows, frames","Aluminium","2,278",null,"2,278","2,506","2,734","2,962","K"],
-  ["7611 00 00","Al reservoirs/tanks >300L","Aluminium","2,730",null,"2,730","3,003","3,276","3,549","K"],
-  ["7612","Al casks, drums, cans ≤300L","Aluminium","2,730",null,"2,730","3,003","3,276","3,549","K"],
-  ["7613 00 00","Al containers compressed gas","Aluminium","2,730",null,"2,730","3,003","3,276","3,549","K"],
-  ["7614","Al stranded wire, cables","Aluminium","2,258",null,"2,258","2,484","2,709","2,935","K"],
-  ["7616 10 00","Al nails, screws, nuts","Aluminium","2,730",null,"2,730","3,003","3,276","3,549","K"],
-  ["7616 91 00","Al cloth, grill, netting","Aluminium","2,730",null,"2,730","3,003","3,276","3,549","K"],
-  ["7616 99 10","Al cast articles","Aluminium","2,032",null,"2,032","2,235","2,439","2,642","K"],
-  ["7616 99 90","Other Al articles","Aluminium","2,730",null,"2,730","3,003","3,276","3,549","K"],
+  ["2808 00 00","Nitric acid","Fertilizers","1,870","0,030","1,900","1,919","1,919","1,919",""],
+  ["2814 10 00","Anhydrous ammonia","Fertilizers","3,320","0,090","3,410","3,444","3,444","3,444",""],
+  ["2814 20 00","Ammonia in aqueous solution","Fertilizers","1","0,030","1,020","1,030","1,030","1,030",""],
+  ["2834 21 00","Nitrate of potassium","Fertilizers","1,860","0,040","1,910","1,929","1,929","1,929",""],
+  ["3102 10 12","Urea aq. sol. >45%N, 31.8–33.2%","Fertilizers","0,740","0,020","0,760","0,768","0,768","0,768",""],
+  ["3102 10 15","Urea aq. sol. >45%N, 33.2–55%","Fertilizers","1,220","0,020","1,240","1,252","1,252","1,252",""],
+  ["3102 10 19","Urea >45%N solid","Fertilizers","2,220","0,070","2,290","2,313","2,313","2,313",""],
+  ["3102 10 90","Urea ≤45%N","Fertilizers","2,170","0,070","2,240","2,262","2,262","2,262",""],
+  ["3102 21 00","Ammonium sulphate","Fertilizers","0,970","0,060","1,030","1,040","1,040","1,040",""],
+  ["3102 29 00","Double salts: ammonium sulphate/nitrate","Fertilizers","1,460","0,060","1,530","1,545","1,545","1,545",""],
+  ["3102 30 10","Ammonium nitrate aqueous","Fertilizers","1,430","0,050","1,470","1,485","1,485","1,485",""],
+  ["3102 30 90","Ammonium nitrate solid","Fertilizers","2,190","0,070","2,270","2,293","2,293","2,293",""],
+  ["3102 40 10","AN+CaCO₃ ≤28%N","Fertilizers","1,910","0,070","1,980","2","2","2",""],
+  ["3102 40 90","AN+CaCO₃ >28%N","Fertilizers","1,910","0,070","1,980","2","2","2",""],
+  ["3102 50 00","Sodium nitrate","Fertilizers","2,920","0,050","2,970","3","3","3",""],
+  ["3102 60 00","Calcium nitrate/ammonium nitrate mix","Fertilizers","1,840","0,060","1,910","1,929","1,929","1,929",""],
+  ["3102 80 00","UAN solution","Fertilizers","1,680","0,060","1,740","1,757","1,757","1,757",""],
+  ["3102 90 00","Other N-fertilizers","Fertilizers","1,950","0,070","2,020","2,040","2,040","2,040",""],
+  ["3105 10 00","NPK packaged ≤10kg","Fertilizers","0,900","0,060","0,960","0,970","0,970","0,970",""],
+  ["3105 20 10","NPK >10%N","Fertilizers","1","0,070","1,060","1,071","1,071","1,071",""],
+  ["3105 20 90","NPK ≤10%N","Fertilizers","0,680","0,050","0,740","0,747","0,747","0,747",""],
+  ["3105 30 00","DAP","Fertilizers","0,780","0,040","0,820","0,828","0,828","0,828",""],
+  ["3105 40 00","MAP","Fertilizers","0,500","0,030","0,530","0,535","0,535","0,535",""],
+  ["3105 51 00","NP nitrates+phosphates","Fertilizers","1,340","0,090","1,420","1,434","1,434","1,434",""],
+  ["3105 59 00","NP other","Fertilizers","0,900","0,100","1,010","1,020","1,020","1,020",""],
+  ["3105 90 20","NK >10%N","Fertilizers","1,280","0,050","1,340","1,353","1,353","1,353",""],
+  ["3105 90 80","NK ≤10%N","Fertilizers","0,670","0,040","0,710","0,717","0,717","0,717",""],
+  ["7601","Unwrought aluminium","Aluminum","1,700",null,"1,700","1,870","2,040","2,210","K"],
+  ["7603","Al powders and flakes","Aluminum","2,032",null,"2,032","2,235","2,439","2,642","K"],
+  ["7604 10 10","Al bars and rods","Aluminum","2,258",null,"2,258","2,484","2,709","2,935","K"],
+  ["7604 10 90","Al profiles","Aluminum","2,278",null,"2,278","2,506","2,734","2,962","K"],
+  ["7604 21 00","Al hollow profiles","Aluminum","2,278",null,"2,278","2,506","2,734","2,962","K"],
+  ["7604 29 10","Al bars and rods (other)","Aluminum","2,258",null,"2,258","2,484","2,709","2,935","K"],
+  ["7604 29 90","Al profiles (other)","Aluminum","2,278",null,"2,278","2,506","2,734","2,962","K"],
+  ["7605","Aluminum wire","Aluminum","2,258",null,"2,258","2,484","2,709","2,935","K"],
+  ["7606","Al plates, sheets, strip >0.2mm","Aluminum","2,730",null,"2,730","3,003","3,276","3,549","K"],
+  ["7607","Aluminum foil ≤0.2mm","Aluminum","2,730",null,"2,730","3,003","3,276","3,549","K"],
+  ["7608","Aluminum tubes and pipes","Aluminum","2,278",null,"2,278","2,506","2,734","2,962","K"],
+  ["7609 00 00","Al tube/pipe fittings","Aluminum","2,278",null,"2,278","2,506","2,734","2,962","K"],
+  ["7610 10 00","Al doors, windows, frames","Aluminum","2,278",null,"2,278","2,506","2,734","2,962","K"],
+  ["7611 00 00","Al reservoirs/tanks >300L","Aluminum","2,730",null,"2,730","3,003","3,276","3,549","K"],
+  ["7612","Al casks, drums, cans ≤300L","Aluminum","2,730",null,"2,730","3,003","3,276","3,549","K"],
+  ["7613 00 00","Al containers compressed gas","Aluminum","2,730",null,"2,730","3,003","3,276","3,549","K"],
+  ["7614","Al stranded wire, cables","Aluminum","2,258",null,"2,258","2,484","2,709","2,935","K"],
+  ["7616 10 00","Al nails, screws, nuts","Aluminum","2,730",null,"2,730","3,003","3,276","3,549","K"],
+  ["7616 91 00","Al cloth, grill, netting","Aluminum","2,730",null,"2,730","3,003","3,276","3,549","K"],
+  ["7616 99 10","Al cast articles","Aluminum","2,032",null,"2,032","2,235","2,439","2,642","K"],
+  ["7616 99 90","Other Al articles","Aluminum","2,730",null,"2,730","3,003","3,276","3,549","K"],
   ["2804 10 00","Hydrogen","Hydrogen","26,640",null,"26,640","29,304","31,968","34,632",""],
   ["2601 12 00","Agglomerated iron ores","Iron & Steel","0,660","0,020","0,680","0,748","0,816","0,884",""],
   ["7201","Pig iron","Iron & Steel","1,210",null,"1,210","1,331","1,452","1,573",""],
@@ -234,6 +236,17 @@ function ytdAvgEur(cn){
   }
   return sum/BASELINE_YEARS.length;
 }
+function ytdTonnesForRows(rows,liveEntries=null){
+  let total=0;
+  for(const d of rows){
+    const k=trKey(d.cn);
+    for(const mo of YTD_MONTHS){
+      const liveT=liveEntries?.[k]?.[`${YTD_YEAR}-${mo}`]?.[0];
+      total+=(liveT>0?liveT:avgMonthTonnes(d.cn,mo))*ytdMonthFraction(mo);
+    }
+  }
+  return total;
+}
 function ytdCostFactorsForRows(rows,liveEntries=null){
   let cfQ1=0,cfApr=0;
   for(const d of rows){
@@ -247,6 +260,13 @@ function ytdCostFactorsForRows(rows,liveEntries=null){
   }
   return{cfQ1,cfApr};
 }
+
+// ── 5-YEAR ETS HIGH / LOW ────────────────────────────────────────────────────
+const _5yStartY=_td.getFullYear()-5;
+const _5yEntries=Object.entries(ETS_PRICES.quarterly).filter(([k])=>parseInt(k)>=_5yStartY);
+let ETS_5Y_HIGH=0,ETS_5Y_LOW=Infinity,ETS_5Y_HIGH_QTR="",ETS_5Y_LOW_QTR="";
+for(const[k,v]of _5yEntries){if(v>ETS_5Y_HIGH){ETS_5Y_HIGH=v;ETS_5Y_HIGH_QTR=k;}if(v<ETS_5Y_LOW){ETS_5Y_LOW=v;ETS_5Y_LOW_QTR=k;}}
+const fmtQtr=k=>{const[y,q]=k.split("-");return`${q} '${y.slice(2)}`;};
 
 // ── PRECOMPUTE CHART DATA (2022-01 to 2028-12) ────────────────────────────────
 const CHART_DATA=[];
@@ -315,11 +335,13 @@ const TODAY_IDX=Math.round(48+_tdMo+_tdDay/_tdDIM);
 
 const MONTH_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX,viewStartYm="2024-07",viewEndYm="2028-06"}){
+function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX,viewStartYm="2024-07",viewEndYm="2028-06",q1Ets=Q1_ETS,forecastEts=75}){
   const [hov,setHov]=useState(null);
+  const [q1LinkHov,setQ1LinkHov]=useState(false);
   const svgRef=useRef(null);
+  const chartLeaveTimer=useRef(null);
 
-  const W=820,H=360,pad={l:12,r:12,t:29,b:41};
+  const W=820,H=360,pad={l:12,r:12,t:50,b:41};
   const visibleStartIdx=Math.max(0,points.findIndex(p=>p.ym>=viewStartYm));
   const afterEndIdx=points.findIndex(p=>p.ym>viewEndYm);
   const visibleEndIdx=afterEndIdx===-1?points.length-1:Math.max(visibleStartIdx,afterEndIdx-1);
@@ -365,21 +387,23 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
     const cumRaw=idx>=CBAM_IDX?cumValues[idx]:null;
     const cumulative=cumRaw!=null?(cumRaw>=1000?`$${(cumRaw/1000).toFixed(2)}B`:`$${cumRaw.toFixed(0)}M`):null;
     if(idx<CBAM_IDX){
-      return{label,sub:"Pre-CBAM · hypothetical",value:val,note:`${year} annual estimate: ${annualAmt}`,hlTime:`In ${year}`,hlVerb:"would have paid an estimated",hlAmt:annualAmt,year,isConfirmed:false,cumulative};
+      const qEts=getQtrEts(p.ym,q1Ets);
+      return{label,sub:`Pre-CBAM · hypothetical · €${qEts.toFixed(2)}/tCO₂e`,value:val,note:`${year} annual estimate: ${annualAmt}`,hlTime:`In ${year}`,hlVerb:"would have owed",hlAmt:annualAmt,year,isConfirmed:false,cumulative};
     }
     if(isConfirmed){
-      return{label:`${label} (confirmed)`,sub:"Actual Comext trade vol.",value:val,note:`${year} annual estimate: ${annualAmt}`,hlTime:`In ${year}`,hlVerb:"is projected to pay",hlAmt:annualAmt,year,isConfirmed:true,cumulative};
+      return{label:`${label} (confirmed)`,sub:"Actual Comext trade vol.",value:val,note:`${year} annual estimate: ${annualAmt}`,hlTime:`In ${year}`,hlVerb:"owes an estimated",hlAmt:annualAmt,year,isConfirmed:true,cumulative};
     }
     if(year===2026){
-      return{label,sub:"Projected (2022–25 avg trade)",value:val,note:`Est. monthly · 2026 total: ${annualAmt}`,hlTime:"In 2026",hlVerb:"is projected to pay",hlAmt:annualAmt,year,isConfirmed:false,cumulative};
+      return{label,sub:"Projected (2022–25 avg trade)",value:val,note:`Est. monthly · 2026 total: ${annualAmt}`,hlTime:"In 2026",hlVerb:"is projected to owe",hlAmt:annualAmt,year,isConfirmed:false,cumulative};
     }
     if(year===2027){
-      return{label,sub:"Projected (2022–25 avg · 20% mark-up)",value:val,note:`Est. monthly · 2027 total: ${annualAmt}`,hlTime:"In 2027",hlVerb:"is projected to pay",hlAmt:annualAmt,year,isConfirmed:false,cumulative};
+      return{label,sub:"Projected (2022–25 avg · 20% mark-up)",value:val,note:`Est. monthly · 2027 total: ${annualAmt}`,hlTime:"In 2027",hlVerb:"is projected to owe",hlAmt:annualAmt,year,isConfirmed:false,cumulative};
     }
-    return{label,sub:"Projected (2022–25 avg · 30% mark-up)",value:val,note:`Est. monthly · 2028 total: ${annualAmt}`,hlTime:"In 2028",hlVerb:"is projected to pay",hlAmt:annualAmt,year,isConfirmed:false,cumulative};
+    return{label,sub:"Projected (2022–25 avg · 30% mark-up)",value:val,note:`Est. monthly · 2028 total: ${annualAmt}`,hlTime:"In 2028",hlVerb:"is projected to owe",hlAmt:annualAmt,year,isConfirmed:false,cumulative};
   },[points,annualTotals,cutIdx,cumValues]);
 
   const handleMouseMove=useCallback((e)=>{
+    if(chartLeaveTimer.current){clearTimeout(chartLeaveTimer.current);chartLeaveTimer.current=null;}
     const idx=idxFromClientX(e.clientX);if(idx==null)return;
     setHov({idx,sx:e.clientX,sy:e.clientY});
     if(onChartHover){const t=getTooltip(idx);onChartHover({hlTime:t.hlTime,hlVerb:t.hlVerb,hlAmt:t.hlAmt,year:t.year,isConfirmed:t.isConfirmed});}
@@ -424,9 +448,9 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
     ?{x:xp(idx-visibleStartIdx)+dx,y:yp(points[idx].v)+dy,text,color,anchor}
     :null;
   const graphLabels=[
-    lineLabel(Math.min(CBAM_IDX-4,visibleStartIdx+9),"historic trade",N.tealLight,0,-25),
-    lineLabel(Math.min(Math.max(CBAM_IDX,visibleStartIdx),Math.min(cutIdx,visibleEndIdx)),"confirmed trade",N.tealLight,5,22,"start"),
-    lineLabel(Math.min(Math.max(cutIdx+18,CBAM_IDX+9),visibleEndIdx-5),"projected data",N.tealLight,80,-16),
+    lineLabel(Math.min(CBAM_IDX-4,visibleStartIdx+9),"hypothetical exposure",N.tealMid,-20,-25),
+    lineLabel(Math.min(Math.max(CBAM_IDX,visibleStartIdx),Math.min(cutIdx,visibleEndIdx)),"confirmed exposure","#F4DA91",5,22,"start"),
+    lineLabel(Math.min(Math.max(cutIdx+18,CBAM_IDX+9),visibleEndIdx-5),"projected exposure",N.teal600,90,-16),
   ].filter(Boolean);
   const tip=hov?getTooltip(hov.idx):null;
 
@@ -434,17 +458,49 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
     <div style={{position:"relative"}}>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block",cursor:"crosshair"}}
            role="img" aria-label="Line chart showing estimated monthly CBAM costs for US exports to the EU from mid-2024 through 2028. On-chart labels distinguish estimates based on historic trade, confirmed trade, and projected data. Hover or click to explore by month or year."
-           onMouseMove={handleMouseMove} onMouseLeave={()=>{setHov(null);if(onChartLeave)onChartLeave();}} onClick={handleClick}>
+           onMouseMove={handleMouseMove} onMouseLeave={()=>{chartLeaveTimer.current=setTimeout(()=>{setHov(null);if(onChartLeave)onChartLeave();},80);}} onClick={handleClick}>
         <defs><clipPath id="cum-clip"><rect x={pad.l} y={pad.t} width={cW} height={cH}/></clipPath></defs>
-        <title>US CBAM Exposure — Estimated Monthly Cost, 2024–2028</title>
-        <text x={pad.l+3} y={260} fill={N.tealLight} fontSize={12} fontFamily={SANS} fontWeight={700} letterSpacing={0}>
-          Estimated CBAM cost based on
-        </text>
-        {/* CBAM start vertical marker */}
+        {/* ETS price annotation lines at top */}
+        {(()=>{
+          const lineY=24,tickH=5;
+          const inV=i=>i>=visibleStartIdx&&i<=visibleEndIdx;
+          const q1sX=inV(48)?xp(48-visibleStartIdx):null;
+          const q1eX=51<=visibleEndIdx?xp(Math.min(51,visibleEndIdx)-visibleStartIdx):null;
+          const q2sX=inV(51)?xp(51-visibleStartIdx):null;
+          const q2eX=xp(visibleEndIdx-visibleStartIdx);
+          return(<>
+            {q1sX!=null&&q1eX!=null&&(<>
+              <line x1={q1sX} y1={lineY} x2={q1eX} y2={lineY} stroke="#F4DA91" strokeWidth={1.5} strokeDasharray="5,3"/>
+              <line x1={q1sX} y1={lineY-tickH} x2={q1sX} y2={lineY+tickH} stroke="#F4DA91" strokeWidth={1.5}/>
+              <line x1={q1eX} y1={lineY-tickH} x2={q1eX} y2={lineY+tickH} stroke="#F4DA91" strokeWidth={1.5}/>
+              <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer"
+                onMouseEnter={()=>setQ1LinkHov(true)} onMouseLeave={()=>setQ1LinkHov(false)} style={{cursor:"pointer"}}>
+                <text x={(q1sX+q1eX)/2} y={lineY-7} textAnchor="middle" fill="#F4DA91" fontSize={10} fontFamily={SANS} fontWeight={700}
+                  stroke={N.teal900} strokeWidth={3} paintOrder="stroke">€{q1Ets.toFixed(2)}/tCO<tspan dy="2" fontSize={8}>2</tspan></text>
+                {q1LinkHov&&<line x1={(q1sX+q1eX)/2-30} y1={lineY-5} x2={(q1sX+q1eX)/2+30} y2={lineY-5} stroke="#F4DA91" strokeWidth={1}/>}
+              </a>
+            </>)}
+            {q2sX!=null&&(<>
+              <line x1={q2sX} y1={lineY} x2={q2eX} y2={lineY} stroke={N.teal400} strokeWidth={1.5} strokeDasharray="5,3"/>
+              <line x1={q2sX} y1={lineY-tickH} x2={q2sX} y2={lineY+tickH} stroke={N.teal400} strokeWidth={1.5}/>
+              <line x1={q2eX} y1={lineY-tickH} x2={q2eX} y2={lineY+tickH} stroke={N.teal400} strokeWidth={1.5}/>
+              <text x={(q2sX+q2eX)/2} y={lineY-7} textAnchor="middle" fill={N.teal400} fontSize={10} fontFamily={SANS} fontWeight={700}
+                stroke={N.teal900} strokeWidth={3} paintOrder="stroke">€{Math.round(forecastEts)}/tCO<tspan dy="2" fontSize={8}>2</tspan></text>
+            </>)}
+          </>);
+        })()}
+        {/* CBAM start vertical marker + Y-axis ticks */}
         {cbamX!=null&&(
           <>
             <line x1={cbamX} y1={pad.t} x2={cbamX} y2={H-pad.b} stroke={N.orange400} strokeWidth={2.2} opacity={0.7}/>
             <text x={cbamX+7} y={pad.t+16} fill={N.orange400} fontSize={14} fontFamily={SANS} fontWeight={700}>CBAM start</text>
+            <text x={cbamX-8} y={yp(400)-10} textAnchor="end" fill={N.tealMid} fontSize={9} fontFamily={SANS} opacity={0.6}>monthly cost</text>
+            {[100,200,300,400].map(v=>(
+              <g key={v}>
+                <line x1={cbamX-5} y1={yp(v)} x2={cbamX} y2={yp(v)} stroke={N.tealMid} strokeWidth={1} opacity={0.5}/>
+                <text x={cbamX-8} y={yp(v)+3} textAnchor="end" fill={N.tealMid} fontSize={9} fontFamily={SANS} opacity={0.6}>${v}M</text>
+              </g>
+            ))}
           </>
         )}
         {/* Today vertical marker */}
@@ -466,7 +522,7 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
         {/* Historical dashed */}
         {histD&&<path d={histD} fill="none" stroke={N.tealMid} strokeWidth={3.4} strokeLinejoin="round" strokeDasharray="7,8"/>}
         {/* Solid (confirmed CBAM data) */}
-        {solidD&&<path d={solidD} fill="none" stroke={N.teal600} strokeWidth={5} strokeLinejoin="round"/>}
+        {solidD&&<path d={solidD} fill="none" stroke="#F4DA91" strokeWidth={5} strokeLinejoin="round"/>}
         {/* Year labels */}
         {yearMarks.map(({label,idx})=>(
           <text key={label} x={xp(idx-visibleStartIdx)} y={H-8} textAnchor="middle" fill={label==="2026"?N.teal200:N.tealMid} fontSize={16} fontFamily={SANS} fontWeight={label==="2026"?700:500}>{label}</text>
@@ -475,9 +531,13 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
         {graphLabels.map(({x,y,text,color,anchor})=>(
           <text key={text} x={x} y={y} textAnchor={anchor} fill={color} stroke={N.teal900} strokeWidth={5} paintOrder="stroke" fontSize={13} fontFamily={SANS} fontWeight={800} letterSpacing={0} pointerEvents="none">{text}</text>
         ))}
-        {/* Hover dot */}
+        {/* Hover dot — main line */}
         {hov!=null&&(
           <circle cx={xp(hov.idx-visibleStartIdx)} cy={yp(points[hov.idx].v)} r={7.8} fill={N.teal600} stroke={N.white} strokeWidth={2.4}/>
+        )}
+        {/* Hover dot — cumulative line */}
+        {hov!=null&&hov.idx>=CBAM_IDX&&cumValues[hov.idx]>0&&(
+          <circle cx={xp(hov.idx-visibleStartIdx)} cy={ypRaw(cumValues[hov.idx])} r={6} fill={N.teal200} stroke={N.white} strokeWidth={2} opacity={0.85} clipPath="url(#cum-clip)"/>
         )}
       </svg>
       {/* Hover tooltip */}
@@ -534,17 +594,17 @@ const SECTOR_INFO={
     desc:"The largest CBAM sector by US export volume. Covers iron ore products, pig iron, ferro-alloys, flat and long steel products (HR/CR/coated), tubes, sections, and fabricated steel articles.",
     extra:"US steelmakers are predominantly EAF-based (electric arc furnace), which typically produces lower emissions than the blast furnace route assumed in EU default values — so actual costs may be lower for verified reporters.",
   },
-  "Aluminium":{
+  "Aluminum":{
     desc:"Covers unwrought aluminium, semi-finished products (rods, wire, profiles, plates, foil), tubes, fabricated articles, and containers. The US is a significant primary and secondary aluminium producer.",
-    extra:"Aluminium default values include upstream smelting and power generation emissions. The US power mix used in smelting will affect whether actual emissions are above or below the EU default.",
+    extra:"Aluminum default values include upstream smelting and power generation emissions. The US power mix used in smelting will affect whether actual emissions are above or below the EU default.",
   },
   "Cement":{
     desc:"Includes Portland and hydraulic cement, clinker, white and grey variants, and calcined clay. US–EU cement trade is limited by high freight costs relative to product value.",
     extra:"Cement is one of the most carbon-intensive sectors by tCO₂e/t. Even at low trade volumes, the per-tonne CBAM charge can be significant.",
   },
-  "Fertilisers":{
-    desc:"Nitrogen-based fertilisers including anhydrous ammonia, urea, ammonium nitrate, and compound fertilisers (NPK/NK/DAP/MAP). The US is a major global ammonia and urea producer.",
-    extra:"Fertilisers have a special phase-in rate of 1% throughout 2026–2028 (vs. 10–30% for other sectors) due to high carbon leakage risk and food security concerns.",
+  "Fertilizers":{
+    desc:"Nitrogen-based fertilizers including anhydrous ammonia, urea, ammonium nitrate, and compound fertilizers (NPK/NK/DAP/MAP). The US is a major global ammonia and urea producer.",
+    extra:"Fertilizers have a special phase-in rate of 1% throughout 2026–2028 (vs. 10–30% for other sectors) due to high carbon leakage risk and food security concerns.",
   },
   "Hydrogen":{
     desc:"Covers hydrogen gas (CN 2804 10 00). CBAM applies based on the hydrogen's production emissions intensity — electrolytic, SMR, or by-product routes have very different default values.",
@@ -558,6 +618,12 @@ function SectorModal({sec,ets,liveEntries,onClose}){
   const color=SC[sec]||N.teal600;
   const lightColor=SCL[sec]||N.teal400;
   const closeRef=useRef(null);
+  const [sortCol,setSortCol]=useState("taxToday");
+  const [sortDir,setSortDir]=useState("desc");
+  const handleSort=col=>{
+    if(sortCol===col){setSortDir(d=>d==="desc"?"asc":"desc");}
+    else{setSortCol(col);setSortDir("desc");}
+  };
   useEffect(()=>{if(closeRef.current)closeRef.current.focus();},[]);
   useEffect(()=>{
     const h=e=>{if(e.key==="Escape")onClose();};
@@ -565,33 +631,78 @@ function SectorModal({sec,ets,liveEntries,onClose}){
     return()=>document.removeEventListener("keydown",h);
   },[onClose]);
 
+  // Latest month with confirmed Comext data (from live fetch)
+  const latestConfirmedYm=useMemo(()=>{
+    if(!liveEntries)return null;
+    const yms=Object.values(liveEntries).flatMap(m=>Object.keys(m)).filter(ym=>ym>="2026-01");
+    return yms.length?yms.sort().at(-1):null;
+  },[liveEntries]);
+
   const cnRows=useMemo(()=>{
     if(!sec)return[];
+    const latestMo=latestConfirmedYm?parseInt(latestConfirmedYm.split("-")[1]):0;
+    const confirmedMos=Array.from({length:latestMo},(_,i)=>String(i+1).padStart(2,"0"));
     return RELEVANT.filter(d=>d.sector===sec).map(d=>{
-      // Annual projected tonnes
+      // Keep annT + ytdAvgUsd for KPI cards, c2026/27/28 for trajectory section
       const annT=[1,2,3,4,5,6,7,8,9,10,11,12].reduce((s,m)=>s+avgMonthTonnes(d.cn,String(m).padStart(2,"0")),0);
       const ytdAvgUsd=ytdAvgEur(d.cn)*EUR_USD;
-      // Jan growth 2026 vs 2025 (only confirmed month); prefer live data
+      const mvFn=mvk=>RELEVANT.find(x=>x.cn===d.cn)?.[mvk]||0;
+      const traj=(mvk)=>[1,2,3,4,5,6,7,8,9,10,11,12].reduce((s,m)=>s+avgMonthTonnes(d.cn,String(m).padStart(2,"0"))*mvFn(mvk),0)*ets*EUR_USD;
       const _k=trKey(d.cn);
-      const jan26Eur=liveEntries?.[_k]?.["2026-01"]?.[1]??(TRADE[_k]?.["2026-01"]?.[1]??0);
-      const jan25Eur=TRADE[_k]?.["2025-01"]?.[1]??0;
-      const ytdGrowth=jan25Eur>0?(jan26Eur-jan25Eur)/jan25Eur*100:null;
+      // YTD trade volume: actual 2026 data + 4yr avg for remaining months
+      const ytdTonnes=ytdTonnesForRows([d],liveEntries);
+      // Cumulative growth Jan–latestConfirmedMo, 2026 vs 2025 (tonnes)
+      let cum2026=0,cum2025=0,hasCum=false;
+      for(const mo of confirmedMos){
+        const liveT=liveEntries?.[_k]?.["2026-"+mo]?.[0];
+        const t26=liveT!=null?liveT:0;
+        const t25=TRADE[_k]?.["2025-"+mo]?.[0]??0;
+        if(t26>0||t25>0)hasCum=true;
+        cum2026+=t26;cum2025+=t25;
+      }
+      const cumGrowth=hasCum&&cum2025>0?(cum2026-cum2025)/cum2025*100:null;
+      // CBAM exposure YTD
       const {cfQ1,cfApr}=ytdCostFactorsForRows([d],liveEntries);
       const taxQ1=cfQ1*Q1_ETS*EUR_USD;
       const taxToday=(cfQ1*Q1_ETS+cfApr*ets)*EUR_USD;
-      // Cost trajectory (using forecast ets for simplicity)
-      const mvFn=mvk=>RELEVANT.find(x=>x.cn===d.cn)?.[mvk]||0;
-      const traj=(mvk)=>[1,2,3,4,5,6,7,8,9,10,11,12].reduce((s,m)=>s+avgMonthTonnes(d.cn,String(m).padStart(2,"0"))*mvFn(mvk),0)*ets*EUR_USD;
-      return{cn:d.cn,desc:d.desc,total:d.total,mv2026:d.mv2026,annT,ytdAvgUsd,ytdGrowth,taxQ1,taxToday,c2026:traj("mv2026"),c2027:traj("mv2027"),c2028:traj("mv2028")};
-    }).sort((a,b)=>b.taxToday-a.taxToday);
-  },[sec,ets,liveEntries]);
+      // Proj. 2026 CBAM: actual data for confirmed months + 4yr avg for remainder
+      let pCfQ1=0,pCfRest=0;
+      const mv=d.mv2026||0;
+      for(let m=1;m<=12;m++){
+        const mo=String(m).padStart(2,"0"),ym=`${YTD_YEAR}-${mo}`;
+        const liveT=liveEntries?.[_k]?.[ym]?.[0];
+        const tonnes=liveT!=null&&liveT>0?liveT:avgMonthTonnes(d.cn,mo);
+        if(mo<="03")pCfQ1+=tonnes*mv;else pCfRest+=tonnes*mv;
+      }
+      const proj2026Cbam=(pCfQ1*Q1_ETS+pCfRest*ets)*EUR_USD;
+      return{cn:d.cn,desc:d.desc,total:d.total,mv2026:d.mv2026,annT,ytdAvgUsd,ytdTonnes,cumGrowth,taxQ1,taxToday,proj2026Cbam,c2026:traj("mv2026"),c2027:traj("mv2027"),c2028:traj("mv2028")};
+    });
+  },[sec,ets,liveEntries,latestConfirmedYm]);
 
   const totT=cnRows.reduce((s,r)=>s+r.annT,0);
   const totYtd=cnRows.reduce((s,r)=>s+r.ytdAvgUsd,0);
+  const totYtdTonnes=cnRows.reduce((s,r)=>s+r.ytdTonnes,0);
   const totToday=cnRows.reduce((s,r)=>s+r.taxToday,0);
+  const totProj2026=cnRows.reduce((s,r)=>s+r.proj2026Cbam,0);
   const tot26=cnRows.reduce((s,r)=>s+r.c2026,0);
   const tot27=cnRows.reduce((s,r)=>s+r.c2027,0);
   const tot28=cnRows.reduce((s,r)=>s+r.c2028,0);
+  // Growth column header label
+  const _latestMo=latestConfirmedYm?parseInt(latestConfirmedYm.split("-")[1]):0;
+  const growthColLabel=_latestMo===0?"2026 vs 2025":_latestMo===1?"Jan 2026 vs 2025":`Jan–${_MO_ABB[_latestMo-1]} 2026 vs 2025`;
+
+  // Sorted rows
+  const sortedRows=useMemo(()=>{
+    const dir=sortDir==="desc"?-1:1;
+    return[...cnRows].sort((a,b)=>{
+      const av=a[sortCol],bv=b[sortCol];
+      if(av==null&&bv==null)return 0;
+      if(av==null)return 1;   // nulls always last
+      if(bv==null)return -1;
+      if(typeof av==="string")return dir*(av.localeCompare(bv));
+      return dir*(av-bv);
+    });
+  },[cnRows,sortCol,sortDir]);
 
   if(!sec)return null;
 
@@ -625,8 +736,8 @@ function SectorModal({sec,ets,liveEntries,onClose}){
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:12,marginBottom:20}}>
             {[
               {label:"Proj. Annual Tonnes",val:fmtKt(totT),sub:"2022–25 avg basis"},
-              {label:"YTD Avg Trade Value",val:fmtM(totYtd),sub:`${YTD_LABEL} avg · 4-year avg`},
-              {label:"CBAM Exposure YTD",val:fmtM(totToday),sub:`${YTD_LABEL} · Q1 price + forecast`},
+              {label:"Annual Avg Trade Value",val:fmtM(SECTOR_STATS[sec]?.annUsd||0),sub:"2022–25 avg basis"},
+              {label:"CBAM Exposure YTD",val:fmtM(totToday),sub:`${YTD_LABEL} · Q1 price + assumed`},
             ].map(({label,val,sub})=>(
               <div key={label} style={{background:"rgba(255,255,255,0.05)",borderRadius:4,padding:"12px 14px",border:`1px solid rgba(255,255,255,0.08)`}}>
                 <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:6}}>{label}</div>
@@ -641,9 +752,9 @@ function SectorModal({sec,ets,liveEntries,onClose}){
             <div style={{fontFamily:SANS,fontSize:10,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>Projected Annual Cost Trajectory (at €{ets.toFixed(0)}/tCO₂e)</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
               {[
-                {year:"2026",cost:tot26,markup:sec==="Fertilisers"?"1%":"10%",col:N.orange400},
-                {year:"2027",cost:tot27,markup:sec==="Fertilisers"?"1%":"20%",col:N.orange500},
-                {year:"2028",cost:tot28,markup:sec==="Fertilisers"?"1%":"30%",col:"#c0392b"},
+                {year:"2026",cost:tot26,markup:sec==="Fertilizers"?"1%":"10%",col:N.orange400},
+                {year:"2027",cost:tot27,markup:sec==="Fertilizers"?"1%":"20%",col:N.orange500},
+                {year:"2028",cost:tot28,markup:sec==="Fertilizers"?"1%":"30%",col:"#c0392b"},
               ].map(({year,cost,markup,col})=>(
                 <div key={year} style={{flex:"1 1 120px",background:"rgba(255,255,255,0.04)",borderRadius:4,padding:"12px 14px",borderTop:`3px solid ${col}`}}>
                   <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,marginBottom:4}}>{year} · {markup} mark-up</div>
@@ -661,18 +772,32 @@ function SectorModal({sec,ets,liveEntries,onClose}){
             <table style={{width:"100%",borderCollapse:"collapse",fontFamily:SANS,fontSize:12}}>
               <thead>
                 <tr style={{background:"rgba(255,255,255,0.06)"}}>
-                  <th style={{padding:"8px 10px",textAlign:"left",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>CN Code</th>
-                  <th style={{padding:"8px 10px",textAlign:"left",color:N.teal400,fontWeight:700,maxWidth:180}}>Description</th>
-                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>Default Value<br/>(tCO₂e/t)</th>
-                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>Proj. 2026<br/>Tonnes</th>
-                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>YTD Avg<br/>Trade (4yr)</th>
-                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>Jan Growth<br/>2026 vs 2025</th>
-                  <th style={{padding:"8px 10px",textAlign:"right",color:N.teal400,fontWeight:700,whiteSpace:"nowrap"}}>CBAM YTD</th>
+                  {[
+                    {col:"cn",label:"CN Code",align:"left"},
+                    {col:"desc",label:"Description",align:"left"},
+                    {col:"total",label:<>Default Value<br/>(tCO₂e/t)</>,align:"right"},
+                    {col:"ytdTonnes",label:<>YTD Avg Trade<br/>Volume (t)</>,align:"right"},
+                    {col:"cumGrowth",label:growthColLabel,align:"right"},
+                    {col:"taxToday",label:"CBAM exposure YTD",align:"right"},
+                    {col:"proj2026Cbam",label:<>Proj. 2026<br/>CBAM exposure</>,align:"right"},
+                  ].map(({col,label,align})=>{
+                    const active=sortCol===col;
+                    const arrow=active?(sortDir==="desc"?" ↓":" ↑"):"";
+                    return(
+                      <th key={col} onClick={()=>handleSort(col)}
+                        style={{padding:"8px 10px",textAlign:align,color:active?N.white:N.teal400,fontWeight:700,
+                          whiteSpace:"nowrap",cursor:"pointer",userSelect:"none",
+                          background:active?"rgba(255,255,255,0.1)":"transparent",
+                          transition:"background 0.15s, color 0.15s"}}>
+                        {label}{arrow}
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {cnRows.map((r,i)=>{
-                  const gr=r.ytdGrowth;
+                {sortedRows.map((r,i)=>{
+                  const gr=r.cumGrowth;
                   const gCol=gr==null?N.tealMid:gr>2?N.teal400:gr<-2?N.orange400:N.tealMid;
                   const gArr=gr==null?"":gr>2?"↑":gr<-2?"↓":"→";
                   return(
@@ -680,10 +805,10 @@ function SectorModal({sec,ets,liveEntries,onClose}){
                       <td style={{padding:"8px 10px",color:lightColor,fontWeight:700,fontFamily:"monospace",fontSize:11,whiteSpace:"nowrap"}}>{r.cn}</td>
                       <td style={{padding:"8px 10px",color:N.tealLight,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.desc}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",color:N.tealMid}}>{r.total!=null?r.total.toFixed(2):"—"}</td>
-                      <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtT(r.annT)}</td>
-                      <td style={{padding:"8px 10px",textAlign:"right",color:N.tealLight}}>{fmtM(r.ytdAvgUsd)}</td>
+                      <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtT(Math.round(r.ytdTonnes))}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",color:gCol}}>{gr==null?"—":`${gArr} ${pct(gr)}`}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",fontWeight:700,color:N.white}}>{fmtM(r.taxToday)}</td>
+                      <td style={{padding:"8px 10px",textAlign:"right",color:N.teal200}}>{fmtM(r.proj2026Cbam)}</td>
                     </tr>
                   );
                 })}
@@ -691,16 +816,16 @@ function SectorModal({sec,ets,liveEntries,onClose}){
               <tfoot>
                 <tr style={{background:"rgba(255,255,255,0.08)",fontWeight:700}}>
                   <td colSpan={3} style={{padding:"8px 10px",color:N.teal400}}>Total</td>
-                  <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtT(totT)}</td>
-                  <td style={{padding:"8px 10px",textAlign:"right",color:N.tealLight}}>{fmtM(totYtd)}</td>
+                  <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtT(Math.round(totYtdTonnes))}</td>
                   <td/>
                   <td style={{padding:"8px 10px",textAlign:"right",color:N.white}}>{fmtM(totToday)}</td>
+                  <td style={{padding:"8px 10px",textAlign:"right",color:N.teal200}}>{fmtM(totProj2026)}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
           <div style={{marginTop:8,fontFamily:SANS,fontSize:11,color:N.tealMid}}>
-            Sorted by CBAM exposure. YTD = {YTD_LABEL}, 2026. Confirmed Comext months use actual data; remaining months use 2022–25 avg. Trajectory uses €{ets.toFixed(0)}/tCO₂e for all months (indicative).
+            Sorted by CBAM exposure YTD. YTD = {YTD_LABEL}, 2026. YTD trade volume and Proj. 2026 use actual Comext data for confirmed months; remaining months use 2022–25 avg. Growth comparison uses confirmed Comext tonnes only. ETS price: Q1 official + €{ets.toFixed(0)}/tCO₂e assumed thereafter.
           </div>
         </div>
       </div>
@@ -714,8 +839,8 @@ const LS={color:N.teal200,textDecoration:"underline"};
 const TERM_DEFS={
   tonnes:{title:"Exported Tonnes",def:"How much CBAM-covered product the US ships to the EU. Past years use reported Comext tonnage; future and not-yet-confirmed months use the 2022–25 monthly average as the trade baseline.",source:<>Source: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Comext database</a>, which publishes monthly with a six-to-eight week lag.</>},
   dv:{title:"Default Value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one tonne of product into estimated tonnes of CO₂-equivalent.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
-  markup:{title:"Mark-up / Phase-in %",def:"The penalty add-on in the default-value design. It nudges exporters toward submitting actual emissions data and grows over time for most sectors: 10% in 2026, 20% in 2027, and 30% in 2028. Fertilisers stay at 1% in this model.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
-  ets:{title:"EU ETS Carbon Price",def:"The carbon price used to turn embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the adjustable forecast so you can test different carbon-market assumptions.",source:<>Source: <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={LS}>CBAM certificate price</a>.</>},
+  markup:{title:"Mark-up / Phase-in %",def:"The penalty add-on in the default-value design. It nudges exporters toward submitting actual emissions data and grows over time for most sectors: 10% in 2026, 20% in 2027, and 30% in 2028. Fertilizers stay at 1% in this model.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
+  ets:{title:"EU ETS Carbon Price",def:"The carbon price used to turn embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the assumed price so you can test different carbon-market scenarios.",source:<>Source: <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={LS}>CBAM certificate price</a>.</>},
   fxrate:{title:"Exchange Rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.",source:"Source: European Central Bank (ECB) Statistical Data Warehouse"},
 };
 
@@ -754,6 +879,9 @@ export default function V3App(){
   const [hoveredSector,setHoveredSector]=useState(null);
   const [selectedSector,setSelectedSector]=useState(null);
   const [hoveredRow,setHoveredRow]=useState(null);
+  const sectorLeaveTimer=useRef(null);
+  const rowLeaveTimer=useRef(null);
+  const [howToOpen,setHowToOpen]=useState(false);
 
   // ── LIVE COMEXT FETCH ────────────────────────────────────────────────────────
   const [liveData,setLiveData]=useState(null);
@@ -765,7 +893,7 @@ export default function V3App(){
     fetchedRef.current=true;
     setFetchStatus("loading");
     const BASE="https://ec.europa.eu/eurostat/api/comext/dissemination/sdmx/2.1/data/DS-045409";
-    const QUERIES={"Iron & Steel":"2601+7201+7202+7203+7205+7206+7208+7209+7210+7211+7212+7213+7214+7215+7216+7217+7218+7219+7221+7223+7224+7225+7301+7302+7303+7304+7305+7306+7307+7308+7309+7310+7311+7318+7326","Aluminium":"7601+7603+7604+7605+7606+7607+7608+7609+7610+7611+7612+7613+7614+7616","Fertilisers":"2808+2814+2834+3102+3105","Hydrogen":"28041000","Cement":"2507+2523"};
+    const QUERIES={"Iron & Steel":"2601+7201+7202+7203+7205+7206+7208+7209+7210+7211+7212+7213+7214+7215+7216+7217+7218+7219+7221+7223+7224+7225+7301+7302+7303+7304+7305+7306+7307+7308+7309+7310+7311+7318+7326","Aluminum":"7601+7603+7604+7605+7606+7607+7608+7609+7610+7611+7612+7613+7614+7616","Fertilizers":"2808+2814+2834+3102+3105","Hydrogen":"28041000","Cement":"2507+2523"};
     const raw={};let gotAny=false;
     for(const codes of Object.values(QUERIES)){
       try{
@@ -810,6 +938,15 @@ export default function V3App(){
       f[sec]=ytdCostFactorsForRows(rows,mergedTrade);
     }
     return f;
+  },[mergedTrade]);
+
+  // Per-sector YTD tonnes: confirmed months use actual 2026 data, remainder uses 2022–25 avg pro-rated to today
+  const ytdTonnesBySector=useMemo(()=>{
+    const t={};
+    for(const sec of SECTORS_LIST){
+      t[sec]=ytdTonnesForRows(RELEVANT.filter(d=>d.sector===sec),mergedTrade);
+    }
+    return t;
   },[mergedTrade]);
 
   // Chart factor overrides for months with confirmed live data
@@ -858,7 +995,7 @@ export default function V3App(){
   // Confirmed 2026 hover keeps YTD display (null = default); projected 2026 hover shows full-year estimate
   const activeTableYear=(activeSectorYear&&!(activeSectorYear===2026&&isHoverConfirmed))?activeSectorYear:null;
   const displayTableRows=useMemo(()=>tableRows.map(r=>{
-    if(!activeTableYear)return{...r,displayTonnes:r.annT,displayCbam:r.taxToday};
+    if(!activeTableYear)return{...r,displayTonnes:ytdTonnesBySector[r.sec],displayCbam:r.taxToday};
     return{
       ...r,
       displayTonnes:sectorYearTonnes(r.sec,activeTableYear,mergedTrade),
@@ -868,13 +1005,13 @@ export default function V3App(){
   const displayTableTonnesTotal=displayTableRows.reduce((s,r)=>s+r.displayTonnes,0);
   const displayTableCbamTotal=displayTableRows.reduce((s,r)=>s+r.displayCbam,0);
   const tonnesColumnLabel=activeTableYear
-    ?`${activeTableYear>=2026?"Projected":"Actual"} ${activeTableYear} Tonnes`
-    :"Projected 2026 Tonnes";
+    ?(activeTableYear>=2026?`${activeTableYear} Est. Trade Volume (t)`:`${activeTableYear} Trade Volume (t)`)
+    :"YTD Trade Volume (t)";
   const cbamColumnLabel=activeTableYear
     ?(activeTableYear<2026
       ?`Hyp. CBAM in ${activeTableYear}`
       :`Proj. CBAM exposure in ${activeTableYear}`)
-    :"CBAM YTD";
+    :"CBAM exposure YTD";
 
   // Sector proportions for right panel
   const sectorAnnCosts=useMemo(()=>{
@@ -899,7 +1036,7 @@ export default function V3App(){
 
   // Mark-up phase-in % for table column
   const markupPct=(sec)=>{
-    if(sec==="Fertilisers")return"1%";
+    if(sec==="Fertilizers")return"1%";
     const eEnd=rangeEnd==="today"?2026:rangeEnd;
     const startPct=rangeStart<=2026?10:rangeStart===2027?20:30;
     const endPct=eEnd<=2026?10:eEnd===2027?20:30;
@@ -909,26 +1046,35 @@ export default function V3App(){
   // Headline amounts by year range
   const {hlVerb,hlAmt}=useMemo(()=>{
     if(rangeEnd==="today"){
-      return{hlTime:"Since January 2026",hlVerb:"is paying an estimated",hlAmt:fmtM(totTaxToday)};
+      return{hlTime:"Since January 2026",hlVerb:"owes an estimated",hlAmt:fmtM(totTaxToday)};
     }
     const startYm=`${rangeStart}-01`,endYm=`${rangeEnd}-12`;
     if(rangeEnd<=2025){
       const hist=CHART_DATA.filter(m=>m.ym>=startYm&&m.ym<=endYm).reduce((s,m)=>s+m.factor*getQtrEts(m.ym,ets),0)/(rangeEnd-rangeStart+1)*EUR_USD;
       const label=rangeStart===rangeEnd?`${rangeStart}`:`${rangeStart}–${rangeEnd}`;
-      return{hlTime:`In ${label}`,hlVerb:"would have paid",hlAmt:fmtM(hist)+" / year"};
+      return{hlTime:`In ${label}`,hlVerb:"would have owed",hlAmt:fmtM(hist)+" / year"};
     }
     const tot=CHART_DATA.filter(m=>m.ym>=startYm&&m.ym<=endYm).reduce((s,m)=>s+m.factor*getQtrEts(m.ym,ets),0)*EUR_USD;
     const hlLabel=rangeStart===rangeEnd?`In ${rangeStart}`:`Through ${rangeEnd}`;
-    return{hlTime:hlLabel,hlVerb:"is projected to pay",hlAmt:fmtM(tot)+" total"};
+    return{hlTime:hlLabel,hlVerb:"is projected to owe",hlAmt:fmtM(tot)};
   },[rangeStart,rangeEnd,ets,totTaxToday]);
 
   // Per-year cost breakdown for right panel
   const annualCosts=useMemo(()=>{
-    if(rangeEnd==="today")return[{year:"2026 (YTD)",cost:totTaxToday}];
+    if(rangeEnd==="today")return[{year:"2026 (YTD)",cost:totTaxToday,quarters:null}];
     const result=[];
     for(let y=rangeStart;y<=rangeEnd;y++){
-      const cost=CHART_DATA.filter(m=>m.ym.startsWith(String(y))).reduce((s,m)=>s+m.factor*getQtrEts(m.ym,ets),0)*EUR_USD;
-      result.push({year:String(y),cost});
+      const yearData=CHART_DATA.filter(m=>m.ym.startsWith(String(y)));
+      const cost=yearData.reduce((s,m)=>s+m.factor*getQtrEts(m.ym,ets),0)*EUR_USD;
+      let quarters=null;
+      if(y<2026){
+        quarters=[1,2,3,4].map(q=>{
+          const etsPrice=ETS_PRICES.quarterly[`${y}-Q${q}`]||0;
+          const qCost=yearData.filter(m=>{const mo=parseInt(m.ym.split("-")[1]);return Math.ceil(mo/3)===q;}).reduce((s,m)=>s+m.factor*etsPrice,0)*EUR_USD;
+          return{q,etsPrice,cost:qCost};
+        });
+      }
+      result.push({year:String(y),cost,quarters});
     }
     return result;
   },[rangeStart,rangeEnd,ets,totTaxToday]);
@@ -967,7 +1113,7 @@ export default function V3App(){
 
   return(
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Neuton:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}html,body,#root{margin:0;min-height:100%;width:100%;max-width:100%;}body{background:${N.teal900};overflow-x:hidden;}:focus-visible{outline:2px solid ${N.teal400};outline-offset:2px;}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Neuton:wght@400;700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}html,body,#root{margin:0;min-height:100%;width:100%;max-width:100%;}body{background:${N.teal900};overflow-x:hidden;}:focus-visible{outline:2px solid ${N.teal400};outline-offset:2px;}svg a:hover text{text-decoration:underline;}`}</style>
 
       <div style={{fontFamily:SANS,minHeight:"100vh",color:N.teal900,width:"100%",margin:0,background:N.teal900}}>
 
@@ -1005,16 +1151,23 @@ export default function V3App(){
               to the EU
             </div>
             <div style={{margin:"0 0 8px",fontFamily:SANS,fontSize:isMobile?20:"clamp(18px,2vw,23px)",fontWeight:400,lineHeight:1.4,color:N.tealMid}}>
-              for exporting emission&#8209;intensive products.
+              for exporting emission&#8209;intensive products under carbon border adjustment mechanism.
             </div>
             <div style={{marginTop:"auto"}}>
-              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2024-07" onChartClick={handleChartClick} cutIdx={liveDataCutIdx}/>
-              <p style={{margin:"2px 0 0",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
-                Estimated CBAM cost per month ($M), labeled by historic trade, confirmed trade, and projected data
-                {fetchStatus==="loading"&&<span style={{color:N.teal400}}> · Fetching live 2026 data…</span>}
-                {fetchStatus==="done"&&liveMonths.length>0&&<span style={{color:N.teal400}}> · Live: {liveMonths.join(", ")}</span>}
-                {fetchStatus==="done"&&liveMonths.length===0&&<span style={{color:N.tealMid}}> · (live 2026 data not yet available)</span>}
-              </p>
+              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2024-07" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={Q1_ETS} forecastEts={ets}/>
+              {(()=>{
+                const latestYm=liveMonths.length>0?liveMonths[liveMonths.length-1]:DATA_CUTOFF_YM;
+                const[lcY,lcM]=latestYm.split("-");
+                const latestLabel=`${MONTH_NAMES[parseInt(lcM)-1]} ${lcY}`;
+                const nextMoNum=parseInt(lcM)%12+1;
+                const nextYr=parseInt(lcM)===12?parseInt(lcY)+1:parseInt(lcY);
+                const nextLabel=`${MONTH_NAMES[nextMoNum-1]} ${nextYr}`;
+                return(
+                  <p style={{margin:"4px 0 0",fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5}}>
+                    Estimated monthly CBAM cost ($M) · <span style={{color:N.tealLight,fontWeight:600}}>Trade</span> (<a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>Comext</a>): confirmed 2022 – {latestLabel}, projected {nextLabel} – 2028 · <span style={{color:N.tealLight,fontWeight:600}}>EU carbon price</span> (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>EU Commission</a>): Q1 2026 confirmed at €{Q1_ETS.toFixed(2)}/tCO₂e, assumed from {FORECAST_FROM}{fetchStatus==="loading"&&<span style={{color:N.teal400}}> · Fetching…</span>}
+                  </p>
+                );
+              })()}
             </div>
           </div>
 
@@ -1031,25 +1184,39 @@ export default function V3App(){
             )}
             {/* ETS Price */}
             <div>
-              <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>EU ETS Carbon Price</div>
-              <div style={isMobile?{display:"flex",gap:8}:{}}>
-                <div style={{flex:isMobile?"1 1 0":undefined,background:"rgba(255,255,255,0.06)",borderRadius:4,padding:"12px 14px",marginBottom:isMobile?0:8}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:4}}>
-                    <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>Q1 2026 (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>confirmed</a>)</span>
-                    <span style={{fontFamily:SERIF,fontSize:20,fontWeight:700,color:N.teal200}}>€{Q1_ETS.toFixed(2)}</span>
-                  </div>
-                  {!isMobile&&<div style={{fontSize:12,color:N.tealMid,marginTop:2}}>Official CBAM certificate price, EU Commission</div>}
+              <div style={{marginBottom:4}}>
+                <div style={{background:"rgba(255,255,255,0.05)",borderRadius:4,border:`1px solid rgba(255,255,255,0.08)`,marginBottom:12,overflow:"hidden"}}>
+                  <button onClick={()=>setHowToOpen(o=>!o)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",background:"none",border:"none",cursor:"pointer",padding:"10px 14px",fontFamily:SANS,fontSize:10,fontWeight:700,color:N.teal400,textTransform:"uppercase",letterSpacing:"0.08em"}}>
+                    <span>How to explore</span>
+                    <span style={{fontSize:14,lineHeight:1,transition:"transform 0.2s",transform:howToOpen?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
+                  </button>
+                  {howToOpen&&(
+                    <div style={{padding:"0 14px 12px"}}>
+                      {[
+                        ["◎","Hover the chart to explore monthly cost estimates and cumulative totals"],
+                        ["⇅","Drag the slider below to model different carbon price scenarios"],
+                        ["▶","Click any sector row in the table below for a full CN-code breakdown"],
+                        ["↔","Use the year selectors at the top to view multi-year totals and the sector breakdown"],
+                      ].map(([icon,text],i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,fontFamily:SANS,fontSize:12,color:N.tealLight,lineHeight:1.5,marginBottom:i<3?6:0}}>
+                          <span style={{color:N.teal400,flexShrink:0}}>{icon}</span>
+                          <span>{text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div style={{flex:isMobile?"1 1 0":undefined,background:"rgba(255,255,255,0.06)",borderRadius:4,padding:"12px 14px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8,flexWrap:"wrap",gap:4}}>
-                    <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>Forecast (Q2+)</span>
-                    <span style={{fontFamily:SERIF,fontSize:20,fontWeight:700,color:N.orange400}}>€{ets.toFixed(1)}</span>
-                  </div>
-                  <input type="range" min={30} max={130} value={ets} onChange={e=>setEts(+e.target.value)}
-                    style={{width:"100%",accentColor:N.orange400,cursor:"pointer"}}/>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:N.tealMid,marginTop:2}}>
-                    <span>€30</span><span>€80</span><span>€130</span>
-                  </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
+                  <span style={{fontFamily:SANS,fontSize:12,color:N.tealMid}}>Price on your choice <span style={{fontSize:11,opacity:0.65}}>from {FORECAST_FROM} on</span></span>
+                  <span style={{fontFamily:SANS,fontSize:17,fontWeight:700,color:N.teal400}}>€{ets.toFixed(1)}<span style={{fontSize:12,fontWeight:400}}>/tCO<sub>2</sub></span></span>
+                </div>
+                <input type="range" min={30} max={130} value={ets} onChange={e=>setEts(+e.target.value)}
+                  style={{width:"100%",accentColor:N.teal400,cursor:"pointer",marginBottom:2}}/>
+                <div style={{display:"flex",justifyContent:"space-between",fontFamily:SANS,fontSize:11,color:N.tealMid}}>
+                  <span>€30</span><span>€80</span><span>€130</span>
+                </div>
+                <div style={{marginTop:5,fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5}}>
+                  Past 5-yr range: low €{ETS_5Y_LOW.toFixed(0)}/t ({fmtQtr(ETS_5Y_LOW_QTR)}) · high €{ETS_5Y_HIGH.toFixed(0)}/t ({fmtQtr(ETS_5Y_HIGH_QTR)})
                 </div>
               </div>
             </div>
@@ -1065,11 +1232,14 @@ export default function V3App(){
                   :rangeEnd!=="today"
                     ?`${rangeStart}${Number(rangeEnd)>rangeStart?`–${rangeEnd}`:""} · sector mix`
                     :`YTD · ${YTD_LABEL}`
-                } · at €{ets.toFixed(0)}
+                }{(activeSectorYear&&activeSectorYear<2026)||(rangeEnd!=="today"&&Number(rangeEnd)<=2025)
+                  ?` · actual ETS prices`
+                  :` · at €${ets.toFixed(0)}`
+                }
               </div>
               {sectorAnnCosts.map(({sec,cost,pct})=>(
                 <div key={sec} style={{marginBottom:10,cursor:"pointer"}}
-                  onMouseEnter={()=>setHoveredSector(sec)} onMouseLeave={()=>setHoveredSector(null)}>
+                  onMouseEnter={()=>{clearTimeout(sectorLeaveTimer.current);setHoveredSector(sec);}} onMouseLeave={()=>{sectorLeaveTimer.current=setTimeout(()=>setHoveredSector(null),80);}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
                     <span style={{fontFamily:SANS,fontSize:13,fontWeight:600,color:SCL[sec]}}>{sec}</span>
                     <span style={{fontFamily:SANS,fontSize:13,fontWeight:700,color:N.white,opacity:hoveredSector===sec?1:0,transition:"opacity 0.2s"}}>{fmtM(cost)}</span>
@@ -1084,12 +1254,20 @@ export default function V3App(){
             {/* Total */}
             <div style={{borderTop:`1px solid rgba(255,255,255,0.1)`,paddingTop:14,marginTop:"auto"}}>
               <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>CBAM Exposure by Year</div>
-              {annualCosts.map(({year,cost})=>(
-                <div key={year} style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                  <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>{year}</span>
-                  <span style={{fontFamily:SERIF,fontSize:18,fontWeight:700,color:N.teal200}}>{fmtM(cost)}</span>
+              {(()=>{const showQtr=rangeEnd!=="today"&&rangeStart===rangeEnd&&rangeStart<2026;return annualCosts.map(({year,cost,quarters})=>(
+                <div key={year} style={{marginBottom:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:showQtr&&quarters?4:0}}>
+                    <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>{year}</span>
+                    <span style={{fontFamily:SERIF,fontSize:18,fontWeight:700,color:N.teal200}}>{fmtM(cost)}</span>
+                  </div>
+                  {showQtr&&quarters&&quarters.map(({q,etsPrice,cost:qCost})=>(
+                    <div key={q} style={{display:"flex",justifyContent:"space-between",marginBottom:3,paddingLeft:8}}>
+                      <span style={{fontFamily:SANS,fontSize:11,color:N.tealMid}}>Q{q} · €{etsPrice.toFixed(1)}/t</span>
+                      <span style={{fontFamily:SERIF,fontSize:12,color:N.teal400}}>{fmtM(qCost)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ))})()}
               {annualCosts.length>1&&(
                 <div style={{display:"flex",justifyContent:"space-between",borderTop:`1px solid rgba(255,255,255,0.1)`,paddingTop:8,marginTop:2}}>
                   <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid,fontWeight:700}}>Total</span>
@@ -1113,7 +1291,7 @@ export default function V3App(){
               </colgroup>
               <thead>
                 <tr style={{background:N.teal900,color:N.white,verticalAlign:"bottom"}}>
-                  <th style={{padding:isMobile?"8px 8px":"8px 12px",textAlign:"left",fontWeight:700,fontSize:isMobile?13:16}}>Sector</th>
+                  <th style={{padding:isMobile?"8px 8px":"8px 12px",textAlign:"left",fontWeight:700,fontSize:isMobile?13:16,borderLeft:`4px solid ${N.teal900}`}}>Sector</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("tonnes","top")}}>{tonnesColumnLabel}</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("dv","top")}}>Default Value<br/>(tCO₂e/t)</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("markup","top")}}>Mark-up %</th>
@@ -1128,7 +1306,7 @@ export default function V3App(){
                   <tr key={r.sec} tabIndex={0} role="button" aria-label={`Open ${r.sec} sector detail`}
                     style={{background:i%2===0?N.white:N.tealPale,borderBottom:`1px solid ${N.tealLight}`,cursor:"pointer"}}
                     onClick={()=>setSelectedSector(r.sec)}
-                    onMouseEnter={()=>setHoveredRow(i)} onMouseLeave={()=>setHoveredRow(null)}
+                    onMouseEnter={()=>{clearTimeout(rowLeaveTimer.current);setHoveredRow(i);}} onMouseLeave={()=>{rowLeaveTimer.current=setTimeout(()=>setHoveredRow(null),80);}}
                     onKeyDown={e=>(e.key==="Enter"||e.key===" ")&&(e.preventDefault(),setSelectedSector(r.sec))}>
                     <td style={{padding:isMobile?"9px 8px":"9px 12px",fontSize:isMobile?14:17,fontWeight:800,color:SC[r.sec],borderLeft:`4px solid ${SC[r.sec]}`}}>
                       <span style={{display:"flex",alignItems:"center",overflow:"hidden",whiteSpace:"nowrap"}}>
@@ -1153,9 +1331,7 @@ export default function V3App(){
                   );
                 })}
                 <tr style={{background:N.teal900,color:N.white,fontWeight:700}}>
-                  <td style={{padding:"9px 12px",fontSize:16}}>Total</td>
-                  <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,fontVariantNumeric:"tabular-nums"}}>{fmtT(displayTableTonnesTotal)}</td>
-                  <td colSpan={2} style={{padding:"9px 8px",textAlign:"center",color:N.tealMid,fontSize:13}}>(weighted avg)</td>
+                  <td colSpan={4} style={{padding:"9px 12px",fontSize:16,textAlign:"right",color:N.tealMid,borderLeft:`4px solid ${N.teal900}`}}>Total</td>
                   <td style={{padding:"9px 8px",textAlign:"right",fontSize:16,borderLeft:`3px solid rgba(125,206,218,0.25)`,fontVariantNumeric:"tabular-nums"}}>{fmtM(displayTableCbamTotal)}</td>
                 </tr>
               </tbody>

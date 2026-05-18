@@ -7,6 +7,6 @@ import V3App from './V3App.jsx'
 const v = new URLSearchParams(location.search).get('v')
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {v === '2' ? <V2App /> : v === '3' ? <App /> : <V3App />}
+    {v === '2' ? <V3App /> : v === '3' ? <App /> : <V2App />}
   </StrictMode>,
 )
