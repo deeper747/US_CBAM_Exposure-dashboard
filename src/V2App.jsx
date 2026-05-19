@@ -218,6 +218,7 @@ const BASELINE_YEARS=["2022","2023","2024","2025"];
 const YTD_YEAR="2026";
 // Dynamic YTD: Jan 1 → today. Actual Comext data used where confirmed; 2022-25 avg otherwise.
 const _td=new Date(),_tdMo=_td.getMonth(),_tdDay=_td.getDate();
+const _CURRENT_YM=`${_td.getFullYear()}-${String(_tdMo+1).padStart(2,"0")}`;
 const _tdDIM=new Date(_td.getFullYear(),_tdMo+1,0).getDate();
 const _MO_ABB=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const YTD_FULL_MONTHS=Array.from({length:_tdMo},(_,i)=>String(i+1).padStart(2,"0"));
@@ -335,7 +336,7 @@ const TODAY_IDX=Math.round(48+_tdMo+_tdDay/_tdDIM);
 
 const MONTH_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX,viewStartYm="2024-07",viewEndYm="2028-06",q1Ets=Q1_ETS,forecastEts=75}){
+function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX,viewStartYm="2024-07",viewEndYm="2028-06",q1Ets=Q1_ETS,forecastEts=75,onConfirmedClick,confirmedPinned=false}){
   const [hov,setHov]=useState(null);
   const [q1LinkHov,setQ1LinkHov]=useState(false);
   const svgRef=useRef(null);
@@ -406,7 +407,7 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
     if(chartLeaveTimer.current){clearTimeout(chartLeaveTimer.current);chartLeaveTimer.current=null;}
     const idx=idxFromClientX(e.clientX);if(idx==null)return;
     setHov({idx,sx:e.clientX,sy:e.clientY});
-    if(onChartHover){const t=getTooltip(idx);onChartHover({hlTime:t.hlTime,hlVerb:t.hlVerb,hlAmt:t.hlAmt,year:t.year,isConfirmed:t.isConfirmed});}
+    if(onChartHover){const t=getTooltip(idx);onChartHover({hlTime:t.hlTime,hlVerb:t.hlVerb,hlAmt:t.hlAmt,year:t.year,isConfirmed:t.isConfirmed,ym:points[idx].ym});}
   },[idxFromClientX,getTooltip,onChartHover]);
 
   const handleClick=useCallback((e)=>{
@@ -450,7 +451,7 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
   const graphLabels=[
     lineLabel(Math.min(CBAM_IDX-4,visibleStartIdx+9),"hypothetical exposure",N.tealMid,-20,-25),
     lineLabel(Math.min(Math.max(CBAM_IDX,visibleStartIdx),Math.min(cutIdx,visibleEndIdx)),"confirmed exposure","#F4DA91",5,22,"start"),
-    lineLabel(Math.min(Math.max(cutIdx+18,CBAM_IDX+9),visibleEndIdx-5),"projected exposure",N.teal600,90,-16),
+    lineLabel(Math.min(Math.max(cutIdx+18,CBAM_IDX+9),visibleEndIdx-5),"projected exposure",N.teal600,90,-1),
   ].filter(Boolean);
   const tip=hov?getTooltip(hov.idx):null;
 
@@ -493,7 +494,7 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
         {cbamX!=null&&(
           <>
             <line x1={cbamX} y1={pad.t} x2={cbamX} y2={H-pad.b} stroke={N.orange400} strokeWidth={2.2} opacity={0.7}/>
-            <text x={cbamX+7} y={pad.t+16} fill={N.orange400} fontSize={14} fontFamily={SANS} fontWeight={700}>CBAM start</text>
+            <text x={cbamX-80} y={pad.t+16} fill={N.orange400} fontSize={14} fontFamily={SANS} fontWeight={700}>CBAM start</text>
             <text x={cbamX-8} y={yp(400)-10} textAnchor="end" fill={N.tealMid} fontSize={9} fontFamily={SANS} opacity={0.6}>monthly cost</text>
             {[100,200,300,400].map(v=>(
               <g key={v}>
@@ -522,15 +523,27 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
         {/* Historical dashed */}
         {histD&&<path d={histD} fill="none" stroke={N.tealMid} strokeWidth={3.4} strokeLinejoin="round" strokeDasharray="7,8"/>}
         {/* Solid (confirmed CBAM data) */}
-        {solidD&&<path d={solidD} fill="none" stroke="#F4DA91" strokeWidth={5} strokeLinejoin="round"/>}
+        {solidD&&<path d={solidD} fill="none" stroke={confirmedPinned?"#ffe88a":"#F4DA91"} strokeWidth={confirmedPinned?6:5} strokeLinejoin="round"/>}
+        {/* Wider transparent hit area for clicking the confirmed segment to pin */}
+        {solidD&&<path d={solidD} fill="none" stroke="transparent" strokeWidth={22} strokeLinejoin="round" style={{cursor:"pointer"}}
+          onClick={e=>{e.stopPropagation();onConfirmedClick?.();}}
+        />}
         {/* Year labels */}
         {yearMarks.map(({label,idx})=>(
           <text key={label} x={xp(idx-visibleStartIdx)} y={H-8} textAnchor="middle" fill={label==="2026"?N.teal200:N.tealMid} fontSize={16} fontFamily={SANS} fontWeight={label==="2026"?700:500}>{label}</text>
         ))}
-        {/* Direct labels */}
-        {graphLabels.map(({x,y,text,color,anchor})=>(
-          <text key={text} x={x} y={y} textAnchor={anchor} fill={color} stroke={N.teal900} strokeWidth={5} paintOrder="stroke" fontSize={13} fontFamily={SANS} fontWeight={800} letterSpacing={0} pointerEvents="none">{text}</text>
-        ))}
+        {/* Direct labels — "confirmed exposure" is interactive */}
+        {graphLabels.map(({x,y,text,color,anchor})=>{
+          if(text==="confirmed exposure"){
+            return(
+              <g key={text}>
+                <text x={x} y={y} textAnchor={anchor} fill={confirmedPinned?"#ffe88a":color} stroke={N.teal900} strokeWidth={5} paintOrder="stroke" fontSize={13} fontFamily={SANS} fontWeight={800} letterSpacing={0} pointerEvents="none">{text}{confirmedPinned?" ⊗":""}</text>
+                {confirmedPinned&&<line x1={x} y1={y+2} x2={x+120} y2={y+2} stroke="#ffe88a" strokeWidth={1} opacity={0.7} pointerEvents="none"/>}
+              </g>
+            );
+          }
+          return(<text key={text} x={x} y={y} textAnchor={anchor} fill={color} stroke={N.teal900} strokeWidth={5} paintOrder="stroke" fontSize={13} fontFamily={SANS} fontWeight={800} letterSpacing={0} pointerEvents="none">{text}</text>);
+        })}
         {/* Hover dot — main line */}
         {hov!=null&&(
           <circle cx={xp(hov.idx-visibleStartIdx)} cy={yp(points[hov.idx].v)} r={7.8} fill={N.teal600} stroke={N.white} strokeWidth={2.4}/>
@@ -778,7 +791,7 @@ function SectorModal({sec,ets,liveEntries,onClose}){
                     {col:"total",label:<>Default Value<br/>(tCO₂e/t)</>,align:"right"},
                     {col:"ytdTonnes",label:<>YTD Avg Trade<br/>Volume (t)</>,align:"right"},
                     {col:"cumGrowth",label:growthColLabel,align:"right"},
-                    {col:"taxToday",label:"CBAM exposure YTD",align:"right"},
+                    {col:"taxToday",label:<>Proj. YTD<br/>CBAM exposure</>,align:"right"},
                     {col:"proj2026Cbam",label:<>Proj. 2026<br/>CBAM exposure</>,align:"right"},
                   ].map(({col,label,align})=>{
                     const active=sortCol===col;
@@ -882,6 +895,8 @@ export default function V3App(){
   const sectorLeaveTimer=useRef(null);
   const rowLeaveTimer=useRef(null);
   const [howToOpen,setHowToOpen]=useState(false);
+  const [confirmedViewPinned,setConfirmedViewPinned]=useState(false);
+  const confirmedViewActive=(chartHover?.isConfirmed??false)||confirmedViewPinned;
 
   // ── LIVE COMEXT FETCH ────────────────────────────────────────────────────────
   const [liveData,setLiveData]=useState(null);
@@ -979,6 +994,52 @@ export default function V3App(){
   // Confirmed months list for caption display
   const liveMonths=useMemo(()=>Object.keys(liveChartOverrides).sort(),[liveChartOverrides]);
 
+  // Latest confirmed Comext month (e.g. "2026-03")
+  const latestConfirmedYm=useMemo(()=>{
+    if(!mergedTrade)return null;
+    const yms=Object.values(mergedTrade).flatMap(m=>Object.keys(m)).filter(ym=>ym>="2026-01");
+    return yms.length?yms.sort().at(-1):null;
+  },[mergedTrade]);
+
+  const confirmedMosList=useMemo(()=>{
+    if(!latestConfirmedYm)return[];
+    const lm=parseInt(latestConfirmedYm.split("-")[1]);
+    return Array.from({length:lm},(_,i)=>String(i+1).padStart(2,"0"));
+  },[latestConfirmedYm]);
+
+  // Per-sector confirmed trade volume and CBAM exposure (Jan 2026 – latestConfirmedYm)
+  const confirmedDataBySector=useMemo(()=>{
+    if(!mergedTrade||!latestConfirmedYm||!confirmedMosList.length)return null;
+    const result={};
+    for(const sec of SECTORS_LIST){
+      const rows=RELEVANT.filter(d=>d.sector===sec);
+      let tonnes=0,cost=0;
+      for(const d of rows){
+        const k=trKey(d.cn),mv=d.mv2026||0;
+        for(const mo of confirmedMosList){
+          const ym=`2026-${mo}`;
+          const t=mergedTrade[k]?.[ym]?.[0]??0;
+          const qEts=getQtrEts(ym,ets);
+          tonnes+=t;
+          cost+=t*mv*qEts*EUR_USD;
+        }
+      }
+      result[sec]={tonnes,cost};
+    }
+    return result;
+  },[mergedTrade,latestConfirmedYm,confirmedMosList,ets]);
+
+  const confirmedTotal=useMemo(()=>{
+    if(!confirmedDataBySector)return 0;
+    return Object.values(confirmedDataBySector).reduce((s,d)=>s+d.cost,0);
+  },[confirmedDataBySector]);
+
+  const confirmedMonthLabel=useMemo(()=>{
+    if(!latestConfirmedYm)return"";
+    const[,m]=latestConfirmedYm.split("-");
+    return`${MONTH_NAMES[parseInt(m)-1]} 2026`;
+  },[latestConfirmedYm]);
+
   // Chart: monthly costs applying ETS prices, with live overrides for confirmed months
   const chartPoints=useMemo(()=>CHART_DATA.map(m=>({...m,v:(liveChartOverrides[m.ym]??m.factor)*getQtrEts(m.ym,ets)*EUR_USD/1e6})),[ets,liveChartOverrides]);
 
@@ -992,30 +1053,46 @@ export default function V3App(){
   const totTaxToday=tableRows.reduce((s,r)=>s+r.taxToday,0);
   const activeSectorYear=chartHover?.year??chartPinnedYear;
   const isHoverConfirmed=chartHover?.isConfirmed??false;
-  // Confirmed 2026 hover keeps YTD display (null = default); projected 2026 hover shows full-year estimate
-  const activeTableYear=(activeSectorYear&&!(activeSectorYear===2026&&isHoverConfirmed))?activeSectorYear:null;
-  const displayTableRows=useMemo(()=>tableRows.map(r=>{
-    if(!activeTableYear)return{...r,displayTonnes:ytdTonnesBySector[r.sec],displayCbam:r.taxToday};
-    return{
-      ...r,
-      displayTonnes:sectorYearTonnes(r.sec,activeTableYear,mergedTrade),
-      displayCbam:sectorYearCost(r.sec,activeTableYear,ets,mergedTrade),
-    };
-  }),[tableRows,activeTableYear,ets,mergedTrade]);
+  // Hovering between latest confirmed month and today also shows YTD (these months have no confirmed data yet)
+  const isHoverPreToday=!!(chartHover?.ym&&latestConfirmedYm&&chartHover.ym>latestConfirmedYm&&chartHover.ym<=_CURRENT_YM);
+  const showYtdForHover=activeSectorYear===2026&&(isHoverConfirmed||isHoverPreToday);
+  const activeTableYear=(activeSectorYear&&!showYtdForHover)?activeSectorYear:null;
+  const displayTableRows=useMemo(()=>{
+    if(confirmedViewActive&&confirmedDataBySector){
+      return tableRows.map(r=>({...r,displayTonnes:confirmedDataBySector[r.sec]?.tonnes??0,displayCbam:confirmedDataBySector[r.sec]?.cost??0}));
+    }
+    return tableRows.map(r=>{
+      if(!activeTableYear)return{...r,displayTonnes:ytdTonnesBySector[r.sec],displayCbam:r.taxToday};
+      return{
+        ...r,
+        displayTonnes:sectorYearTonnes(r.sec,activeTableYear,mergedTrade),
+        displayCbam:sectorYearCost(r.sec,activeTableYear,ets,mergedTrade),
+      };
+    });
+  },[tableRows,activeTableYear,ets,mergedTrade,confirmedViewActive,confirmedDataBySector,ytdTonnesBySector]);
   const displayTableTonnesTotal=displayTableRows.reduce((s,r)=>s+r.displayTonnes,0);
   const displayTableCbamTotal=displayTableRows.reduce((s,r)=>s+r.displayCbam,0);
-  const tonnesColumnLabel=activeTableYear
-    ?(activeTableYear>=2026?`${activeTableYear} Est. Trade Volume (t)`:`${activeTableYear} Trade Volume (t)`)
-    :"YTD Trade Volume (t)";
-  const cbamColumnLabel=activeTableYear
-    ?(activeTableYear<2026
-      ?`Hyp. CBAM in ${activeTableYear}`
-      :`Proj. CBAM exposure in ${activeTableYear}`)
-    :"CBAM exposure YTD";
+  const tonnesColumnLabel=confirmedViewActive
+    ?"Confirmed trade volume (t)"
+    :activeTableYear
+      ?(activeTableYear>=2026?`${activeTableYear} Proj. trade volume (t)`:`${activeTableYear} trade volume (t)`)
+      :"Proj. YTD trade volume (t)";
+  const cbamColumnLabel=confirmedViewActive
+    ?"Confirmed CBAM exposure"
+    :activeTableYear
+      ?(activeTableYear<2026
+        ?`Hyp. CBAM in ${activeTableYear}`
+        :`Proj. CBAM exposure in ${activeTableYear}`)
+      :"Proj. CBAM exposure YTD";
 
   // Sector proportions for right panel
   const sectorAnnCosts=useMemo(()=>{
-    const yr=activeSectorYear;
+    if(confirmedViewActive&&confirmedDataBySector){
+      const items=SECTORS_LIST.map(sec=>({sec,cost:confirmedDataBySector[sec]?.cost??0}));
+      const tot=items.reduce((s,d)=>s+d.cost,0);
+      return items.map(d=>({...d,pct:tot>0?d.cost/tot*100:0})).sort((a,b)=>b.pct-a.pct);
+    }
+    const yr=showYtdForHover?null:activeSectorYear;
     const items=SECTORS_LIST.map(sec=>{
       let cost;
       if(yr){
@@ -1032,7 +1109,7 @@ export default function V3App(){
     });
     const tot=items.reduce((s,d)=>s+d.cost,0);
     return items.map(d=>({...d,pct:tot>0?d.cost/tot*100:0})).sort((a,b)=>b.pct-a.pct);
-  },[ets,activeSectorYear,mergedTrade,ytdCostFactors,rangeStart,rangeEnd]);
+  },[ets,activeSectorYear,mergedTrade,ytdCostFactors,rangeStart,rangeEnd,confirmedViewActive,confirmedDataBySector,showYtdForHover]);
 
   // Mark-up phase-in % for table column
   const markupPct=(sec)=>{
@@ -1097,19 +1174,27 @@ export default function V3App(){
     setChartHover(null);
   },[]);
 
-  const handleChartClick=useCallback((yr)=>{
+  const handleChartClick=useCallback((yr,tooltipInfo)=>{
+    if(tooltipInfo?.isConfirmed){
+      setConfirmedViewPinned(p=>!p);
+      return;
+    }
     setRangeStart(yr);
     setRangeEnd(yr);
     setChartHover(null);
     setChartPinnedYear(yr);
     setChartHoverPinned(true);
+    setConfirmedViewPinned(false);
   },[]);
 
   const clearChartPinnedYear=useCallback(()=>{
     setChartPinnedYear(null);
     setChartHoverPinned(false);
     setChartHover(null);
+    setConfirmedViewPinned(false);
   },[]);
+
+  const handleConfirmedClick=useCallback(()=>setConfirmedViewPinned(p=>!p),[]);
 
   return(
     <>
@@ -1133,7 +1218,9 @@ export default function V3App(){
           <div style={{padding:isMobile?"10px 16px 0":"10px 28px 0",background:"transparent",position:"relative",zIndex:1,display:"flex",flexDirection:"column",minHeight:isMobile?0:560}}>
             {/* Eyebrow: inline year selects (or hover override) */}
             <div style={{margin:"0 0 10px",height:isMobile?undefined:"clamp(46px,5vw,58px)",minHeight:isMobile?36:undefined,fontSize:isMobile?22:"clamp(32px,4vw,45px)",fontWeight:700,color:N.teal400,fontFamily:SANS,letterSpacing:0,lineHeight:1,display:"flex",alignItems:"center",flexWrap:"nowrap",gap:"0 8px",flexShrink:0}}>
-              {chartHover?(
+              {confirmedViewActive?(
+                <span style={{fontFamily:SANS,fontSize:isMobile?22:"clamp(32px,4vw,45px)",fontWeight:700,lineHeight:1,letterSpacing:0,color:"#F4DA91"}}>Jan 2026 – {confirmedMonthLabel}</span>
+              ):(chartHover&&!showYtdForHover)?(
                 <span style={{fontFamily:SANS,fontSize:isMobile?22:"clamp(32px,4vw,45px)",fontWeight:700,lineHeight:1,letterSpacing:0}}>{chartHover.hlTime}</span>
               ):(
                 <>
@@ -1146,15 +1233,15 @@ export default function V3App(){
             </div>
             <div style={{margin:"0 0 6px",fontFamily:SERIF,fontSize:isMobile?"clamp(28px,8vw,34px)":"clamp(43px,6vw,77px)",fontWeight:400,lineHeight:isMobile?1.08:0.98,letterSpacing:isMobile?"-0.02em":undefined,color:N.white}}>
               The US{" "}
-              <span style={{color:N.teal400}}>{chartHover?chartHover.hlVerb:hlVerb}</span>{" "}
-              <span style={{color:N.orange500,whiteSpace:"nowrap"}}>{chartHover?chartHover.hlAmt:hlAmt}</span>{" "}
+              <span style={{color:N.teal400}}>{confirmedViewActive?"owes":(chartHover&&!showYtdForHover)?chartHover.hlVerb:hlVerb}</span>{" "}
+              <span style={{color:N.orange500,whiteSpace:"nowrap"}}>{confirmedViewActive?fmtM(confirmedTotal):(chartHover&&!showYtdForHover)?chartHover.hlAmt:hlAmt}</span>{" "}
               to the EU
             </div>
             <div style={{margin:"0 0 8px",fontFamily:SANS,fontSize:isMobile?20:"clamp(18px,2vw,23px)",fontWeight:400,lineHeight:1.4,color:N.tealMid}}>
               for exporting emission&#8209;intensive products under carbon border adjustment mechanism.
             </div>
             <div style={{marginTop:"auto"}}>
-              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2024-07" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={Q1_ETS} forecastEts={ets}/>
+              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2024-07" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={Q1_ETS} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned}/>
               {(()=>{
                 const latestYm=liveMonths.length>0?liveMonths[liveMonths.length-1]:DATA_CUTOFF_YM;
                 const[lcY,lcM]=latestYm.split("-");
@@ -1223,26 +1310,36 @@ export default function V3App(){
 
             {/* Sector breakdown */}
             <div>
-              <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:10}}>
-                {activeSectorYear?`${activeSectorYear} `:rangeEnd!=="today"?`${rangeStart}${Number(rangeEnd)>rangeStart?`–${rangeEnd}`:""} `:"YTD "}CBAM Exposure by Sector
+              <div style={{fontFamily:SANS,fontSize:11,fontWeight:700,letterSpacing:"0.1em",color:N.teal400,textTransform:"uppercase",marginBottom:6}}>
+                {confirmedViewActive?"Confirmed CBAM Exposure by Sector":`${(activeSectorYear&&!showYtdForHover)?`${activeSectorYear} `:rangeEnd!=="today"?`${rangeStart}${Number(rangeEnd)>rangeStart?`–${rangeEnd}`:""} `:"YTD "}CBAM Exposure by Sector`}
               </div>
-              <div style={{fontSize:12,color:N.tealMid,marginBottom:10}}>
-                {activeSectorYear
-                  ?(activeSectorYear<2026?`${activeSectorYear} hypothetical`:`${activeSectorYear} projected`)
-                  :rangeEnd!=="today"
-                    ?`${rangeStart}${Number(rangeEnd)>rangeStart?`–${rangeEnd}`:""} · sector mix`
-                    :`YTD · ${YTD_LABEL}`
-                }{(activeSectorYear&&activeSectorYear<2026)||(rangeEnd!=="today"&&Number(rangeEnd)<=2025)
+              <div style={{fontSize:12,color:N.tealMid,marginBottom:confirmedViewActive?6:10}}>
+                {confirmedViewActive
+                  ?`Jan – ${confirmedMonthLabel} · actual Comext data · at €${Q1_ETS.toFixed(2)}`
+                  :showYtdForHover
+                    ?`YTD · ${YTD_LABEL} · at €${ets.toFixed(0)}`
+                    :(activeSectorYear&&!showYtdForHover)
+                      ?(activeSectorYear<2026?`${activeSectorYear} hypothetical`:`${activeSectorYear} projected`)
+                      :rangeEnd!=="today"
+                        ?`${rangeStart}${Number(rangeEnd)>rangeStart?`–${rangeEnd}`:""} · sector mix`
+                        :`YTD · ${YTD_LABEL}`
+                }{!confirmedViewActive&&!showYtdForHover&&((activeSectorYear&&activeSectorYear<2026)||(rangeEnd!=="today"&&Number(rangeEnd)<=2025)
                   ?` · actual ETS prices`
-                  :` · at €${ets.toFixed(0)}`
+                  :activeSectorYear?` · at €${ets.toFixed(0)}`:` · at €${ets.toFixed(0)}`)
                 }
               </div>
+              {confirmedViewActive&&confirmedViewPinned&&(
+                <div style={{marginBottom:8,fontFamily:SANS,fontSize:11,color:N.tealMid,opacity:0.85,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:4}}
+                  onClick={()=>setConfirmedViewPinned(false)}>
+                  <span style={{fontSize:13}}>⊗</span><span>Pinned · click to unpin</span>
+                </div>
+              )}
               {sectorAnnCosts.map(({sec,cost,pct})=>(
                 <div key={sec} style={{marginBottom:10,cursor:"pointer"}}
                   onMouseEnter={()=>{clearTimeout(sectorLeaveTimer.current);setHoveredSector(sec);}} onMouseLeave={()=>{sectorLeaveTimer.current=setTimeout(()=>setHoveredSector(null),80);}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
                     <span style={{fontFamily:SANS,fontSize:13,fontWeight:600,color:SCL[sec]}}>{sec}</span>
-                    <span style={{fontFamily:SANS,fontSize:13,fontWeight:700,color:N.white,opacity:hoveredSector===sec?1:0,transition:"opacity 0.2s"}}>{fmtM(cost)}</span>
+                    <span style={{fontFamily:SANS,fontSize:13,fontWeight:700,color:N.white,opacity:(confirmedViewActive||hoveredSector===sec)?1:0,transition:"opacity 0.2s"}}>{fmtM(cost)}</span>
                   </div>
                   <div style={{height:6,background:"rgba(255,255,255,0.08)",borderRadius:3,overflow:"hidden"}}>
                     <div style={{height:"100%",width:`${pct.toFixed(1)}%`,background:SC[sec]||N.teal600,borderRadius:3,transition:"width 0.3s"}}/>
@@ -1293,7 +1390,7 @@ export default function V3App(){
                 <tr style={{background:N.teal900,color:N.white,verticalAlign:"bottom"}}>
                   <th style={{padding:isMobile?"8px 8px":"8px 12px",textAlign:"left",fontWeight:700,fontSize:isMobile?13:16,borderLeft:`4px solid ${N.teal900}`}}>Sector</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("tonnes","top")}}>{tonnesColumnLabel}</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("dv","top")}}>Default Value<br/>(tCO₂e/t)</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("dv","top")}}>Default value (tCO₂e/t, weighted avg.)</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("markup","top")}}>Mark-up %</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>{cbamColumnLabel}</th>
                 </tr>
@@ -1338,6 +1435,7 @@ export default function V3App(){
             </table>
           </div>
           <div style={{padding:"6px 16px 8px",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
+            {confirmedViewActive&&<span style={{color:N.tealMid,fontWeight:600,marginRight:6}}>Confirmed Comext data: Jan 2026 – {confirmedMonthLabel}.</span>}
             Click any sector row for CN-code breakdown. Hover the line chart to shift the data display by year. Projected trade uses 2022–25 monthly averages where live data is unavailable.
           </div>
         </div>
@@ -1376,7 +1474,6 @@ export default function V3App(){
             );})()}
           </div>
         </div>
-
 
       </div>
 
