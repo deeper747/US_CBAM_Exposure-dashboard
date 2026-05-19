@@ -401,14 +401,14 @@ function LineChart({points,onChartHover,onChartLeave,onChartClick,cutIdx=CUT_IDX
       return{label,sub:"Projected (2022–25 avg · 20% mark-up)",value:val,note:`Est. monthly · 2027 total: ${annualAmt}`,hlTime:"In 2027",hlVerb:"is projected to owe",hlAmt:annualAmt,year,isConfirmed:false,cumulative};
     }
     return{label,sub:"Projected (2022–25 avg · 30% mark-up)",value:val,note:`Est. monthly · 2028 total: ${annualAmt}`,hlTime:"In 2028",hlVerb:"is projected to owe",hlAmt:annualAmt,year,isConfirmed:false,cumulative};
-  },[points,annualTotals,cutIdx,cumValues]);
+  },[points,annualTotals,cutIdx,cumValues,q1Ets]);
 
   const handleMouseMove=useCallback((e)=>{
     if(chartLeaveTimer.current){clearTimeout(chartLeaveTimer.current);chartLeaveTimer.current=null;}
     const idx=idxFromClientX(e.clientX);if(idx==null)return;
     setHov({idx,sx:e.clientX,sy:e.clientY});
     if(onChartHover){const t=getTooltip(idx);onChartHover({hlTime:t.hlTime,hlVerb:t.hlVerb,hlAmt:t.hlAmt,year:t.year,isConfirmed:t.isConfirmed,ym:points[idx].ym});}
-  },[idxFromClientX,getTooltip,onChartHover]);
+  },[idxFromClientX,getTooltip,onChartHover,points]);
 
   const handleClick=useCallback((e)=>{
     const idx=idxFromClientX(e.clientX);if(idx==null||!onChartClick)return;
@@ -626,6 +626,13 @@ const SECTOR_INFO={
 };
 
 // ── JAN–FEB DETAIL MODAL ─────────────────────────────────────────────────────
+function JanFebHeaderCell({children,right,dim,accent,color}){
+  return(
+    <th style={{padding:"6px 8px",textAlign:right?"right":"left",fontWeight:700,fontSize:12,
+      color:accent?color:dim?N.tealMid:N.teal900,whiteSpace:"nowrap"}}>{children}</th>
+  );
+}
+
 function JanFebModal({sec,mergedTrade,confirmedMos,rangeLabel,onClose}){
   const color=SC[sec]||N.teal600;
   const closeRef=useRef(null);
@@ -636,7 +643,7 @@ function JanFebModal({sec,mergedTrade,confirmedMos,rangeLabel,onClose}){
     return()=>document.removeEventListener("keydown",h);
   },[onClose]);
 
-  const cns=RELEVANT.filter(d=>d.sector===sec);
+  const cns=useMemo(()=>RELEVANT.filter(d=>d.sector===sec),[sec]);
 
   const monthRows=useMemo(()=>confirmedMos.map(mo=>{
     let avg=0,y25=0,y26=0;
@@ -650,7 +657,7 @@ function JanFebModal({sec,mergedTrade,confirmedMos,rangeLabel,onClose}){
       vs26avg:avg>0?(y26-avg)/avg*100:null,
       vs25avg:avg>0?(y25-avg)/avg*100:null,
       vs2625:y25>0?(y26-y25)/y25*100:null};
-  }),[mergedTrade,confirmedMos]);
+  }),[mergedTrade,confirmedMos,cns]);
 
   const cnRows=useMemo(()=>cns.map(d=>{
     const k=trKey(d.cn);
@@ -664,17 +671,13 @@ function JanFebModal({sec,mergedTrade,confirmedMos,rangeLabel,onClose}){
       vs26avg:avg>0?(y26-avg)/avg*100:null,
       vs25avg:avg>0?(y25-avg)/avg*100:null,
       vs2625:y25>0?(y26-y25)/y25*100:null};
-  }).filter(r=>r.avg>0||r.y25>0||r.y26>0).sort((a,b)=>b.y25-a.y25),[mergedTrade,confirmedMos]);
+  }).filter(r=>r.avg>0||r.y25>0||r.y26>0).sort((a,b)=>b.y25-a.y25),[mergedTrade,confirmedMos,cns]);
 
   const totAvg=monthRows.reduce((s,r)=>s+r.avg,0);
   const tot25=monthRows.reduce((s,r)=>s+r.y25,0);
   const tot26=monthRows.reduce((s,r)=>s+r.y26,0);
   const hasLive=mergedTrade&&tot26>0;
 
-  const TH=({children,right,dim,accent})=>(
-    <th style={{padding:"6px 8px",textAlign:right?"right":"left",fontWeight:700,fontSize:12,
-      color:accent?color:dim?N.tealMid:N.teal900,whiteSpace:"nowrap"}}>{children}</th>
-  );
   const pctCell=(v)=><td style={{padding:"6px 8px",textAlign:"right",fontSize:12,fontVariantNumeric:"tabular-nums",
     color:v!=null?(v>=0?N.green600:N.orange500):N.tealMid}}>{pct(v)}</td>;
 
@@ -700,12 +703,12 @@ function JanFebModal({sec,mergedTrade,confirmedMos,rangeLabel,onClose}){
             <table style={{width:"100%",borderCollapse:"collapse",fontFamily:SANS,fontSize:14}}>
               <thead>
                 <tr style={{background:N.tealPale}}>
-                  <TH>Month</TH>
-                  <TH right dim>2022–25 Avg</TH>
-                  <TH right>2025</TH>
-                  {hasLive&&<TH right accent>2026</TH>}
-                  <TH right dim>vs avg</TH>
-                  {hasLive&&<TH right dim>vs 2025</TH>}
+                  <JanFebHeaderCell color={color}>Month</JanFebHeaderCell>
+                  <JanFebHeaderCell right dim color={color}>2022–25 Avg</JanFebHeaderCell>
+                  <JanFebHeaderCell right color={color}>2025</JanFebHeaderCell>
+                  {hasLive&&<JanFebHeaderCell right accent color={color}>2026</JanFebHeaderCell>}
+                  <JanFebHeaderCell right dim color={color}>vs avg</JanFebHeaderCell>
+                  {hasLive&&<JanFebHeaderCell right dim color={color}>vs 2025</JanFebHeaderCell>}
                 </tr>
               </thead>
               <tbody>
@@ -955,7 +958,6 @@ function SectorModal({sec,ets,liveEntries,onClose}){
   },[sec,ets,liveEntries,latestConfirmedYm]);
 
   const totT=cnRows.reduce((s,r)=>s+r.annT,0);
-  const totYtd=cnRows.reduce((s,r)=>s+r.ytdAvgUsd,0);
   const totYtdTonnes=cnRows.reduce((s,r)=>s+r.ytdTonnes,0);
   const totToday=cnRows.reduce((s,r)=>s+r.taxToday,0);
   const totProj2026=cnRows.reduce((s,r)=>s+r.proj2026Cbam,0);
@@ -1332,7 +1334,6 @@ export default function V3App(){
       };
     });
   },[tableRows,activeTableYear,ets,mergedTrade,confirmedViewActive,confirmedDataBySector,ytdTonnesBySector]);
-  const displayTableTonnesTotal=displayTableRows.reduce((s,r)=>s+r.displayTonnes,0);
   const displayTableCbamTotal=displayTableRows.reduce((s,r)=>s+r.displayCbam,0);
   const tonnesColumnLabel=confirmedViewActive
     ?"Confirmed trade volume (t)"

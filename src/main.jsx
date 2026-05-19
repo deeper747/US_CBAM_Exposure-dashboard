@@ -1,12 +1,14 @@
-import { StrictMode } from 'react'
+import { StrictMode, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.jsx'
-import V2App from './V2App.jsx'
-import V3App from './V3App.jsx'
 
 const v = new URLSearchParams(location.search).get('v')
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    {v === '2' ? <V3App /> : v === '3' ? <App /> : <V2App />}
-  </StrictMode>,
-)
+const appModule = v === '2' ? import('./V3App.jsx') : import('./V2App.jsx')
+
+appModule.then(module => {
+  const App = module.default
+  createRoot(document.getElementById('root')).render(
+    <StrictMode>
+      {createElement(App)}
+    </StrictMode>,
+  )
+})
