@@ -413,7 +413,7 @@ export default function V3App(){
             </div>
             <div style={{margin:"0 0 6px",fontFamily:SERIF,fontSize:isMobile?"clamp(28px,8vw,34px)":"clamp(43px,6vw,77px)",fontWeight:400,lineHeight:isMobile?1.08:0.98,letterSpacing:isMobile?"-0.02em":undefined,color:N.white}}>
               The US{" "}
-              <span style={{color:N.teal400}}>{confirmedViewActive?"owes":(chartHover&&!showYtdForHover)?chartHover.hlVerb:hlVerb}</span>{" "}
+              <span style={{color:N.teal400}}>{confirmedViewActive?"owes an estimated":(chartHover&&!showYtdForHover)?chartHover.hlVerb:hlVerb}</span>{" "}
               <span style={{color:N.orange500,whiteSpace:"nowrap"}}>{confirmedViewActive?fmtM(confirmedTotal):(chartHover&&!showYtdForHover)?chartHover.hlAmt:hlAmt}</span>{" "}
               to the EU
             </div>
