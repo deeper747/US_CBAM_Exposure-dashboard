@@ -27,7 +27,7 @@ import {
   ytdCostFactorsForRows,
   ytdTonnesForRows,
 } from "./lib/cbamCalculations.js";
-import { useComextLiveData } from "./hooks/useComextLiveData.js";
+import { useComextData } from "./context/ComextDataContext.jsx";
 import { useIframeHeight } from "./hooks/useIframeHeight.js";
 import { N, SANS, SERIF, SECTOR_COLORS as SC, SECTOR_LIGHT_COLORS as SCL } from "./styles/tokens.js";
 
@@ -121,7 +121,7 @@ export default function V3App(){
   const [confirmedViewPinned,setConfirmedViewPinned]=useState(false);
   const confirmedViewActive=(chartHover?.isConfirmed??false)||confirmedViewPinned;
 
-  const {liveData,fetchStatus}=useComextLiveData();
+  const {liveData,fetchStatus}=useComextData();
 
   // Merge live API data with static baseline; null if nothing fetched yet
   const mergedTrade=useMemo(()=>liveData?.gotAny?liveData.entries:null,[liveData]);
