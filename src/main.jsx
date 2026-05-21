@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { ComextDataProvider } from './context/ComextDataContext.jsx'
 
 const v = new URLSearchParams(location.search).get('v')
-const appModule = v === '2' ? import('./V3App.jsx') : import('./V2App.jsx')
+const appModule = v === '3' ? import('./V3App.jsx') : v === '2' ? import('./V2App.jsx') : import('./App.jsx')
 
 appModule.then(module => {
   const App = module.default

@@ -4,7 +4,7 @@ import {
   CBAM_IDX,
   CUT_IDX,
   MONTH_NAMES,
-  TODAY_IDX,
+  TODAY_FRAC_IDX,
   getQtrEts,
 } from "../lib/cbamCalculations.js";
 
@@ -20,6 +20,9 @@ export default function LineChart({
   forecastEts = 75,
   onConfirmedClick,
   confirmedPinned = false,
+  cbamIdx = CBAM_IDX,
+  todayFracIdx = TODAY_FRAC_IDX,
+  padLeft = 12,
 }) {
   const [hov, setHov] = useState(null);
   const [q1LinkHov, setQ1LinkHov] = useState(false);
@@ -28,7 +31,7 @@ export default function LineChart({
 
   const W = 820;
   const H = 360;
-  const pad = { l: 12, r: 12, t: 50, b: 41 };
+  const pad = { l: padLeft, r: 12, t: 50, b: 41 };
   const visibleStartIdx = Math.max(0, points.findIndex(p => p.ym >= viewStartYm));
   const afterEndIdx = points.findIndex(p => p.ym > viewEndYm);
   const visibleEndIdx = afterEndIdx === -1 ? points.length - 1 : Math.max(visibleStartIdx, afterEndIdx - 1);
@@ -40,12 +43,12 @@ export default function LineChart({
   const cumValues = useMemo(() => {
     const arr = new Array(points.length).fill(0);
     let running = 0;
-    for (let i = CBAM_IDX; i < points.length; i++) {
+    for (let i = cbamIdx; i < points.length; i++) {
       running += points[i].v;
       arr[i] = running;
     }
     return arr;
-  }, [points]);
+  }, [points, cbamIdx]);
 
   const maxY = 500;
   const xp = i => pad.l + (n <= 1 ? 0 : i / (n - 1) * cW);
@@ -70,6 +73,22 @@ export default function LineChart({
     return totals;
   }, [points]);
 
+  // Dynamic year marks derived from points array — works for any date range
+  const yearMarks = useMemo(() => {
+    const marks = [];
+    const seen = new Set();
+    for (let i = visibleStartIdx; i <= visibleEndIdx; i++) {
+      const yr = parseInt(points[i].ym);
+      if (!seen.has(yr)) {
+        seen.add(yr);
+        const mo = parseInt(points[i].ym.slice(5, 7));
+        const label = (seen.size === 1 && mo > 6) ? `'${String(yr).slice(2)}` : String(yr);
+        marks.push({ label, idx: i });
+      }
+    }
+    return marks;
+  }, [points, visibleStartIdx, visibleEndIdx]);
+
   const getTooltip = useCallback((idx) => {
     const p = points[idx];
     const [yr, mo] = p.ym.split("-");
@@ -79,24 +98,19 @@ export default function LineChart({
     const year = parseInt(yr);
     const annual = annualTotals[year] || 0;
     const annualAmt = `$${annual.toFixed(1)}M`;
-    const isConfirmed = idx >= CBAM_IDX && idx <= cutIdx;
-    const cumRaw = idx >= CBAM_IDX ? cumValues[idx] : null;
+    const isConfirmed = idx >= cbamIdx && idx <= cutIdx;
+    const cumRaw = idx >= cbamIdx ? cumValues[idx] : null;
     const cumulative = cumRaw != null ? (cumRaw >= 1000 ? `$${(cumRaw / 1000).toFixed(2)}B` : `$${cumRaw.toFixed(0)}M`) : null;
-    if (idx < CBAM_IDX) {
+    if (idx < cbamIdx) {
       const qEts = getQtrEts(p.ym, q1Ets);
       return { label, sub: `Pre-CBAM · hypothetical · €${qEts.toFixed(2)}/tCO₂e`, value: val, note: `${year} annual estimate: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "would have owed", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
     }
     if (isConfirmed) {
       return { label: `${label} (confirmed)`, sub: "Actual Comext trade vol.", value: val, note: `${year} annual estimate: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "owes an estimated", hlAmt: annualAmt, year, isConfirmed: true, cumulative };
     }
-    if (year === 2026) {
-      return { label, sub: "Projected (2022–25 avg trade)", value: val, note: `Est. monthly · 2026 total: ${annualAmt}`, hlTime: "In 2026", hlVerb: "is projected to owe", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
-    }
-    if (year === 2027) {
-      return { label, sub: "Projected (2022–25 avg · 20% mark-up)", value: val, note: `Est. monthly · 2027 total: ${annualAmt}`, hlTime: "In 2027", hlVerb: "is projected to owe", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
-    }
-    return { label, sub: "Projected (2022–25 avg · 30% mark-up)", value: val, note: `Est. monthly · 2028 total: ${annualAmt}`, hlTime: "In 2028", hlVerb: "is projected to owe", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
-  }, [points, annualTotals, cutIdx, cumValues, q1Ets]);
+    const markup = year >= 2028 ? 30 : year === 2027 ? 20 : 10;
+    return { label, sub: `Projected (2022–25 avg trade · ${markup}% mark-up)`, value: val, note: `Est. monthly · ${year} total: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "is projected to owe", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
+  }, [points, annualTotals, cutIdx, cumValues, q1Ets, cbamIdx]);
 
   const handleMouseMove = useCallback((e) => {
     if (chartLeaveTimer.current) {
@@ -130,28 +144,25 @@ export default function LineChart({
     }).join(" ");
   };
 
-  const histD = pathFrom(visibleStartIdx, CBAM_IDX);
-  const solidD = pathFrom(CBAM_IDX, cutIdx + 1);
+  const histD = pathFrom(visibleStartIdx, cbamIdx);
+  const solidD = pathFrom(cbamIdx, cutIdx + 1);
   const foreD = pathFrom(cutIdx, visibleEndIdx);
-  const cumStart = Math.max(CBAM_IDX, visibleStartIdx);
+  const cumStart = Math.max(cbamIdx, visibleStartIdx);
   const cumD = cumStart <= visibleEndIdx ? points.slice(cumStart, visibleEndIdx + 1).map((p, i) => {
     const idx = cumStart + i;
     return `${i === 0 ? "M" : "L"}${xp(idx - visibleStartIdx).toFixed(1)},${ypRaw(cumValues[idx]).toFixed(1)}`;
   }).join(" ") : null;
 
-  const cbamX = CBAM_IDX >= visibleStartIdx && CBAM_IDX <= visibleEndIdx ? xp(CBAM_IDX - visibleStartIdx) : null;
-  const todayX = TODAY_IDX >= visibleStartIdx && TODAY_IDX <= visibleEndIdx ? xp(TODAY_IDX - visibleStartIdx) : null;
-  const yearMarks = [
-    { label: "’24", idx: visibleStartIdx },
-    ...[2025, 2026, 2027, 2028].map(y => ({ label: String(y), idx: (y - 2022) * 12 })),
-  ].filter(m => m.idx >= visibleStartIdx && m.idx <= visibleEndIdx);
+  const cbamX = cbamIdx >= visibleStartIdx && cbamIdx <= visibleEndIdx ? xp(cbamIdx - visibleStartIdx) : null;
+  const todayX = todayFracIdx >= visibleStartIdx && todayFracIdx <= visibleEndIdx ? xp(todayFracIdx - visibleStartIdx) : null;
+
   const lineLabel = (idx, text, color, dx = 0, dy = -14, anchor = "middle") => idx >= visibleStartIdx && idx <= visibleEndIdx
     ? { x: xp(idx - visibleStartIdx) + dx, y: yp(points[idx].v) + dy, text, color, anchor }
     : null;
   const graphLabels = [
-    lineLabel(Math.min(CBAM_IDX - 4, visibleStartIdx + 9), "hypothetical exposure", N.tealMid, -20, -25),
-    lineLabel(Math.min(Math.max(CBAM_IDX, visibleStartIdx), Math.min(cutIdx, visibleEndIdx)), "confirmed exposure", "#F4DA91", 5, 22, "start"),
-    lineLabel(Math.min(Math.max(cutIdx + 18, CBAM_IDX + 9), visibleEndIdx - 5), "projected exposure", N.teal600, 90, -1),
+    lineLabel(Math.min(cbamIdx - 4, visibleStartIdx + 9), "hypothetical exposure", N.tealMid, -20, -25),
+    lineLabel(Math.min(Math.max(cbamIdx, visibleStartIdx), Math.min(cutIdx, visibleEndIdx)), "confirmed exposure", "#F4DA91", 5, 22, "start"),
+    lineLabel(Math.min(Math.max(cutIdx + 18, cbamIdx + 9), visibleEndIdx - 5), "projected exposure", N.teal600, 90, -1),
   ].filter(Boolean);
   const tip = hov ? getTooltip(hov.idx) : null;
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
@@ -159,16 +170,16 @@ export default function LineChart({
   return (
     <div style={{ position: "relative" }}>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block", cursor: "crosshair" }}
-        role="img" aria-label="Line chart showing estimated monthly CBAM costs for US exports to the EU from mid-2024 through 2028. On-chart labels distinguish estimates based on historic trade, confirmed trade, and projected data. Hover or click to explore by month or year."
+        role="img" aria-label="Line chart showing estimated monthly CBAM costs for US exports to the EU. On-chart labels distinguish estimates based on historic trade, confirmed trade, and projected data. Hover or click to explore by month or year."
         onMouseMove={handleMouseMove} onMouseLeave={() => { chartLeaveTimer.current = setTimeout(() => { setHov(null); if (onChartLeave) onChartLeave(); }, 80); }} onClick={handleClick}>
         <defs><clipPath id="cum-clip"><rect x={pad.l} y={pad.t} width={cW} height={cH}/></clipPath></defs>
         {(() => {
           const lineY = 24;
           const tickH = 5;
           const inV = i => i >= visibleStartIdx && i <= visibleEndIdx;
-          const q1sX = inV(48) ? xp(48 - visibleStartIdx) : null;
-          const q1eX = 51 <= visibleEndIdx ? xp(Math.min(51, visibleEndIdx) - visibleStartIdx) : null;
-          const q2sX = inV(51) ? xp(51 - visibleStartIdx) : null;
+          const q1sX = inV(cbamIdx) ? xp(cbamIdx - visibleStartIdx) : null;
+          const q1eX = cbamIdx + 3 <= visibleEndIdx ? xp(Math.min(cbamIdx + 3, visibleEndIdx) - visibleStartIdx) : null;
+          const q2sX = inV(cbamIdx + 3) ? xp((cbamIdx + 3) - visibleStartIdx) : null;
           const q2eX = xp(visibleEndIdx - visibleStartIdx);
           return (<>
             {q1sX != null && q1eX != null && (<>
@@ -207,12 +218,12 @@ export default function LineChart({
         {todayX != null && (
           <>
             <line x1={todayX} y1={pad.t} x2={todayX} y2={H - pad.b} stroke={N.teal400} strokeWidth={2.2} strokeDasharray="6,5" opacity={0.7}/>
-            <text x={todayX + 7} y={pad.t + 34} fill={N.teal400} fontSize={14} fontFamily={SANS} fontWeight={700}>As of</text>
+            <text x={todayX + 7} y={pad.t + 34} fill={N.teal400} fontSize={14} fontFamily={SANS} fontWeight={700}>Today</text>
           </>
         )}
         {cumD && <path d={cumD} fill="none" stroke={N.teal200} strokeWidth={4} strokeLinejoin="round" opacity={0.35} clipPath="url(#cum-clip)"/>}
         {cumD && (() => {
-          const labelIdx = Math.min(CBAM_IDX + 15, visibleEndIdx);
+          const labelIdx = Math.min(cbamIdx + 15, visibleEndIdx);
           return labelIdx >= visibleStartIdx ? (
             <text x={xp(labelIdx - visibleStartIdx) + 8} y={pad.t + 14}
               fill={N.teal200} fontSize={11} fontFamily={SANS} fontWeight={700} opacity={0.6}
@@ -242,7 +253,7 @@ export default function LineChart({
         {hov != null && (
           <circle cx={xp(hov.idx - visibleStartIdx)} cy={yp(points[hov.idx].v)} r={7.8} fill={N.teal600} stroke={N.white} strokeWidth={2.4}/>
         )}
-        {hov != null && hov.idx >= CBAM_IDX && cumValues[hov.idx] > 0 && (
+        {hov != null && hov.idx >= cbamIdx && cumValues[hov.idx] > 0 && (
           <circle cx={xp(hov.idx - visibleStartIdx)} cy={ypRaw(cumValues[hov.idx])} r={6} fill={N.teal200} stroke={N.white} strokeWidth={2} opacity={0.85} clipPath="url(#cum-clip)"/>
         )}
       </svg>

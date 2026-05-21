@@ -226,4 +226,5 @@ export function sectorYearTonnes(sec, yr, liveEntries = null) {
 export const CBAM_IDX = CHART_DATA.findIndex(p => p.ym === "2026-01");
 const dataCutoffIdx = CHART_DATA.findIndex(p => p.ym === DATA_CUTOFF_YM);
 export const CUT_IDX = dataCutoffIdx >= 0 ? Math.max(CBAM_IDX, dataCutoffIdx) : CBAM_IDX;
-export const TODAY_IDX = Math.round(CBAM_IDX + AS_OF_MONTH_INDEX + AS_OF_DAY / AS_OF_DAYS_IN_MONTH);
+export const TODAY_FRAC_IDX = CBAM_IDX + AS_OF_MONTH_INDEX + AS_OF_DAY / AS_OF_DAYS_IN_MONTH;
+export const TODAY_IDX = Math.floor(TODAY_FRAC_IDX);

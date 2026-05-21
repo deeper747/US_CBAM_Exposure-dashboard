@@ -6,7 +6,7 @@
 > - Abbreviations used: CBAM, ETS, YTD, tCO₂e, CN code, HR, CR, SS, EAF, SMR — confirm consistency
 > - Superscripts: CO₂ (₂), tCO₂e (₂)
 > - Non-breaking hyphen used in "emission‑intensive" (to prevent line break)
-> - Sector name spelling: **Fertilizers** (American English throughout — not "Fertilisers")
+> - Sector name spelling: **Fertilizers** and **Aluminum** (American English throughout — not "Fertilisers" or "Aluminium")
 > - Exchange rate is now **$1.13/€** (updated from $1.08 in previous version), reflecting 2025 annual average
 > - **Removed since last review:** FAQ/Methodology panel, dark footer with article cards, data sources footer row
 > - **Added since last review:** "How to explore" accordion, live Comext data fetch caption, updated formula prompt
@@ -35,10 +35,11 @@ Author: Jia-Shen Tsai, Niskanen Center
 **Year selector label:**
 From [year] to [year]
 
-**Main headline** (three verb variants depending on selected range):
-- The US **owes an estimated** [amount] to the EU
-- The US **would have owed** [amount] to the EU
-- The US **is projected to owe** [amount] to the EU
+**Main headline** (verb variants depending on selected range):
+- The US **owes an estimated** [amount] to the EU *(YTD / confirmed view)*
+- The US **would have owed** [amount] to the EU *(pre-2026 historical range)*
+- The US **is projected to owe** [amount] to the EU *(future range, single year)*
+- The US **is projected to owe** [amount] to the EU *(with "Through [endYear]" eyebrow for multi-year 2026+ ranges)*
 
 **Tagline below headline:**
 for exporting emission‑intensive products under carbon border adjustment mechanism.
@@ -76,22 +77,27 @@ Past 5-yr range: low €[X]/t ([Qtr]) · high €[X]/t ([Qtr])
 
 ### Sector Bar Chart (right panel, upper)
 
-**Section header** (changes with line chart hover):
+**Section header** (changes with line chart hover / confirmed view):
 - Default: YTD CBAM Exposure by Sector
+- Confirmed view pinned: Confirmed CBAM Exposure by Sector
 - On hover over pre-2026 year: [year] CBAM Exposure by Sector
 - On hover over 2026–2028: [year] CBAM Exposure by Sector
 - On multi-year range: [startYear]–[endYear] CBAM Exposure by Sector
 
 **Subtitle** (changes with line chart hover and year selector):
-- Default: YTD · [YTD label, e.g. Jan–May 18] · at €[ETS]
+- Default: YTD · [YTD label, e.g. Jan–May 19] · at €[ETS]
+- Confirmed view: Jan – [confirmed month label] · actual Comext data · at €75.36
 - On hover over pre-2026: [year] hypothetical · actual ETS prices
 - On hover over 2026–2028: [year] projected · at €[ETS]
 - On multi-year pre-2026 range: [start]–[end] · sector mix · actual ETS prices
 - On multi-year range incl. 2026+: [start]–[end] · sector mix · at €[ETS]
 
+**Confirmed view pinned indicator (small, below subtitle):**
+⊗ Pinned · click to unpin
+
 **Sector names (in bar chart):**
 - Iron & Steel
-- Aluminium
+- Aluminum
 - Cement
 - Fertilizers
 - Hydrogen
@@ -118,10 +124,13 @@ Total
 ### Line Chart
 
 **Chart caption** (dynamic, below chart):
-Estimated monthly CBAM cost ($M) · **Trade** ([Comext](link)): confirmed 2022 – [latest confirmed month, e.g. Jan 2026], projected [next month] – 2028 · **EU carbon price** ([EU Commission](link)): Q1 2026 confirmed at €75.36/tCO₂e, assumed from Apr 2026
+Estimated monthly CBAM cost ($M) · **Trade** ([Comext](link)): confirmed 2022 – [latest confirmed month, e.g. Feb 2026], projected [next month] – 2028 · **EU carbon price** ([EU Commission](link)): Q1 2026 confirmed at €75.36/tCO₂e, assumed from Apr 2026 · Data current as of [date, e.g. May 19, 2026]
 
 *When live data is loading:*
 …· Fetching…
+
+*When live Comext fetch fails (fallback):*
+· Live Comext fetch unavailable; using static baseline and bundled confirmed data.
 
 **On-chart labels:**
 - hypothetical exposure *(gray dashed segment)*
@@ -160,14 +169,14 @@ Click to select year
 **Table column headers** (dynamic — change when hovering/selecting years):
 
 Default (YTD):
-| Sector | YTD Trade Volume (t) | Default Value (tCO₂e/t) | Mark-up % | CBAM exposure YTD |
+| Sector | YTD Trade Volume (t) | Default value (tCO₂e/t, weighted avg.) | Mark-up % | CBAM exposure YTD |
 
 When a specific year is selected:
-| Sector | [Year] Est. Trade Volume (t) *or* [Year] Trade Volume (t) | Default Value (tCO₂e/t) | Mark-up % | Proj. CBAM exposure in [Year] *or* Hyp. CBAM in [Year] |
+| Sector | [Year] Est. Trade Volume (t) *or* [Year] Trade Volume (t) | Default value (tCO₂e/t, weighted avg.) | Mark-up % | Proj. CBAM exposure in [Year] *or* Hyp. CBAM in [Year] |
 
 **Sector row labels:**
 - Iron & Steel
-- Aluminium
+- Aluminum
 - Cement
 - Fertilizers
 - Hydrogen
@@ -177,6 +186,9 @@ Total
 
 **Table footnote:**
 Click any sector row for CN-code breakdown. Hover the line chart to shift the data display by year. Projected trade uses 2022–25 monthly averages where live data is unavailable.
+
+*When confirmed view is active, prepended:*
+Confirmed Comext data: Jan 2026 – [confirmed month label].
 
 ---
 
@@ -189,7 +201,8 @@ CBAM Cost Formula
 CBAM Cost ($) = Exported Tonnes × Default Value (tCO₂e/t) × (1 + Mark-up) × €[ETS value]/tCO₂e × $1.13 / €
 
 **Default prompt (no term hovered or clicked):**
-Hover a term to preview its definition. Click to keep it open.
+- Desktop: Hover a term to preview its definition. Click to keep it open.
+- Mobile: Tap a term to preview its definition. Click to keep it open.
 
 **Term definitions (shown on hover/click):**
 
@@ -232,7 +245,7 @@ Source: European Central Bank (ECB) Statistical Data Warehouse
 Sector Detail
 
 **Sector name** (one of):
-Iron & Steel / Aluminium / Cement / Fertilizers / Hydrogen
+Iron & Steel / Aluminum / Cement / Fertilizers / Hydrogen
 
 ---
 
@@ -244,11 +257,11 @@ The largest CBAM sector by US export volume. Covers iron ore products, pig iron,
 *Additional context (italic):*
 US steelmakers are predominantly EAF-based (electric arc furnace), which typically produces lower emissions than the blast furnace route assumed in EU default values — so actual costs may be lower for verified reporters.
 
-#### Aluminium
+#### Aluminum
 Covers unwrought aluminium, semi-finished products (rods, wire, profiles, plates, foil), tubes, fabricated articles, and containers. The US is a significant primary and secondary aluminium producer.
 
 *Additional context:*
-Aluminium default values include upstream smelting and power generation emissions. The US power mix used in smelting will affect whether actual emissions are above or below the EU default.
+Aluminum default values include upstream smelting and power generation emissions. The US power mix used in smelting will affect whether actual emissions are above or below the EU default.
 
 #### Cement
 Includes Portland and hydraulic cement, clinker, white and grey variants, and calcined clay. US–EU cement trade is limited by high freight costs relative to product value.
@@ -300,7 +313,7 @@ Projected Annual Cost Trajectory (at €[ETS]/tCO₂e)
 CN Code Breakdown · [N] product code(s)
 
 **Column headers** (5th column header is dynamic based on latest Comext data month):
-| CN Code | Description | Default Value (tCO₂e/t) | YTD Avg Trade Volume (t) | Jan 2026 vs 2025 *or* Jan–[Mo] 2026 vs 2025 | CBAM exposure YTD | Proj. 2026 CBAM exposure |
+| CN Code | Description | Default Value (tCO₂e/t) | YTD Avg Trade Volume (t) | Jan 2026 vs 2025 *or* Jan–[Mo] 2026 vs 2025 | Proj. YTD CBAM exposure | Proj. 2026 CBAM exposure |
 
 **Sort behavior:**
 Click any column header to sort high → low; click again to sort low → high. Null values always sort last.
