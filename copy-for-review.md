@@ -36,10 +36,10 @@ Author: Jia-Shen Tsai, Niskanen Center
 From [year] to [year]
 
 **Main headline** (verb variants depending on selected range):
-- The US **owes an estimated** [amount] to the EU *(YTD / confirmed view)*
-- The US **would have owed** [amount] to the EU *(pre-2026 historical range)*
-- The US **is projected to owe** [amount] to the EU *(future range, single year)*
-- The US **is projected to owe** [amount] to the EU *(with "Through [endYear]" eyebrow for multi-year 2026+ ranges)*
+- The US **loses an estimated** [amount] to the EU *(YTD / confirmed view)*
+- The US **would have lost** [amount] to the EU *(pre-2026 historical range)*
+- The US **is projected to lose** [amount] to the EU *(future range, single year)*
+- The US **is projected to lose** [amount] to the EU *(with "Through [endYear]" eyebrow for multi-year 2026+ ranges)*
 
 **Tagline below headline:**
 for exporting emission‑intensive products under carbon border adjustment mechanism.

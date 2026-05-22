@@ -103,13 +103,13 @@ export default function LineChart({
     const cumulative = cumRaw != null ? (cumRaw >= 1000 ? `$${(cumRaw / 1000).toFixed(2)}B` : `$${cumRaw.toFixed(0)}M`) : null;
     if (idx < cbamIdx) {
       const qEts = getQtrEts(p.ym, q1Ets);
-      return { label, sub: `Pre-CBAM · hypothetical · €${qEts.toFixed(2)}/tCO₂e`, value: val, note: `${year} annual estimate: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "would have owed", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
+      return { label, sub: `Pre-CBAM · hypothetical · €${qEts.toFixed(2)}/tCO₂e`, value: val, note: `${year} annual estimate: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "would have lost", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
     }
     if (isConfirmed) {
-      return { label: `${label} (confirmed)`, sub: "Actual Comext trade vol.", value: val, note: `${year} annual estimate: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "owes an estimated", hlAmt: annualAmt, year, isConfirmed: true, cumulative };
+      return { label: `${label} (confirmed)`, sub: "Actual Comext trade vol.", value: val, note: `${year} annual estimate: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "loses an estimated", hlAmt: annualAmt, year, isConfirmed: true, cumulative };
     }
     const markup = year >= 2028 ? 30 : year === 2027 ? 20 : 10;
-    return { label, sub: `Projected (2022–25 avg trade · ${markup}% mark-up)`, value: val, note: `Est. monthly · ${year} total: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "is projected to owe", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
+    return { label, sub: `Projected (2022–25 avg trade · ${markup}% mark-up)`, value: val, note: `Est. monthly · ${year} total: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "is projected to lose", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
   }, [points, annualTotals, cutIdx, cumValues, q1Ets, cbamIdx]);
 
   const handleMouseMove = useCallback((e) => {

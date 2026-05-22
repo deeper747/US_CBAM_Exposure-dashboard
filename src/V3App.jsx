@@ -170,13 +170,13 @@ function Term({id,label,hovered,setHovered,pinnedTerm,setPinnedTerm,color,style=
 
 const LS={color:N.teal200,textDecoration:"underline"};
 const TERM_DEFS={
-  tonnes:{title:"Exported Metric Tons",def:"How much CBAM-covered product the US ships to the EU. Confirmed Comext months use reported tonnage; all other months use the 2022–2025 monthly average as the trade baseline.",source:<>Source: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Comext database</a>, which publishes monthly with a six-to-eight week lag.</>},
-  dv:{title:"Default Value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one metric ton of product into estimated metric tons of CO₂-equivalent.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
+  tonnes:{title:"Exported metric tons",def:"How much CBAM-covered product the US ships to the EU. Confirmed Comext months use reported tonnage; all other months use the 2022–2025 monthly average as the trade baseline.",source:<>Source: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Comext database</a>, which publishes monthly with a six-to-eight week lag.</>},
+  dv:{title:"Default value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one metric ton of product into estimated metric tons of CO₂-equivalent.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
   markup:{title:"Mark-up / Phase-in %",def:"The penalty add-on applied to the default value. It nudges exporters toward submitting actual emissions data: 10% in 2026, 20% in 2027, 30% from 2028. Fertilizers stay at 1%.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
-  benchmark:{title:"EU ETS Product Benchmark (tCO₂e/t)",def:"The best-in-class EU production emissions for each product. Multiplied by the CBAM factor each year, it gives the effective free-allocation equivalent deducted from the importer's liability. As the CBAM factor falls, this deduction shrinks and the charge grows.",source:<>Source: <a href="https://eur-lex.europa.eu/eli/reg_impl/2025/2620/oj" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2620</a>.</>},
-  cbamFactor:{title:"CBAM Factor",def:"The fraction of the EU ETS product benchmark still granted as free allocation to EU producers. Starts at 97.5% in 2026 — so 97.5% of the benchmark is still deducted — then falls to 0% from 2034, after which no free allocation remains and importers pay for all embedded emissions above zero.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02003L0087-20240301" target="_blank" rel="noreferrer" style={LS}>EU ETS Directive 2003/87/EC, Article 10a</a>.</>},
-  ets:{title:"EU ETS Carbon Price",def:"The carbon price used to turn net embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the assumed price so you can test different carbon-market scenarios.",source:<>Source: <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={LS}>CBAM certificate price</a>.</>},
-  fxrate:{title:"Exchange Rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.",source:"Source: European Central Bank (ECB) Statistical Data Warehouse"},
+  benchmark:{title:"EU ETS product benchmark (tCO₂e/t)",def:"The best-in-class EU production emissions for each product. Multiplied by the CBAM factor each year, it gives the effective free-allocation equivalent deducted from the importer's liability. As the CBAM factor falls, this deduction shrinks and the charge grows.",source:<>Source: <a href="https://eur-lex.europa.eu/eli/reg_impl/2025/2620/oj" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2620</a>.</>},
+  cbamFactor:{title:"CBAM factor",def:"The fraction of the EU ETS product benchmark still granted as free allocation to EU producers. Starts at 97.5% in 2026 — so 97.5% of the benchmark is still deducted — then falls to 0% from 2034, after which no free allocation remains and importers pay for all embedded emissions above zero.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02003L0087-20240301" target="_blank" rel="noreferrer" style={LS}>EU ETS Directive 2003/87/EC, Article 10a</a>.</>},
+  ets:{title:"EU ETS carbon price",def:"The carbon price used to turn net embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the assumed price so you can test different carbon-market scenarios.",source:<>Source: <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={LS}>CBAM certificate price</a>.</>},
+  fxrate:{title:"Exchange rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.",source:"Source: European Central Bank (ECB) Statistical Data Warehouse"},
 };
 
 function InlineSelect({value,onChange,options,color}){
@@ -417,11 +417,11 @@ export default function V4App(){
 
   const{hlVerb,hlAmt}=useMemo(()=>{
     if(rangeEnd==="today"){
-      return{hlVerb:"owes an estimated",hlAmt:fmtM(totTaxToday)};
+      return{hlVerb:"loses an estimated",hlAmt:fmtM(totTaxToday)};
     }
     const startYm=`${rangeStart}-01`,endYm=`${rangeEnd}-12`;
     const tot=V4_CHART_DATA.filter(m=>m.ym>=startYm&&m.ym<=endYm).reduce((s,m)=>s+m.factor*getQtrEts(m.ym,ets),0)*EUR_USD;
-    return{hlVerb:"is projected to owe",hlAmt:fmtM(tot)};
+    return{hlVerb:"is projected to lose",hlAmt:fmtM(tot)};
   },[rangeStart,rangeEnd,ets,totTaxToday]);
 
   const annualCosts=useMemo(()=>{
@@ -499,7 +499,7 @@ export default function V4App(){
             </div>
             <div style={{margin:"0 0 6px",fontFamily:SERIF,fontSize:isMobile?"clamp(28px,8vw,34px)":"clamp(43px,6vw,77px)",fontWeight:400,lineHeight:isMobile?1.08:0.98,letterSpacing:isMobile?"-0.02em":undefined,color:N.white}}>
               The US{" "}
-              <span style={{color:N.teal400}}>{confirmedViewActive?"owes an estimated":(chartHover&&!showYtdForHover)?chartHover.hlVerb:hlVerb}</span>{" "}
+              <span style={{color:N.teal400}}>{confirmedViewActive?"loses an estimated":(chartHover&&!showYtdForHover)?chartHover.hlVerb:hlVerb}</span>{" "}
               <span style={{color:N.orange500,whiteSpace:"nowrap"}}>{confirmedViewActive?fmtM(confirmedTotal):(chartHover&&!showYtdForHover)?chartHover.hlAmt:hlAmt}</span>{" "}
               to the EU
             </div>
@@ -580,11 +580,11 @@ export default function V4App(){
               </div>
               <div style={{fontSize:12,color:N.tealMid,marginBottom:confirmedViewActive?6:10}}>
                 {confirmedViewActive
-                  ?`Jan – ${confirmedMonthLabel} · actual Comext data · at €${Q1_ETS.toFixed(2)}`
+                  ?`Jan – ${confirmedMonthLabel} · CBAM factor ${fmtCf(2026)}% · at €${Q1_ETS.toFixed(2)}`
                   :showYtdForHover
-                    ?`YTD · ${YTD_LABEL} · at €${ets.toFixed(0)}`
+                    ?`YTD · ${YTD_LABEL} · CBAM factor ${fmtCf(2026)}% · at €${ets.toFixed(0)}`
                     :(activeSectorYear&&!showYtdForHover)
-                      ?`${activeSectorYear} projected · CBAM factor ${fmtCf(activeSectorYear)}%`
+                      ?`${activeSectorYear} ${activeSectorYear<2026?"hypothetical":"projected"} · CBAM factor ${activeSectorYear<2026?100:fmtCf(activeSectorYear)}%`
                       :rangeEnd!=="today"
                         ?`${rangeStart}${Number(rangeEnd)>rangeStart?`–${rangeEnd}`:""} · sector mix`
                         :`YTD · ${YTD_LABEL}`
@@ -654,7 +654,7 @@ export default function V4App(){
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("dv","top")}}>Default value (tCO₂e/t)</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("markup","top")}}>Mark-up</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("benchmark","top")}}>Benchmark (tCO₂e/t)</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("cbamFactor","top")}}>CBAM Factor</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("cbamFactor","top")}}>CBAM factor</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>{cbamColumnLabel}</th>
                 </tr>
               </thead>
@@ -711,16 +711,16 @@ export default function V4App(){
           <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"10px 8px",userSelect:"none"}} onMouseLeave={()=>termLeave(setHovered)}>
             <span style={{fontFamily:SERIF,fontSize:"clamp(14px,2vw,24px)",fontWeight:700,color:N.teal200}}>CBAM Cost ($)</span>
             <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>=</span>
-            <Term id="tonnes" label="Exported Metric Tons" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
+            <Term id="tonnes" label="Exported metric tons" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
             <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>×</span>
             <span style={{fontFamily:SERIF,fontSize:"clamp(20px,2.5vw,32px)",color:N.tealMid,fontWeight:300,lineHeight:1}}>(</span>
-            <Term id="dv" label="Default Value (tCO₂e/t)" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
+            <Term id="dv" label="Default value (tCO₂e/t)" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
             <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>×</span>
             <Term id="markup" label="(1 + Mark-up)" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
             <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>−</span>
             <Term id="benchmark" label="Benchmark" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
             <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>×</span>
-            <Term id="cbamFactor" label="CBAM Factor" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
+            <Term id="cbamFactor" label="CBAM factor" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
             <span style={{fontFamily:SERIF,fontSize:"clamp(20px,2.5vw,32px)",color:N.tealMid,fontWeight:300,lineHeight:1}}>)</span>
             <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>×</span>
             <span

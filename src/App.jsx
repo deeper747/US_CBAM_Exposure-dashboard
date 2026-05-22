@@ -303,17 +303,17 @@ export default function V3App(){
   // Headline amounts by year range
   const {hlVerb,hlAmt}=useMemo(()=>{
     if(rangeEnd==="today"){
-      return{hlTime:"Since January 2026",hlVerb:"owes an estimated",hlAmt:fmtM(totTaxToday)};
+      return{hlTime:"Since January 2026",hlVerb:"loses an estimated",hlAmt:fmtM(totTaxToday)};
     }
     const startYm=`${rangeStart}-01`,endYm=`${rangeEnd}-12`;
     if(rangeEnd<=2025){
       const hist=CHART_DATA.filter(m=>m.ym>=startYm&&m.ym<=endYm).reduce((s,m)=>s+m.factor*getQtrEts(m.ym,ets),0)/(rangeEnd-rangeStart+1)*EUR_USD;
       const label=rangeStart===rangeEnd?`${rangeStart}`:`${rangeStart}–${rangeEnd}`;
-      return{hlTime:`In ${label}`,hlVerb:"would have owed",hlAmt:fmtM(hist)};
+      return{hlTime:`In ${label}`,hlVerb:"would have lost",hlAmt:fmtM(hist)};
     }
     const tot=CHART_DATA.filter(m=>m.ym>=startYm&&m.ym<=endYm).reduce((s,m)=>s+m.factor*getQtrEts(m.ym,ets),0)*EUR_USD;
     const hlLabel=rangeStart===rangeEnd?`In ${rangeStart}`:`Through ${rangeEnd}`;
-    return{hlTime:hlLabel,hlVerb:"is projected to owe",hlAmt:fmtM(tot)};
+    return{hlTime:hlLabel,hlVerb:"is projected to lose",hlAmt:fmtM(tot)};
   },[rangeStart,rangeEnd,ets,totTaxToday]);
 
   // Per-year cost breakdown for right panel
@@ -413,7 +413,7 @@ export default function V3App(){
             </div>
             <div style={{margin:"0 0 6px",fontFamily:SERIF,fontSize:isMobile?"clamp(28px,8vw,34px)":"clamp(43px,6vw,77px)",fontWeight:400,lineHeight:isMobile?1.08:0.98,letterSpacing:isMobile?"-0.02em":undefined,color:N.white}}>
               The US{" "}
-              <span style={{color:N.teal400}}>{confirmedViewActive?"owes an estimated":(chartHover&&!showYtdForHover)?chartHover.hlVerb:hlVerb}</span>{" "}
+              <span style={{color:N.teal400}}>{confirmedViewActive?"loses an estimated":(chartHover&&!showYtdForHover)?chartHover.hlVerb:hlVerb}</span>{" "}
               <span style={{color:N.orange500,whiteSpace:"nowrap"}}>{confirmedViewActive?fmtM(confirmedTotal):(chartHover&&!showYtdForHover)?chartHover.hlAmt:hlAmt}</span>{" "}
               to the EU
             </div>

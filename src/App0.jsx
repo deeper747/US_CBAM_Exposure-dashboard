@@ -996,7 +996,7 @@ export default function App(){
                 )}
               </div>
               <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,marginTop:16,padding:"10px 14px",background:N.tealPale,borderLeft:`4px solid ${N.tealMid}`,borderRadius:4}}>
-                CBAM financial obligations only began January 1, 2026. These figures show what US exporters would have owed had CBAM applied in each prior year, using 2026 default values and mark-ups. The stacked chart keeps a fixed sector order based on 2025 exposure so changes in composition are easier to compare across years.
+                CBAM financial obligations only began January 1, 2026. These figures show what US exporters would have lost had CBAM applied in each prior year, using 2026 default values and mark-ups. The stacked chart keeps a fixed sector order based on 2025 exposure so changes in composition are easier to compare across years.
               </div>
             </div>
           )}

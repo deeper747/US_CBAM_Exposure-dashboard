@@ -7,6 +7,7 @@ import {
   Q1_ETS,
   SECTOR_STATS,
   YTD_LABEL,
+  YTD_MONTHS,
   avgMonthTonnes,
   ytdMonthFraction,
   ytdTonnesForRows,
@@ -100,8 +101,7 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
       // V4 YTD CBAM cost (Q1 at official price, rest at slider price)
       const netMv2026 = Math.max(0, (d.mv2026 || 0) - bmg * CF2026);
       let v4Q1 = 0, v4Apr = 0;
-      for (let m = 1; m <= 12; m++) {
-        const mo = String(m).padStart(2, "0");
+      for (const mo of YTD_MONTHS) {
         const ym = `${YTD_YEAR}-${mo}`;
         const liveT = liveEntries?.[_k]?.[ym]?.[0];
         const tonnes = (liveT != null && liveT > 0 ? liveT : avgMonthTonnes(d.cn, mo)) * ytdMonthFraction(mo);
