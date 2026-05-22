@@ -225,12 +225,12 @@ export default function LineChart({
         {cumD && (() => {
           const labelIdx = Math.min(cbamIdx + 15, visibleEndIdx);
           return labelIdx >= visibleStartIdx ? (
-            <text x={xp(labelIdx - visibleStartIdx) + 8} y={pad.t + 14}
+            <text x={xp(labelIdx - visibleStartIdx) + 58} y={pad.t + 14}
               fill={N.teal200} fontSize={11} fontFamily={SANS} fontWeight={700} opacity={0.6}
               stroke={N.teal900} strokeWidth={4} paintOrder="stroke" pointerEvents="none">Cumulative CBAM cost</text>
           ) : null;
         })()}
-        {foreD && <path d={foreD} fill="none" stroke={N.teal600} strokeWidth={4.1} strokeLinejoin="round" strokeDasharray="16,10" opacity={0.75}/>}
+        {foreD && <path d={foreD} fill="none" stroke={N.teal600} strokeWidth={3.4} strokeLinejoin="round" strokeDasharray="7,8" opacity={0.75}/>}
         {histD && <path d={histD} fill="none" stroke={N.tealMid} strokeWidth={3.4} strokeLinejoin="round" strokeDasharray="7,8"/>}
         {solidD && <path d={solidD} fill="none" stroke={confirmedPinned ? "#ffe88a" : "#F4DA91"} strokeWidth={confirmedPinned ? 6 : 5} strokeLinejoin="round"/>}
         {solidD && <path d={solidD} fill="none" stroke="transparent" strokeWidth={22} strokeLinejoin="round" style={{ cursor: "pointer" }}

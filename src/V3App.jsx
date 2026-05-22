@@ -22,6 +22,7 @@ import {
   YTD_MONTHS,
   avgMonthTonnes,
   fmtQtr,
+  getMonthTonnes,
   getQtrEts,
   sectorYearTonnes,
   trKey,
@@ -34,10 +35,20 @@ import { N, SANS, SERIF, SECTOR_COLORS as SC, SECTOR_LIGHT_COLORS as SCL } from 
 
 // ── MODULE-LEVEL V4 CALCULATIONS ──────────────────────────────────────────────
 
-// V4 chart: 2026–2035.
-// Formula: max(0, mv − benchmark × CBAM_FACTOR[year]) per tonne.
-// CBAM_FACTOR is the free allocation factor (97.5% in 2026 → 0% from 2034).
+// Chart data starts at 2024-01: 2024–2025 are pre-CBAM hypothetical (dashed),
+// 2026–2035 use the V4 formula: max(0, mv − benchmark × CBAM_FACTOR[year]).
 export const V4_CHART_DATA = [];
+// Pre-CBAM hypothetical (2024–2025): actual year-month tonnage × mv2026, no benchmark deduction
+for (let y = 2024; y <= 2025; y++) {
+  for (let m = 1; m <= 12; m++) {
+    const mo = String(m).padStart(2, "0");
+    const ym = `${y}-${mo}`;
+    let factor = 0;
+    for (const d of RELEVANT) factor += getMonthTonnes(d.cn, ym) * (d.mv2026 || 0);
+    V4_CHART_DATA.push({ ym, factor, isProjected: true });
+  }
+}
+// CBAM period (2026–2035)
 for (let y = 2026; y <= 2035; y++) {
   const cf = CBAM_FACTOR[y] ?? 0;
   for (let m = 1; m <= 12; m++) {
@@ -53,8 +64,10 @@ for (let y = 2026; y <= 2035; y++) {
   }
 }
 
-// Fractional index of today within V4_CHART_DATA (which starts at 2026-01)
-export const V4_TODAY_FRAC_IDX = TODAY_FRAC_IDX - CBAM_IDX;
+// Index of 2026-01 within V4_CHART_DATA (2 years × 12 months of pre-CBAM prefix)
+export const V4_CBAM_IDX = 24;
+// Fractional index of today within V4_CHART_DATA
+export const V4_TODAY_FRAC_IDX = TODAY_FRAC_IDX - CBAM_IDX + V4_CBAM_IDX;
 
 // Weighted-average EU ETS benchmark per sector (tCO₂e/t), weighted by avg monthly tonnes
 const SECTOR_BENCHMARKS = {};
@@ -146,7 +159,7 @@ function Term({id,label,hovered,setHovered,pinnedTerm,setPinnedTerm,color,style=
     <span
       tabIndex={0} role="button" aria-pressed={active} aria-label={label}
       style={{display:"inline-flex",alignItems:"center",minHeight:32,cursor:"pointer",borderRadius:4,padding:"4px 10px",border:`2px solid ${active?color:N.tealLight}`,background:active?"rgba(255,255,255,0.12)":"transparent",color:active?color:N.white,transition:"all 0.15s",...style}}
-      onMouseEnter={()=>termEnter(id,setHovered)} onMouseLeave={()=>termLeave(setHovered)}
+      onMouseEnter={()=>termEnter(id,setHovered)}
       onFocus={()=>termEnter(id,setHovered)} onBlur={()=>termLeave(setHovered)}
       onClick={()=>setPinnedTerm(p=>p===id?null:id)}
     >
@@ -157,11 +170,11 @@ function Term({id,label,hovered,setHovered,pinnedTerm,setPinnedTerm,color,style=
 
 const LS={color:N.teal200,textDecoration:"underline"};
 const TERM_DEFS={
-  tonnes:{title:"Exported Tonnes",def:"How much CBAM-covered product the US ships to the EU. Confirmed Comext months use reported tonnage; all other months use the 2022–2025 monthly average as the trade baseline.",source:<>Source: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Comext database</a>, which publishes monthly with a six-to-eight week lag.</>},
-  dv:{title:"Default Value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one tonne of product into estimated tonnes of CO₂-equivalent.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
+  tonnes:{title:"Exported Metric Tons",def:"How much CBAM-covered product the US ships to the EU. Confirmed Comext months use reported tonnage; all other months use the 2022–2025 monthly average as the trade baseline.",source:<>Source: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Comext database</a>, which publishes monthly with a six-to-eight week lag.</>},
+  dv:{title:"Default Value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one metric ton of product into estimated metric tons of CO₂-equivalent.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
   markup:{title:"Mark-up / Phase-in %",def:"The penalty add-on applied to the default value. It nudges exporters toward submitting actual emissions data: 10% in 2026, 20% in 2027, 30% from 2028. Fertilizers stay at 1%.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
-  benchmark:{title:"EU ETS Product Benchmark (tCO₂e/t)",def:"The best-in-class EU production emissions for each product (BMg, Column B of Regulation 2025/2620). Multiplied by the CBAM factor each year, it gives the effective free-allocation equivalent deducted from the importer's liability. As the CBAM factor falls, this deduction shrinks and the charge grows.",source:<>Source: <a href="https://eur-lex.europa.eu/eli/reg_impl/2025/2620/oj" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2620, Annex I</a>.</>},
-  cbamFactor:{title:"CBAM Factor (Free Allocation Factor)",def:"The fraction of the EU ETS product benchmark still granted as free allocation to EU producers (Article 10a, Directive 2003/87/EC). Starts at 97.5% in 2026 — so 97.5% of the benchmark is still deducted — then falls to 0% from 2034, after which no free allocation remains and importers pay for all embedded emissions above zero.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02003L0087-20240301" target="_blank" rel="noreferrer" style={LS}>EU ETS Directive 2003/87/EC, Article 10a</a>.</>},
+  benchmark:{title:"EU ETS Product Benchmark (tCO₂e/t)",def:"The best-in-class EU production emissions for each product. Multiplied by the CBAM factor each year, it gives the effective free-allocation equivalent deducted from the importer's liability. As the CBAM factor falls, this deduction shrinks and the charge grows.",source:<>Source: <a href="https://eur-lex.europa.eu/eli/reg_impl/2025/2620/oj" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2620</a>.</>},
+  cbamFactor:{title:"CBAM Factor",def:"The fraction of the EU ETS product benchmark still granted as free allocation to EU producers. Starts at 97.5% in 2026 — so 97.5% of the benchmark is still deducted — then falls to 0% from 2034, after which no free allocation remains and importers pay for all embedded emissions above zero.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02003L0087-20240301" target="_blank" rel="noreferrer" style={LS}>EU ETS Directive 2003/87/EC, Article 10a</a>.</>},
   ets:{title:"EU ETS Carbon Price",def:"The carbon price used to turn net embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the assumed price so you can test different carbon-market scenarios.",source:<>Source: <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={LS}>CBAM certificate price</a>.</>},
   fxrate:{title:"Exchange Rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.",source:"Source: European Central Bank (ECB) Statistical Data Warehouse"},
 };
@@ -376,9 +389,12 @@ export default function V4App(){
     return items.map(d=>({...d,pct:tot>0?d.cost/tot*100:0})).sort((a,b)=>b.pct-a.pct);
   },[ets,activeSectorYear,mergedTrade,ytdCostFactors,rangeStart,rangeEnd,confirmedViewActive,confirmedDataBySector,showYtdForHover]);
 
-  // Mark-up % per sector for table column (same as V3: 10% in 2026, 20% in 2027, 30% from 2028)
+  // Mark-up % per sector for table column (10% in 2026, 20% in 2027, 30% from 2028)
   const markupPct=(sec)=>{
     if(sec==="Fertilizers")return"1%";
+    if(activeTableYear){
+      return`${activeTableYear>=2028?30:activeTableYear===2027?20:10}%`;
+    }
     const eEnd=rangeEnd==="today"?2026:Number(rangeEnd);
     const startPct=rangeStart<=2026?10:rangeStart===2027?20:30;
     const endPct=eEnd<=2026?10:eEnd===2027?20:30;
@@ -389,9 +405,13 @@ export default function V4App(){
   const fmtCf=yr=>parseFloat(((CBAM_FACTOR[yr]??0)*100).toFixed(1));
 
   const cbamFactorPct=()=>{
+    if(activeTableYear){
+      if(activeTableYear<2026)return"100%";
+      return`${fmtCf(activeTableYear)}%`;
+    }
     const eEnd=rangeEnd==="today"?2026:Number(rangeEnd);
-    const sf=fmtCf(rangeStart);
-    const ef=fmtCf(eEnd);
+    const sf=rangeStart<2026?100:fmtCf(rangeStart);
+    const ef=eEnd<2026?100:fmtCf(eEnd);
     return sf===ef?`${sf}%`:`${sf}–${ef}%`;
   };
 
@@ -424,7 +444,7 @@ export default function V4App(){
     return{...bg,boxShadow:lr};
   };
 
-  const handleChartHover=useCallback((info)=>{if(!chartHoverPinned)setChartHover(info);},[chartHoverPinned]);
+  const handleChartHover=useCallback((info)=>{setChartHover(info);},[]);
   const handleChartLeave=useCallback(()=>{setChartHover(null);},[]);
 
   const handleChartClick=useCallback((yr,tooltipInfo)=>{
@@ -441,7 +461,7 @@ export default function V4App(){
 
   const handleConfirmedClick=useCallback(()=>setConfirmedViewPinned(p=>!p),[]);
 
-  const ALL_YEARS=[2026,2027,2028,2029,2030,2031,2032,2033,2034,2035];
+  const ALL_YEARS=[2024,2025,2026,2027,2028,2029,2030,2031,2032,2033,2034,2035];
 
   return(
     <>
@@ -471,7 +491,7 @@ export default function V4App(){
               ):(
                 <>
                   <span>From{" "}</span>
-                  <InlineSelect value={rangeStart} onChange={v=>{clearChartPinnedYear();setRangeStart(v);if(rangeEnd!=="today"&&rangeEnd<v)setRangeEnd(v);}} options={ALL_YEARS} color={N.teal400}/>
+                  <InlineSelect value={rangeStart} onChange={v=>{clearChartPinnedYear();setRangeStart(v);if(rangeEnd!=="today"&&rangeEnd<v)setRangeEnd(v);else if(v!==2026&&rangeEnd==="today")setRangeEnd(2026);}} options={ALL_YEARS} color={N.teal400}/>
                   <span>{" "}to{" "}</span>
                   <InlineSelect value={rangeEnd} onChange={v=>{clearChartPinnedYear();setRangeEnd(v);}} options={rangeStart===2026?[...ALL_YEARS.filter(y=>y>=rangeStart),"today"]:ALL_YEARS.filter(y=>y>=rangeStart)} color={N.teal400}/>
                 </>
@@ -487,7 +507,7 @@ export default function V4App(){
               for exporting emission&#8209;intensive products under the EU carbon border adjustment mechanism.
             </div>
             <div style={{marginTop:"auto"}}>
-              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2026-01" viewEndYm="2035-12" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={Q1_ETS} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={0} todayFracIdx={V4_TODAY_FRAC_IDX} padLeft={90}/>
+              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2024-01" viewEndYm="2030-12" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={Q1_ETS} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={V4_CBAM_IDX} todayFracIdx={V4_TODAY_FRAC_IDX}/>
               {(()=>{
                 const latestYm=liveMonths.length>0?liveMonths[liveMonths.length-1]:DATA_CUTOFF_YM;
                 const[lcY,lcM]=latestYm.split("-");
@@ -599,7 +619,7 @@ export default function V4App(){
               {annualCosts.map(({year,cost})=>(
                 <div key={year} style={{marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between"}}>
-                    <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>{year}{typeof year==="string"&&year.length===4&&CBAM_FACTOR[+year]!=null&&<span style={{fontSize:10,opacity:0.6,marginLeft:4}}>(fa: {fmtCf(+year)}%)</span>}</span>
+                    <span style={{fontFamily:SANS,fontSize:13,color:N.tealMid}}>{year}</span>
                     <span style={{fontFamily:SERIF,fontSize:18,fontWeight:700,color:N.teal200}}>{fmtM(cost)}</span>
                   </div>
                 </div>
@@ -688,10 +708,10 @@ export default function V4App(){
         {/* FORMULA */}
         <div style={{background:N.teal900,padding:isMobile?"24px 16px 60px":"32px 28px 72px",position:"relative"}}>
           <div style={{fontFamily:SANS,fontSize:12,fontWeight:700,letterSpacing:"0.12em",color:N.teal400,textTransform:"uppercase",marginBottom:16}}>CBAM Cost Formula</div>
-          <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"10px 8px",userSelect:"none"}}>
+          <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:"10px 8px",userSelect:"none"}} onMouseLeave={()=>termLeave(setHovered)}>
             <span style={{fontFamily:SERIF,fontSize:"clamp(14px,2vw,24px)",fontWeight:700,color:N.teal200}}>CBAM Cost ($)</span>
             <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>=</span>
-            <Term id="tonnes" label="Exported Tonnes" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
+            <Term id="tonnes" label="Exported Metric Tons" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
             <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>×</span>
             <span style={{fontFamily:SERIF,fontSize:"clamp(20px,2.5vw,32px)",color:N.tealMid,fontWeight:300,lineHeight:1}}>(</span>
             <Term id="dv" label="Default Value (tCO₂e/t)" hovered={hovered} setHovered={setHovered} pinnedTerm={pinnedTerm} setPinnedTerm={setPinnedTerm} color={N.teal400}/>
@@ -705,7 +725,7 @@ export default function V4App(){
             <span style={{fontFamily:SANS,fontSize:18,color:N.tealMid,fontWeight:300}}>×</span>
             <span
               tabIndex={0} role="button" aria-pressed={hovered==="ets"||pinnedTerm==="ets"} aria-label="EU ETS carbon price"
-              onMouseEnter={()=>termEnter("ets",setHovered)} onMouseLeave={()=>termLeave(setHovered)}
+              onMouseEnter={()=>termEnter("ets",setHovered)}
               onFocus={()=>termEnter("ets",setHovered)} onBlur={()=>termLeave(setHovered)}
               onClick={()=>setPinnedTerm(p=>p==="ets"?null:"ets")}
               style={{display:"inline-flex",alignItems:"center",minHeight:32,cursor:"pointer",fontFamily:SERIF,fontSize:"clamp(14px,2vw,24px)",fontWeight:700,lineHeight:1.1,color:(hovered==="ets"||pinnedTerm==="ets")?N.white:N.orange400,background:(hovered==="ets"||pinnedTerm==="ets")?"rgba(241,125,58,0.18)":"rgba(241,125,58,0.1)",borderRadius:4,padding:"4px 10px",border:`2px solid ${N.orange400}`}}>

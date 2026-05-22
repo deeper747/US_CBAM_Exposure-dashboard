@@ -25,7 +25,7 @@ const SECTOR_INFO = {
   },
   Cement: {
     desc: "Includes Portland and hydraulic cement, clinker, white and grey variants, and calcined clay. US–EU cement trade is limited by high freight costs relative to product value.",
-    extra: "Cement is one of the most carbon-intensive sectors by tCO₂e/t. Even at low trade volumes, the per-tonne CBAM charge can be significant.",
+    extra: "Cement is one of the most carbon-intensive sectors by tCO₂e/t. Even at low trade volumes, the per-metric-ton CBAM charge can be significant.",
   },
   Fertilizers: {
     desc: "Nitrogen-based fertilizers including anhydrous ammonia, urea, ammonium nitrate, and compound fertilizers (NPK/NK/DAP/MAP). The US is a major global ammonia and urea producer.",
@@ -39,6 +39,18 @@ const SECTOR_INFO = {
 
 const CF2026 = CBAM_FACTOR[2026]; // 0.975
 const fmtCf = yr => parseFloat(((CBAM_FACTOR[yr] ?? 0) * 100).toFixed(1));
+
+function SortTh({ col, label, align = "right", onSort, active, dir }) {
+  const arrow = active ? (dir === "desc" ? " ↓" : " ↑") : "";
+  return (
+    <th onClick={() => onSort(col)}
+      style={{ padding: "8px 10px", textAlign: align, color: active ? N.white : N.teal400, fontWeight: 700,
+        whiteSpace: "nowrap", cursor: "pointer", userSelect: "none",
+        background: active ? "rgba(255,255,255,0.1)" : "transparent", transition: "background 0.15s, color 0.15s" }}>
+      {label}{arrow}
+    </th>
+  );
+}
 
 export default function SectorModal({ sec, ets, liveEntries, onClose }) {
   const info = SECTOR_INFO[sec] || { desc: "", extra: "" };
@@ -75,7 +87,7 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
       // YTD trade volume
       const ytdTonnes = ytdTonnesForRows([d], liveEntries);
 
-      // V4 formula: max(0, mv − bmg × CBAM_FACTOR) per tonne
+      // V4 formula: max(0, mv − bmg × CBAM_FACTOR) per metric ton
       const trajV4 = (mvk, yr) => {
         const cf = CBAM_FACTOR[yr] ?? 0;
         const mv = d[mvk] || 0;
@@ -99,7 +111,7 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
       const v4TaxToday = (v4Q1 * Q1_ETS + v4Apr * ets) * netMv2026 * EUR_USD;
 
       return {
-        cn: d.cn, desc: d.desc, total: d.total, bmg, markupLabel, annT, ytdTonnes, v4TaxToday,
+        cn: d.cn, desc: d.desc, total: d.total, bmg, markupLabel, cbamFactorLabel: "97.5%", annT, ytdTonnes, v4TaxToday,
         c2026: trajV4("mv2026", 2026), c2027: trajV4("mv2027", 2027), c2028: trajV4("mv2028", 2028),
       };
     });
@@ -126,18 +138,8 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
 
   if (!sec) return null;
 
-  const SortTh = ({ col, label, align = "right" }) => {
-    const active = sortCol === col;
-    const arrow = active ? (sortDir === "desc" ? " ↓" : " ↑") : "";
-    return (
-      <th onClick={() => handleSort(col)}
-        style={{ padding: "8px 10px", textAlign: align, color: active ? N.white : N.teal400, fontWeight: 700,
-          whiteSpace: "nowrap", cursor: "pointer", userSelect: "none",
-          background: active ? "rgba(255,255,255,0.1)" : "transparent", transition: "background 0.15s, color 0.15s" }}>
-        {label}{arrow}
-      </th>
-    );
-  };
+  const sh = { onSort: handleSort, dir: sortDir };
+  const ST = ({ col, label, align }) => <SortTh col={col} label={label} align={align} active={sortCol === col} {...sh}/>;
 
   return (
     <>
@@ -163,9 +165,9 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12, marginBottom: 20 }}>
             {[
-              { label: "Proj. Annual Tonnes", val: fmtKt(totT), sub: "2022–25 avg basis" },
-              { label: "Annual Avg Trade Value", val: fmtM(SECTOR_STATS[sec]?.annUsd || 0), sub: "2022–25 avg basis" },
-              { label: "CBAM Exposure YTD", val: fmtM(totV4Today), sub: `${YTD_LABEL} · after benchmark deduction` },
+              { label: "Annual Avg trade volume", val: fmtKt(totT), sub: "2022–25 avg basis" },
+              { label: "Annual Avg trade value", val: fmtM(SECTOR_STATS[sec]?.annUsd || 0), sub: "2022–25 avg basis" },
+              { label: "CBAM exposure YTD", val: fmtM(totV4Today), sub: `${YTD_LABEL}` },
             ].map(({ label, val, sub }) => (
               <div key={label} style={{ background: "rgba(255,255,255,0.05)", borderRadius: 4, padding: "12px 14px", border: `1px solid rgba(255,255,255,0.08)` }}>
                 <div style={{ fontFamily: SANS, fontSize: 10, color: N.tealMid, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{label}</div>
@@ -177,7 +179,7 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
 
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: N.teal400, textTransform: "uppercase", marginBottom: 10 }}>
-              Projected Annual Cost Trajectory (at €{ets.toFixed(0)}/tCO₂e) · after benchmark deduction
+              Projected Annual Cost Trajectory (at €{ets.toFixed(0)}/tCO₂e)
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
               {[
@@ -209,13 +211,13 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
               </colgroup>
               <thead>
                 <tr style={{ background: N.teal900, color: N.white, verticalAlign: "bottom" }}>
-                  <SortTh col="cn" label="CN Code / Description" align="left"/>
-                  <SortTh col="ytdTonnes" label="YTD Trade Vol (t)"/>
-                  <SortTh col="total" label="Default Value (tCO₂e/t)"/>
-                  <th style={{ padding: "8px 10px", textAlign: "right", color: N.teal400, fontWeight: 700, whiteSpace: "nowrap" }}>Mark-up</th>
-                  <SortTh col="bmg" label="Benchmark (tCO₂e/t)"/>
-                  <th style={{ padding: "8px 10px", textAlign: "right", color: N.teal400, fontWeight: 700, whiteSpace: "nowrap" }}>CBAM Factor</th>
-                  <SortTh col="v4TaxToday" label="CBAM Exposure YTD"/>
+                  <ST col="cn" label="CN Code / Description" align="left"/>
+                  <ST col="ytdTonnes" label="YTD Trade Vol (t)"/>
+                  <ST col="total" label="Default Value (tCO₂e/t)"/>
+                  <ST col="markupLabel" label="Mark-up"/>
+                  <ST col="bmg" label="Benchmark (tCO₂e/t)"/>
+                  <ST col="cbamFactorLabel" label="CBAM Factor"/>
+                  <ST col="v4TaxToday" label="CBAM Exposure YTD"/>
                 </tr>
               </thead>
               <tbody>
@@ -229,7 +231,7 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
                     <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealLight, fontVariantNumeric: "tabular-nums" }}>{r.total != null ? r.total.toFixed(3) : "—"}</td>
                     <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealMid }}>{r.markupLabel}</td>
                     <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealLight, fontVariantNumeric: "tabular-nums" }}>{r.bmg > 0 ? r.bmg.toFixed(3) : "—"}</td>
-                    <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealMid }}>97.5%</td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealMid }}>{r.cbamFactorLabel}</td>
                     <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, color: N.white, fontVariantNumeric: "tabular-nums", borderLeft: `2px solid rgba(125,206,218,0.2)` }}>{fmtM(r.v4TaxToday)}</td>
                   </tr>
                 ))}

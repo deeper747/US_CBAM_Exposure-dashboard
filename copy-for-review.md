@@ -213,7 +213,7 @@ Source: [Comext database](link), which publishes monthly with a six-to-eight wee
 
 *Default Value (tCO₂e/t)*
 Title: Default Value (tCO₂e/t)
-Definition: The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one tonne of product into estimated tonnes of CO₂-equivalent.
+Definition: The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one metric ton of product into estimated metric tons of CO₂-equivalent.
 Source: [EU Implementing Regulation 2025/2621, Annex I](link).
 
 *Mark-up / Phase-in %*
@@ -267,7 +267,7 @@ Aluminum default values include upstream smelting and power generation emissions
 Includes Portland and hydraulic cement, clinker, white and grey variants, and calcined clay. US–EU cement trade is limited by high freight costs relative to product value.
 
 *Additional context:*
-Cement is one of the most carbon-intensive sectors by tCO₂e/t. Even at low trade volumes, the per-tonne CBAM charge can be significant.
+Cement is one of the most carbon-intensive sectors by tCO₂e/t. Even at low trade volumes, the per-metric-ton CBAM charge can be significant.
 
 #### Fertilizers
 Nitrogen-based fertilizers including anhydrous ammonia, urea, ammonium nitrate, and compound fertilizers (NPK/NK/DAP/MAP). The US is a major global ammonia and urea producer.
@@ -322,7 +322,7 @@ Click any column header to sort high → low; click again to sort low → high. 
 Total
 
 **Table footnote:**
-Sorted by CBAM exposure YTD. YTD = [YTD label], 2026. YTD trade volume and Proj. 2026 use actual Comext data for confirmed months; remaining months use 2022–25 avg. Growth comparison uses confirmed Comext tonnes only. ETS price: Q1 official + €[ETS]/tCO₂e assumed thereafter.
+Sorted by CBAM exposure YTD. YTD = [YTD label], 2026. YTD trade volume and Proj. 2026 use actual Comext data for confirmed months; remaining months use 2022–25 avg. Growth comparison uses confirmed Comext metric tons only. ETS price: Q1 official + €[ETS]/tCO₂e assumed thereafter.
 
 ---
 

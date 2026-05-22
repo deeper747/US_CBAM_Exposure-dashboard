@@ -1,5 +1,5 @@
 // EU ETS product benchmarks (BMg, Column B) from EU Implementing Regulation 2025/2620, Annex I.
-// Values in tCO2e per tonne of product.
+// Values in tCO2e per metric ton of product.
 // Keys: trKey(cn) + (route ? ":" + route : "")
 // Many integer values in the source CSV had "0," prefix stripped; correct values restored here.
 

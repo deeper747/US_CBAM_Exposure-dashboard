@@ -480,7 +480,7 @@ const KEY_TERMS=[
   },
   {
     term:"Allowance",
-    def:<>One EU ETS allowance equals the right to emit <b>one tonne of CO₂-equivalent</b>. Companies must surrender allowances to cover their verified emissions. CBAM certificate prices are linked to the weekly average auction price of these allowances.</>,
+    def:<>One EU ETS allowance equals the right to emit <b>one metric ton of CO₂-equivalent</b>. Companies must surrender allowances to cover their verified emissions. CBAM certificate prices are linked to the weekly average auction price of these allowances.</>,
   },
   {
     term:"CN Code (Combined Nomenclature)",
@@ -488,7 +488,7 @@ const KEY_TERMS=[
   },
   {
     term:"Default Value",
-    def:<>An EU-assigned emissions intensity (tCO₂e per tonne of product) used when verified emissions data is unavailable. Default values are typically <b>conservative and may exceed actual emissions</b>, incentivizing firms to report installation-level data.</>,
+    def:<>An EU-assigned emissions intensity (tCO₂e per metric ton of product) used when verified emissions data is unavailable. Default values are typically <b>conservative and may exceed actual emissions</b>, incentivizing firms to report installation-level data.</>,
   },
   {
     term:"Mark-up",
@@ -508,7 +508,7 @@ const KEY_TERMS=[
   },
   {
     term:"BF/BOF (Blast Furnace / Basic Oxygen Furnace)",
-    def:"The traditional coal-based steelmaking route, where iron ore is reduced in a blast furnace and converted to steel in a basic oxygen furnace. This process produces significantly higher CO₂ emissions per tonne than EAF.",
+    def:"The traditional coal-based steelmaking route, where iron ore is reduced in a blast furnace and converted to steel in a basic oxygen furnace. This process produces significantly higher CO₂ emissions per metric ton than EAF.",
   },
 ];
 
@@ -611,7 +611,7 @@ export default function App(){
   function getClockCost(sf){
     if(!comext2026)return null;
     const sectors=sf==="All"?Object.keys(BASELINE_ANNUAL):[sf];
-    // Base rate: tonnes × default value, without price (price applied per period below)
+    // Base rate: metric tons × default value, without price (price applied per period below)
     let tonneDvPerYear=0;
     sectors.forEach(sec=>{const e=comext2026.sectorTonnes[sec];if(e)tonneDvPerYear+=e.tonnes*(SECTOR_AVG_DV[sec]||0);});
     const now=Date.now();
@@ -751,7 +751,7 @@ export default function App(){
         </div>
 
         <div style={{background:N.tealPale,borderLeft:`4px solid ${N.tealMid}`,padding:"6px 24px",fontFamily:SANS,fontSize:14,color:N.teal900}}>
-          <b>Data:</b> Default values from EU IR 2025/2621 Annex I (US). Trade: Eurostat Comext DS-045409 — matched at exact CN digit level (CN4/CN6/CN8) as listed in the regulation. Converted at fixed $1.08/€. CBAM cost = tonnes × default value (tCO₂e/t, incl. mark-up) × ETS price.
+          <b>Data:</b> Default values from EU IR 2025/2621 Annex I (US). Trade: Eurostat Comext DS-045409 — matched at exact CN digit level (CN4/CN6/CN8) as listed in the regulation. Converted at fixed $1.08/€. CBAM cost = metric tons × default value (tCO₂e/t, incl. mark-up) × ETS price.
         </div>
 
         {/* TABS */}
@@ -1081,7 +1081,7 @@ export default function App(){
                 <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:8}}>
                   {[
                     ["Exported Tonnes","Annual quantity of goods exported from the US to the EU27, sourced from Eurostat Comext DS-045409, matched at exact CN digit level (CN4, CN6, or CN8) as listed in the regulation."],
-                    ["Default Value (tCO₂e/t, incl. mark-up)","The embedded carbon intensity assigned to each product by EU IR 2025/2621 Annex I, expressed in tonnes of CO₂-equivalent per tonne of product. The mark-up column is used (see schedule below), which scales the base default value upward by a fixed percentage to account for the phase-in of CBAM obligations. This determines the number of CBAM certificates required per tonne exported. Note: these are conservative default values — if a manufacturer provides verified carbon intensity data, the actual levy could be significantly lower."],
+                    ["Default Value (tCO₂e/t, incl. mark-up)","The embedded carbon intensity assigned to each product by EU IR 2025/2621 Annex I, expressed in metric tons of CO₂-equivalent per metric ton of product. The mark-up column is used (see schedule below), which scales the base default value upward by a fixed percentage to account for the phase-in of CBAM obligations. This determines the number of CBAM certificates required per metric ton exported. Note: these are conservative default values — if a manufacturer provides verified carbon intensity data, the actual levy could be significantly lower."],
                     ["Mark-up","A percentage applied to the base default value as CBAM obligations ramp up. For most sectors the mark-up is 10% in 2026, 20% in 2027, and 30% from 2028 onward. For fertilisers it remains at 1% throughout. The mark-up reflects the share of free EU ETS allowances still in circulation: as free allocations phase out by 2034, the mark-up will eventually reach 100%."],
                     ["ETS Price (€/tCO₂e)","For quarters where the EU Commission has published an official CBAM certificate price (Q1 2026: €75.36), that value is locked and cannot be adjusted — it is the authoritative weighted-average EU ETS auction clearing price for that quarter. For quarters not yet published (Q2–Q4 2026), the slider sets a forecast price for scenario analysis. The Live Cost Clock accrues each period at its own price: confirmed quarters at the official rate, remaining time at the user's forecast."],
                     ["× 1.08","Fixed EUR/USD conversion rate based on the 2022–24 ECB average. Actual CBAM certificate payments are denominated in euros."],
