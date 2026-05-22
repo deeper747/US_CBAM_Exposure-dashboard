@@ -162,7 +162,7 @@ export default function LineChart({
   const graphLabels = [
     lineLabel(Math.min(cbamIdx - 4, visibleStartIdx + 9), "hypothetical exposure", N.tealMid, -20, -25),
     lineLabel(Math.min(Math.max(cbamIdx, visibleStartIdx), Math.min(cutIdx, visibleEndIdx)), "confirmed exposure", "#F4DA91", 5, 22, "start"),
-    lineLabel(Math.min(Math.max(cutIdx + 18, cbamIdx + 9), visibleEndIdx - 5), "projected exposure", N.teal600, 90, -1),
+    lineLabel(Math.min(Math.max(cutIdx + 18, cbamIdx + 9), visibleEndIdx - 5), "projected exposure", N.teal600, 90, -12),
   ].filter(Boolean);
   const tip = hov ? getTooltip(hov.idx) : null;
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024;

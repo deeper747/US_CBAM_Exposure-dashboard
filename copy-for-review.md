@@ -35,6 +35,8 @@ Author: Jia-Shen Tsai, Niskanen Center
 **Year selector label:**
 From [year] to [year]
 
+*(Year options run from 2024 through 2035. 2024 and 2025 are pre-CBAM hypothetical. The "Today" end option is only available when start year is 2026.)*
+
 **Main headline** (verb variants depending on selected range):
 - The US **loses an estimated** [amount] to the EU *(YTD / confirmed view)*
 - The US **would have lost** [amount] to the EU *(pre-2026 historical range)*
@@ -54,15 +56,15 @@ for exporting emission‑intensive products under carbon border adjustment mecha
 How to explore
 
 **Bullet items (icon + text):**
-- ◎  Hover the chart to explore monthly cost estimates and cumulative totals
-- ⇅  Drag the slider below to model different carbon price scenarios
+- ◎  Hover the chart to explore monthly cost estimates for 2026–2035
+- ⇅  Drag the slider to model different carbon price scenarios
 - ▶  Click any sector row in the table below for a full CN-code breakdown
-- ↔  Use the year selectors at the top to view multi-year totals and the sector breakdown
+- ↔  Use the year selectors to view multi-year totals and see the phase-in ramp
 
 #### ETS Slider
 
 **Slider label:**
-Price on your choice *(from Apr 2026 on)*
+Price on your choice *(from [FORECAST_FROM] on)*
 
 **Slider value display:**
 €[value]/tCO₂
@@ -80,17 +82,16 @@ Past 5-yr range: low €[X]/t ([Qtr]) · high €[X]/t ([Qtr])
 **Section header** (changes with line chart hover / confirmed view):
 - Default: YTD CBAM Exposure by Sector
 - Confirmed view pinned: Confirmed CBAM Exposure by Sector
-- On hover over pre-2026 year: [year] CBAM Exposure by Sector
-- On hover over 2026–2028: [year] CBAM Exposure by Sector
+- On hover over any year: [year] CBAM Exposure by Sector
 - On multi-year range: [startYear]–[endYear] CBAM Exposure by Sector
 
 **Subtitle** (changes with line chart hover and year selector):
-- Default: YTD · [YTD label, e.g. Jan–May 19] · at €[ETS]
-- Confirmed view: Jan – [confirmed month label] · actual Comext data · at €75.36
-- On hover over pre-2026: [year] hypothetical · actual ETS prices
-- On hover over 2026–2028: [year] projected · at €[ETS]
-- On multi-year pre-2026 range: [start]–[end] · sector mix · actual ETS prices
-- On multi-year range incl. 2026+: [start]–[end] · sector mix · at €[ETS]
+- Default (no hover, YTD): YTD · [YTD label, e.g. Jan–May 19] · at €[ETS]
+- Confirmed view (Jan–Feb 2026): Jan – [confirmed month, e.g. Feb 2026] · CBAM factor 97.5% · at €75.36
+- On hover between confirmed data and today: YTD · [YTD label] · CBAM factor 97.5% · at €[ETS]
+- On hover over 2024 or 2025: [year] hypothetical · CBAM factor 100% · at €[ETS]
+- On hover over 2026–2033: [year] projected · CBAM factor [X]% · at €[ETS]
+- On multi-year range: [start]–[end] · sector mix · at €[ETS]
 
 **Confirmed view pinned indicator (small, below subtitle):**
 ⊗ Pinned · click to unpin
@@ -113,9 +114,6 @@ CBAM Exposure by Year
 - 2026 (YTD)
 - [year] *(full years when year range selected)*
 
-**Sub-rows for pre-2026 years (quarterly breakdown):**
-Q[N] · €[ETS price]/t
-
 **Multi-year total row label:**
 Total
 
@@ -124,7 +122,7 @@ Total
 ### Line Chart
 
 **Chart caption** (dynamic, below chart):
-Estimated monthly CBAM cost ($M) · **Trade** ([Comext](link)): confirmed 2022 – [latest confirmed month, e.g. Feb 2026], projected [next month] – 2028 · **EU carbon price** ([EU Commission](link)): Q1 2026 confirmed at €75.36/tCO₂e, assumed from Apr 2026 · Data current as of [date, e.g. May 19, 2026]
+Estimated monthly CBAM cost ($M) · **Trade** ([Comext](link)): 2022–2025 monthly averages used as baseline; 2026 confirmed Jan–[latest confirmed month, e.g. Feb 2026], projected [next month]–2035 · **EU carbon price** ([EU Commission](link)): Q1 2026 confirmed at €75.36/tCO₂e, assumed from [FORECAST_FROM] · Data current as of [date, e.g. May 19, 2026]
 
 *When live data is loading:*
 …· Fetching…
@@ -133,7 +131,7 @@ Estimated monthly CBAM cost ($M) · **Trade** ([Comext](link)): confirmed 2022 �
 · Live Comext fetch unavailable; using static baseline and bundled confirmed data.
 
 **On-chart labels:**
-- hypothetical exposure *(gray dashed segment)*
+- hypothetical exposure *(gray dashed segment, 2024–2025)*
 - confirmed exposure *(solid yellow segment)*
 - projected exposure *(teal dashed segment)*
 - Cumulative CBAM cost *(thin teal line from Jan 2026)*
@@ -143,12 +141,12 @@ Estimated monthly CBAM cost ($M) · **Trade** ([Comext](link)): confirmed 2022 �
 - Today
 
 **Year axis labels:**
-'24 · 2025 · 2026 · 2027 · 2028
+'24 · 2025 · 2026 · 2027 · 2028 · 2029 · 2030
 
 **Chart hover tooltip — sub-labels:**
-- Pre-CBAM: Pre-CBAM · hypothetical · €[ETS]/tCO₂e
+- Pre-CBAM (2024–2025): Pre-CBAM · hypothetical · €[ETS]/tCO₂e
 - Confirmed months: Actual Comext trade vol.
-- Projected 2026: Projected (2022–25 avg trade)
+- Projected 2026: Projected (2022–25 avg trade · 10% mark-up)
 - Projected 2027: Projected (2022–25 avg · 20% mark-up)
 - Projected 2028: Projected (2022–25 avg · 30% mark-up)
 
@@ -169,10 +167,13 @@ Click to select year
 **Table column headers** (dynamic — change when hovering/selecting years):
 
 Default (YTD):
-| Sector | YTD Trade Volume (t) | Default value (tCO₂e/t, weighted avg.) | Mark-up % | CBAM exposure YTD |
+| Sector | Proj. YTD trade volume (t) | Default value (tCO₂e/t) | Mark-up | Benchmark (tCO₂e/t) | CBAM factor | Proj. CBAM exposure YTD |
 
-When a specific year is selected:
-| Sector | [Year] Est. Trade Volume (t) *or* [Year] Trade Volume (t) | Default value (tCO₂e/t, weighted avg.) | Mark-up % | Proj. CBAM exposure in [Year] *or* Hyp. CBAM in [Year] |
+When a specific year is hovered/pinned:
+| Sector | [Year] Proj. trade volume (t) | Default value (tCO₂e/t) | Mark-up | Benchmark (tCO₂e/t) | CBAM factor | Proj. CBAM exposure in [Year] |
+
+When confirmed view is active:
+| Sector | Confirmed trade volume (t) | Default value (tCO₂e/t) | Mark-up | Benchmark (tCO₂e/t) | CBAM factor | Confirmed CBAM exposure |
 
 **Sector row labels:**
 - Iron & Steel
@@ -185,7 +186,7 @@ When a specific year is selected:
 Total
 
 **Table footnote:**
-Click any sector row for CN-code breakdown. Hover the line chart to shift the data display by year. Projected trade uses 2022–25 monthly averages where live data is unavailable.
+Click any sector row for CN-code breakdown. Hover the line chart to shift the data display by year. Projected trade uses 2022–2025 monthly averages where live data is unavailable.
 
 *When confirmed view is active, prepended:*
 Confirmed Comext data: Jan 2026 – [confirmed month label].
@@ -198,7 +199,7 @@ Confirmed Comext data: Jan 2026 – [confirmed month label].
 CBAM Cost Formula
 
 **Formula terms (left to right):**
-CBAM Cost ($) = Exported Tonnes × Default Value (tCO₂e/t) × (1 + Mark-up) × €[ETS value]/tCO₂e × $1.13 / €
+CBAM Cost ($) = Exported metric tons × ( Default value (tCO₂e/t) × (1 + Mark-up) − Benchmark × CBAM factor ) × €[ETS value]/tCO₂e × $1.13 / €
 
 **Default prompt (no term hovered or clicked):**
 - Desktop: Hover a term to preview its definition. Click to keep it open.
@@ -206,28 +207,38 @@ CBAM Cost ($) = Exported Tonnes × Default Value (tCO₂e/t) × (1 + Mark-up) ×
 
 **Term definitions (shown on hover/click):**
 
-*Exported Tonnes*
-Title: Exported Tonnes
-Definition: How much CBAM-covered product the US ships to the EU. Past years use reported Comext tonnage; future and not-yet-confirmed months use the 2022–25 monthly average as the trade baseline.
+*Exported metric tons*
+Title: Exported metric tons
+Definition: How much CBAM-covered product the US ships to the EU. Confirmed Comext months use reported tonnage; all other months use the 2022–2025 monthly average as the trade baseline.
 Source: [Comext database](link), which publishes monthly with a six-to-eight week lag.
 
-*Default Value (tCO₂e/t)*
-Title: Default Value (tCO₂e/t)
+*Default value (tCO₂e/t)*
+Title: Default value (tCO₂e/t)
 Definition: The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one metric ton of product into estimated metric tons of CO₂-equivalent.
 Source: [EU Implementing Regulation 2025/2621, Annex I](link).
 
 *Mark-up / Phase-in %*
 Title: Mark-up / Phase-in %
-Definition: The penalty add-on in the default-value design. It nudges exporters toward submitting actual emissions data and grows over time for most sectors: 10% in 2026, 20% in 2027, and 30% in 2028. Fertilizers stay at 1% in this model.
+Definition: The penalty add-on applied to the default value. It nudges exporters toward submitting actual emissions data: 10% in 2026, 20% in 2027, 30% from 2028. Fertilizers stay at 1%.
 Source: [EU Implementing Regulation 2025/2621, Annex I](link).
 
-*EU ETS Carbon Price (the €[value]/tCO₂e term)*
-Title: EU ETS Carbon Price
-Definition: The carbon price used to turn embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the assumed price so you can test different carbon-market scenarios.
+*Benchmark*
+Title: EU ETS product benchmark (tCO₂e/t)
+Definition: The best-in-class EU production emissions for each product. Multiplied by the CBAM factor each year, it gives the effective free-allocation equivalent deducted from the importer's liability. As the CBAM factor falls, this deduction shrinks and the charge grows.
+Source: [EU Implementing Regulation 2025/2620](link).
+
+*CBAM factor*
+Title: CBAM factor
+Definition: The fraction of the EU ETS product benchmark still granted as free allocation to EU producers. Starts at 97.5% in 2026 — so 97.5% of the benchmark is still deducted — then falls to 0% from 2034, after which no free allocation remains and importers pay for all embedded emissions above zero.
+Source: [EU ETS Directive 2003/87/EC, Article 10a](link).
+
+*€[ETS value]/tCO₂e*
+Title: EU ETS carbon price
+Definition: The carbon price used to turn net embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the assumed price so you can test different carbon-market scenarios.
 Source: [CBAM certificate price](link).
 
 *$1.13 / €*
-Title: Exchange Rate (USD/EUR)
+Title: Exchange rate (USD/EUR)
 Definition: The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.
 Source: European Central Bank (ECB) Statistical Data Warehouse
 
@@ -287,9 +298,9 @@ At 26.64 tCO₂e/t, hydrogen has the highest default value of any CBAM product. 
 
 | Label | Value | Sub-label |
 |---|---|---|
-| Proj. Annual Tonnes | [value] | 2022–25 avg basis |
-| Annual Avg Trade Value | [value] | 2022–25 avg basis |
-| CBAM Exposure YTD | [value] | [YTD label] · Q1 price + assumed |
+| Annual Avg trade volume | [value] | 2022–25 avg basis |
+| Annual Avg trade value | [value] | 2022–25 avg basis |
+| CBAM exposure YTD | [value] | [YTD label] |
 
 ---
 
@@ -299,9 +310,9 @@ At 26.64 tCO₂e/t, hydrogen has the highest default value of any CBAM product. 
 Projected Annual Cost Trajectory (at €[ETS]/tCO₂e)
 
 **Year card labels:**
-- 2026 · 10% mark-up
-- 2027 · 20% mark-up
-- 2028 · 30% mark-up
+- 2026 · 10% mark-up · 97.5% CBAM factor
+- 2027 · 20% mark-up · 95% CBAM factor
+- 2028 · 30% mark-up · 90% CBAM factor
 
 *(Fertilizers: 1% mark-up for all three years)*
 
@@ -312,8 +323,8 @@ Projected Annual Cost Trajectory (at €[ETS]/tCO₂e)
 **Section header:**
 CN Code Breakdown · [N] product code(s)
 
-**Column headers** (5th column header is dynamic based on latest Comext data month):
-| CN Code | Description | Default Value (tCO₂e/t) | YTD Avg Trade Volume (t) | Jan 2026 vs 2025 *or* Jan–[Mo] 2026 vs 2025 | Proj. YTD CBAM exposure | Proj. 2026 CBAM exposure |
+**Column headers:**
+| CN Code / Description | YTD Trade Vol (t) | Default Value (tCO₂e/t) | Mark-up | Benchmark (tCO₂e/t) | CBAM Factor | CBAM Exposure YTD |
 
 **Sort behavior:**
 Click any column header to sort high → low; click again to sort low → high. Null values always sort last.
@@ -322,7 +333,7 @@ Click any column header to sort high → low; click again to sort low → high. 
 Total
 
 **Table footnote:**
-Sorted by CBAM exposure YTD. YTD = [YTD label], 2026. YTD trade volume and Proj. 2026 use actual Comext data for confirmed months; remaining months use 2022–25 avg. Growth comparison uses confirmed Comext metric tons only. ETS price: Q1 official + €[ETS]/tCO₂e assumed thereafter.
+CBAM exposure uses V4 formula: max(0, Default Value × (1 + Mark-up) − Benchmark × CBAM Factor) × ETS × $1.13/€. YTD = [YTD label], 2026. Q1 at €75.36/tCO₂e (official), remainder at €[ETS]/tCO₂e assumed.
 
 ---
 

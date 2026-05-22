@@ -517,7 +517,7 @@ export default function V4App(){
                 const nextLabel=`${MONTH_NAMES[nextMoNum-1]} ${nextYr}`;
                 return(
                   <p style={{margin:"4px 0 0",fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5}}>
-                    Estimated monthly CBAM cost ($M) after benchmark deduction and CBAM phase-in factor · <span style={{color:N.tealLight,fontWeight:600}}>Trade</span> (<a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>Comext</a>): 2022–2025 monthly averages used as baseline; 2026 confirmed Jan–{latestLabel}, projected {nextLabel}–2035 · <span style={{color:N.tealLight,fontWeight:600}}>EU carbon price</span> (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>EU Commission</a>): Q1 2026 confirmed at €{Q1_ETS.toFixed(2)}/tCO₂e, assumed from {FORECAST_FROM} · Data current as of {REPORT_AS_OF_LABEL}{fetchStatus==="loading"&&<span style={{color:N.teal400}}> · Fetching…</span>}{fetchStatus==="fallback"&&<span style={{color:N.orange400}}> · Live Comext fetch unavailable; using static baseline and bundled confirmed data.</span>}
+                    Estimated monthly CBAM cost ($M) · <span style={{color:N.tealLight,fontWeight:600}}>Trade</span> (<a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>Comext</a>): 2022–2025 monthly averages used as baseline; 2026 confirmed Jan–{latestLabel}, projected {nextLabel}–2035 · <span style={{color:N.tealLight,fontWeight:600}}>EU carbon price</span> (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>EU Commission</a>): Q1 2026 confirmed at €{Q1_ETS.toFixed(2)}/tCO₂e, assumed from {FORECAST_FROM} · Data current as of {REPORT_AS_OF_LABEL}{fetchStatus==="loading"&&<span style={{color:N.teal400}}> · Fetching…</span>}{fetchStatus==="fallback"&&<span style={{color:N.orange400}}> · Live Comext fetch unavailable; using static baseline and bundled confirmed data.</span>}
                   </p>
                 );
               })()}
@@ -529,7 +529,7 @@ export default function V4App(){
             {!isMobile&&(
               <div style={{paddingBottom:4,textAlign:"right"}}>
                 <div style={{fontFamily:SANS,fontSize:16,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Dashboard <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
-                <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Real CBAM costs with benchmark deduction and phase-in factor</div>
+                <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated costs for US exporters under the EU CBAM default values</div>
                 <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. <span style={{color:N.orange400,fontWeight:800}}>Forgone revenue</span> for the federal government</div>
                 <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid}}>Author: Jia-Shen Tsai, Niskanen Center</div>
               </div>
