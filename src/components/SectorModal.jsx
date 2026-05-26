@@ -60,6 +60,16 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
   const closeRef = useRef(null);
   const [sortCol, setSortCol] = useState("v4TaxToday");
   const [sortDir, setSortDir] = useState("desc");
+  const [viewPeriod, setViewPeriod] = useState("ytd");
+
+  const handleViewChange = p => {
+    setViewPeriod(p);
+    const costKeys = ["v4TaxToday", "c2026", "c2027", "c2028"];
+    if (costKeys.includes(sortCol)) {
+      const map = { ytd: "v4TaxToday", "2026": "c2026", "2027": "c2027", "2028": "c2028" };
+      setSortCol(map[p]);
+    }
+  };
 
   const handleSort = col => {
     if (sortCol === col) setSortDir(d => d === "desc" ? "asc" : "desc");
@@ -136,6 +146,14 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
     });
   }, [cnRows, sortCol, sortDir]);
 
+  const isFert = sec === "Fertilizers";
+  const pc = {
+    ytd:    { volKey: "ytdTonnes", costKey: "v4TaxToday", volLabel: "YTD Trade Vol (t)",    costLabel: "CBAM Exposure YTD",    markup: isFert ? "1%" : "10%", cf: `${fmtCf(2026)}%`, volTotal: totYtdTonnes, costTotal: totV4Today },
+    "2026": { volKey: "annT",      costKey: "c2026",       volLabel: "Annual Trade Vol (t)", costLabel: "Proj. CBAM Cost 2026", markup: isFert ? "1%" : "10%", cf: `${fmtCf(2026)}%`, volTotal: totT, costTotal: tot26 },
+    "2027": { volKey: "annT",      costKey: "c2027",       volLabel: "Annual Trade Vol (t)", costLabel: "Proj. CBAM Cost 2027", markup: isFert ? "1%" : "20%", cf: `${fmtCf(2027)}%`, volTotal: totT, costTotal: tot27 },
+    "2028": { volKey: "annT",      costKey: "c2028",       volLabel: "Annual Trade Vol (t)", costLabel: "Proj. CBAM Cost 2028", markup: isFert ? "1%" : "30%", cf: `${fmtCf(2028)}%`, volTotal: totT, costTotal: tot28 },
+  }[viewPeriod];
+
   if (!sec) return null;
 
   const sh = { onSort: handleSort, dir: sortDir };
@@ -195,8 +213,22 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
             </div>
           </div>
 
-          <div style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: N.teal400, textTransform: "uppercase", marginBottom: 10 }}>
-            CN Code Breakdown · {cnRows.length} product code{cnRows.length !== 1 ? "s" : ""}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: N.teal400, textTransform: "uppercase" }}>
+              CN Code Breakdown · {cnRows.length} product code{cnRows.length !== 1 ? "s" : ""}
+            </div>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[["ytd","YTD"],["2026","2026"],["2027","2027"],["2028","2028"]].map(([p, label]) => (
+                <button key={p} onClick={() => handleViewChange(p)}
+                  style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 3, cursor: "pointer",
+                    border: `1px solid ${viewPeriod === p ? color : "rgba(255,255,255,0.18)"}`,
+                    background: viewPeriod === p ? `${color}33` : "rgba(255,255,255,0.04)",
+                    color: viewPeriod === p ? N.white : N.tealMid,
+                    letterSpacing: "0.06em", transition: "all 0.12s" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", minWidth: 820, borderCollapse: "collapse", fontFamily: SANS, fontSize: 12, tableLayout: "fixed" }}>
@@ -212,12 +244,12 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
               <thead>
                 <tr style={{ background: N.teal900, color: N.white, verticalAlign: "bottom" }}>
                   <ST col="cn" label="CN Code / Description" align="left"/>
-                  <ST col="ytdTonnes" label="YTD Trade Vol (t)"/>
+                  <ST col={pc.volKey} label={pc.volLabel}/>
                   <ST col="total" label="Default Value (tCO₂e/t)"/>
                   <ST col="markupLabel" label="Mark-up"/>
                   <ST col="bmg" label="Benchmark (tCO₂e/t)"/>
                   <ST col="cbamFactorLabel" label="CBAM Factor"/>
-                  <ST col="v4TaxToday" label="CBAM Exposure YTD"/>
+                  <ST col={pc.costKey} label={pc.costLabel}/>
                 </tr>
               </thead>
               <tbody>
@@ -227,27 +259,29 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
                       <div style={{ color: lightColor, fontWeight: 700, fontFamily: "monospace", fontSize: 11 }}>{r.cn}</div>
                       <div style={{ color: N.tealMid, fontSize: 11, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.desc}</div>
                     </td>
-                    <td style={{ padding: "8px 10px", textAlign: "right", color: N.white, fontVariantNumeric: "tabular-nums" }}>{fmtT(Math.round(r.ytdTonnes))}</td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", color: N.white, fontVariantNumeric: "tabular-nums" }}>{fmtT(Math.round(r[pc.volKey]))}</td>
                     <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealLight, fontVariantNumeric: "tabular-nums" }}>{r.total != null ? r.total.toFixed(3) : "—"}</td>
-                    <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealMid }}>{r.markupLabel}</td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealMid }}>{pc.markup}</td>
                     <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealLight, fontVariantNumeric: "tabular-nums" }}>{r.bmg > 0 ? r.bmg.toFixed(3) : "—"}</td>
-                    <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealMid }}>{r.cbamFactorLabel}</td>
-                    <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, color: N.white, fontVariantNumeric: "tabular-nums", borderLeft: `2px solid rgba(125,206,218,0.2)` }}>{fmtM(r.v4TaxToday)}</td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", color: N.tealMid }}>{pc.cf}</td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", fontWeight: 700, color: N.white, fontVariantNumeric: "tabular-nums", borderLeft: `2px solid rgba(125,206,218,0.2)` }}>{fmtM(r[pc.costKey])}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr style={{ background: "rgba(255,255,255,0.08)", fontWeight: 700 }}>
                   <td style={{ padding: "8px 10px", color: N.teal400 }}>Total</td>
-                  <td style={{ padding: "8px 10px", textAlign: "right", color: N.white, fontVariantNumeric: "tabular-nums" }}>{fmtT(Math.round(totYtdTonnes))}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right", color: N.white, fontVariantNumeric: "tabular-nums" }}>{fmtT(Math.round(pc.volTotal))}</td>
                   <td/><td/><td/><td/>
-                  <td style={{ padding: "8px 10px", textAlign: "right", color: N.white, fontVariantNumeric: "tabular-nums", borderLeft: `2px solid rgba(125,206,218,0.2)` }}>{fmtM(totV4Today)}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right", color: N.white, fontVariantNumeric: "tabular-nums", borderLeft: `2px solid rgba(125,206,218,0.2)` }}>{fmtM(pc.costTotal)}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
           <div style={{ marginTop: 8, fontFamily: SANS, fontSize: 11, color: N.tealMid }}>
-            CBAM exposure uses V4 formula: max(0, Default Value × (1 + Mark-up) − Benchmark × CBAM Factor) × ETS × $1.13/€. YTD = {YTD_LABEL}, 2026. Q1 at €{Q1_ETS.toFixed(2)}/tCO₂e (official), remainder at €{ets.toFixed(0)}/tCO₂e assumed.
+            {viewPeriod === "ytd"
+              ? `YTD = ${YTD_LABEL}, 2026. YTD trade volume uses actual Comext data for confirmed months; remaining months use 2022–25 avg. ETS price: Q1 at €${Q1_ETS.toFixed(2)}/tCO₂e (official), remainder at €${ets.toFixed(0)}/tCO₂e assumed.`
+              : `Annual trade volume uses 2022–25 monthly avg. Projected ${viewPeriod} CBAM cost at €${ets.toFixed(0)}/tCO₂e ETS, ${pc.markup} mark-up, ${pc.cf} CBAM factor.`}
           </div>
         </div>
       </div>
