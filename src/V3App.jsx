@@ -98,7 +98,7 @@ export function v4SectorYearCost(sec, yr, forecastEts, liveEntries = null) {
       const mo = String(m).padStart(2, "0");
       const ym = `${yr}-${mo}`;
       const liveT = liveEntries?.[trKey(d.cn)]?.[ym]?.[0];
-      const tonnes = liveT != null ? liveT : avgMonthTonnes(d.cn, mo);
+      const tonnes = yr >= 2026 ? (liveT != null ? liveT : avgMonthTonnes(d.cn, mo)) : getMonthTonnes(d.cn, ym);
       cost += tonnes * netMv * getQtrEts(ym, forecastEts);
     }
   }
