@@ -21,7 +21,7 @@ import {
   getQtrEts,
   trKey,
 } from "./lib/cbamCalculations.js";
-import * as DS from "./datasets/comextDataset.js";
+import * as DS from "./datasets/mixedDataset.js";
 import { useComextData } from "./context/ComextDataContext.jsx";
 import { useIframeHeight } from "./hooks/useIframeHeight.js";
 import { N, SANS, SERIF, SECTOR_COLORS as SC, SECTOR_LIGHT_COLORS as SCL } from "./styles/tokens.js";
@@ -72,7 +72,7 @@ function Term({id,label,hovered,setHovered,pinnedTerm,setPinnedTerm,color,style=
 
 const LS={color:N.teal200,textDecoration:"underline"};
 const TERM_DEFS={
-  tonnes:{title:"Exported metric tons",def:"How much CBAM-covered product the US ships to the EU. Confirmed Comext months use reported tonnage; all other months use the 2022–2025 monthly average as the trade baseline.",source:<>Source: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Comext database</a>, which publishes monthly with a six-to-eight week lag.</>},
+  tonnes:{title:"Exported metric tons",def:"How much CBAM-covered product the US ships to the EU. Confirmed Comext months use reported tonnage for Iron & Steel, Aluminum, Cement, and Fertilizers; Hydrogen uses US Census Bureau export data throughout. All other months use the 2022–2025 monthly average as the trade baseline.",source:<>Sources: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Eurostat Comext</a> (Iron & Steel, Aluminum, Cement, Fertilizers) · <a href="https://www.census.gov/foreign-trade/reference/guides/guide2ftd.html" target="_blank" rel="noreferrer" style={LS}>US Census Bureau International Trade</a> (Hydrogen)</>},
   dv:{title:"Default value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one metric ton of product into estimated metric tons of CO₂-equivalent.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
   markup:{title:"Mark-up / Phase-in %",def:"The penalty add-on applied to the default value. It nudges exporters toward submitting actual emissions data: 10% in 2026, 20% in 2027, 30% from 2028. Fertilizers stay at 1%.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
   benchmark:{title:"EU ETS product benchmark (tCO₂e/t)",def:"The best-in-class EU production emissions for each product. Multiplied by the CBAM factor each year, it gives the effective free-allocation equivalent deducted from the importer's liability. As the CBAM factor falls, this deduction shrinks and the charge grows.",source:<>Source: <a href="https://eur-lex.europa.eu/eli/reg_impl/2025/2620/oj" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2620</a>.</>},
@@ -141,7 +141,7 @@ export default function V4App(){
     return t;
   },[mergedTrade]);
 
-  // V4 chart overrides for confirmed months: apply benchmark × CBAM_FACTOR deduction
+  // Chart overrides for confirmed months: apply benchmark × CBAM_FACTOR deduction
   const liveChartOverrides=useMemo(()=>{
     if(!mergedTrade)return{};
     const cf2026=CBAM_FACTOR[2026];
@@ -166,7 +166,6 @@ export default function V4App(){
   const liveDataCutIdx=useMemo(()=>{
     const yms=Object.keys(liveChartOverrides);
     if(!yms.length){
-      // Static fallback: find DATA_CUTOFF_YM in DS.CHART_DATA
       const idx=DS.CHART_DATA.findIndex(p=>p.ym===DATA_CUTOFF_YM);
       return idx>=0?idx:0;
     }
@@ -419,7 +418,7 @@ export default function V4App(){
                 const nextLabel=`${MONTH_NAMES[nextMoNum-1]} ${nextYr}`;
                 return(
                   <p style={{margin:"4px 0 0",fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5}}>
-                    Estimated monthly CBAM cost ($M) · <span style={{color:N.tealLight,fontWeight:600}}>Trade</span> (<a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>Comext</a>): 2022–2025 monthly averages used as baseline; 2026 confirmed Jan–{latestLabel}, projected {nextLabel}–2035 · <span style={{color:N.tealLight,fontWeight:600}}>EU carbon price</span> (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>EU Commission</a>): Q1 2026 confirmed at €{Q1_ETS.toFixed(2)}/tCO₂e, assumed from {FORECAST_FROM} · Data current as of {REPORT_AS_OF_LABEL}{fetchStatus==="loading"&&<span style={{color:N.teal400}}> · Fetching…</span>}{fetchStatus==="fallback"&&<span style={{color:N.orange400}}> · Live Comext fetch unavailable; using static baseline and bundled confirmed data.</span>}
+                    Estimated monthly CBAM cost ($M) · <span style={{color:N.tealLight,fontWeight:600}}>Trade</span>: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>Eurostat Comext</a> 2022–2025 avg (Iron & Steel, Aluminum, Cement, Fertilizers) and <a href="https://www.census.gov/foreign-trade/reference/guides/guide2ftd.html" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>US Census Bureau</a> export avg (Hydrogen); 2026 confirmed Jan–{latestLabel} via Comext, projected {nextLabel}–2035 · <span style={{color:N.tealLight,fontWeight:600}}>EU carbon price</span> (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>EU Commission</a>): Q1 2026 confirmed at €{Q1_ETS.toFixed(2)}/tCO₂e, assumed from {FORECAST_FROM} · Data current as of {REPORT_AS_OF_LABEL}{fetchStatus==="loading"&&<span style={{color:N.teal400}}> · Fetching…</span>}{fetchStatus==="fallback"&&<span style={{color:N.orange400}}> · Live Comext fetch unavailable; using static baseline and bundled confirmed data.</span>}
                   </p>
                 );
               })()}
@@ -603,7 +602,7 @@ export default function V4App(){
           </div>
           <div style={{padding:"6px 16px 8px",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
             {confirmedViewActive&&<span style={{color:N.tealMid,fontWeight:600,marginRight:6}}>Confirmed Comext data: Jan 2026 – {confirmedMonthLabel}.</span>}
-            Click any sector row for CN-code breakdown. Hover the line chart to shift the data display by year. Projected trade uses 2022–2025 monthly averages where live data is unavailable.
+            Click any sector row for CN-code breakdown. Hover the line chart to shift the data display by year. Baseline: Eurostat Comext 2022–2025 avg for Iron &amp; Steel, Aluminum, Cement, and Fertilizers; US Census Bureau export avg for Hydrogen.
           </div>
         </div>
 

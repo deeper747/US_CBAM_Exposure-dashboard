@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "census": "node scripts/build_census_trade.mjs",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },

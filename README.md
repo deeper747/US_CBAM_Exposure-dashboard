@@ -26,7 +26,7 @@ This dashboard estimates what that levy would cost US exporters across five tabs
 ## Data sources
 
 - **Regulation:** EU Commission Implementing Regulation (EU) 2025/2621, Annex I (US-specific default values)
-- **Trade volumes:** [Eurostat Comext DS-045409](https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409) — matched at exact CN4/CN6/CN8 digit level as listed in the regulation
+- **Trade volumes:** [Eurostat Comext DS-045409](https://ec.europa.eu/eurostat/databrowser/product/view/ds-045409) — matched at exact CN4/CN6/CN8 digit level as listed in the regulation. Historical baselines (2022–2025) are compiled into a static file by `eu_trade.py`. Current-year (2026) monthly data is fetched live from the Eurostat Comext SDMX API on page load; the static historical averages serve as fallback when the API is unreachable.
 - **CBAM certificate price:** Official quarterly prices published by the [European Commission](https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en) — the weighted average of EU ETS auction clearing prices for each completed quarter. Confirmed quarters are locked (Q1 2026: €75.36, published 7 Apr 2026). Quarters not yet published use a user-adjustable forecast via slider. Historical data (pre-2026) from [ICAP Allowance Price Explorer](https://allowancepriceexplorer.icapcarbonaction.com) (secondary market).
 - **Exchange rate:** Fixed at $1.08/€ (2022–24 ECB average)
 
@@ -57,7 +57,11 @@ Also update `default` and `latest_period` to match. The dashboard will automatic
 
 ## Updating trade data
 
-Trade data is fetched from Comext and compiled into a static CSV by `eu_trade.py`. Eurostat typically publishes Comext data 6–8 weeks after the reference month.
+Trade data comes from two separate pipelines:
+
+### Historical baseline (2022–2025)
+
+`eu_trade.py` fetches annual Comext data and compiles it into a static file used as the historical baseline and as fallback averages for the Live Cost Clock. Eurostat typically publishes Comext data 6–8 weeks after the reference month.
 
 ```bash
 # Install dependencies
@@ -67,7 +71,11 @@ pip install requests pandas
 python eu_trade.py
 ```
 
-The script writes to `data/raw/comext_us_cbam_trade_by_year.csv`. After running it, update the `TRADE` object in `src/App.jsx` with the new values from the CSV.
+The script writes to `data/raw/comext_us_cbam_trade_by_year.csv`. After running it, update the `TRADE` object in `src/data/tradeData.js` with the new values from the CSV.
+
+### Live monthly data (2026 YTD)
+
+The dashboard fetches current-year monthly trade data directly from the Eurostat Comext SDMX API at page load — no manual step required. The date range is controlled by `liveComextStartPeriod` and `liveComextEndPeriod` in `src/config/publicationConfig.js`. When rolling over to a new year, update those two values and rerun `eu_trade.py` to add the completed year to the historical baseline.
 
 ## Development
 

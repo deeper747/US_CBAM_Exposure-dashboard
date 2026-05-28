@@ -6,7 +6,7 @@ export const fmtM = n => {
   return `$${Math.round(n).toLocaleString()}`;
 };
 
-export const fmtKt = n => n ? `${(n / 1000).toFixed(0)}kt` : "—";
+export const fmtKt = n => n ? `${(n / 1000).toFixed(1)}kt` : "—";
 export const fmtT = n => n == null ? "—" : Math.round(n).toLocaleString("en-US");
 export const pct = (n, d = 1) => n == null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(d)}%`;
 

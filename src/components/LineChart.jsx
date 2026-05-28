@@ -23,6 +23,8 @@ export default function LineChart({
   cbamIdx = CBAM_IDX,
   todayFracIdx = TODAY_FRAC_IDX,
   padLeft = 12,
+  maxY = 400,
+  chartHeight = 360,
 }) {
   const [hov, setHov] = useState(null);
   const [q1LinkHov, setQ1LinkHov] = useState(false);
@@ -30,7 +32,7 @@ export default function LineChart({
   const chartLeaveTimer = useRef(null);
 
   const W = 820;
-  const H = 360;
+  const H = chartHeight;
   const pad = { l: padLeft, r: 12, t: 50, b: 41 };
   const visibleStartIdx = Math.max(0, points.findIndex(p => p.ym >= viewStartYm));
   const afterEndIdx = points.findIndex(p => p.ym > viewEndYm);
@@ -50,7 +52,6 @@ export default function LineChart({
     return arr;
   }, [points, cbamIdx]);
 
-  const maxY = 500;
   const xp = i => pad.l + (n <= 1 ? 0 : i / (n - 1) * cW);
   const yp = v => pad.t + cH * (1 - Math.min(v / maxY, 1));
   const ypRaw = v => pad.t + cH * (1 - v / maxY);
@@ -206,8 +207,8 @@ export default function LineChart({
           <>
             <line x1={cbamX} y1={pad.t} x2={cbamX} y2={H - pad.b} stroke={N.orange400} strokeWidth={2.2} opacity={0.7}/>
             <text x={cbamX - 80} y={pad.t + 16} fill={N.orange400} fontSize={14} fontFamily={SANS} fontWeight={700}>CBAM start</text>
-            <text x={cbamX - 8} y={yp(400) - 10} textAnchor="end" fill={N.tealMid} fontSize={9} fontFamily={SANS} opacity={0.6}>monthly cost</text>
-            {[100, 200, 300, 400].map(v => (
+            <text x={cbamX - 8} y={yp(maxY) - 10} textAnchor="end" fill={N.tealMid} fontSize={9} fontFamily={SANS} opacity={0.6}>monthly cost</text>
+            {Array.from({length: 4}, (_, i) => (i + 1) * maxY / 4).map(v => (
               <g key={v}>
                 <line x1={cbamX - 5} y1={yp(v)} x2={cbamX} y2={yp(v)} stroke={N.tealMid} strokeWidth={1} opacity={0.5}/>
                 <text x={cbamX - 8} y={yp(v) + 3} textAnchor="end" fill={N.tealMid} fontSize={9} fontFamily={SANS} opacity={0.6}>${v}M</text>
