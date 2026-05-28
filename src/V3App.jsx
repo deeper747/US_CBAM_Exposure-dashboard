@@ -7,16 +7,13 @@ import { DATA_CUTOFF_YM, DEFAULT_FORECAST_ETS, EUR_USD, FORECAST_FROM } from "./
 import { RELEVANT, SECTORS_LIST } from "./data/cbamDefaultValues.js";
 import { fmtM, fmtT, dvLevel } from "./lib/formatters.js";
 import {
-  CURRENT_YM,
   ETS_5Y_HIGH,
   ETS_5Y_HIGH_QTR,
   ETS_5Y_LOW,
   ETS_5Y_LOW_QTR,
   MONTH_NAMES,
   Q1_ETS,
-  REPORT_AS_OF_LABEL,
   SECTOR_STATS,
-  YTD_LABEL,
   fmtQtr,
   getQtrEts,
   trKey,
@@ -25,6 +22,17 @@ import * as DS from "./datasets/comextDataset.js";
 import { useComextData } from "./context/ComextDataContext.jsx";
 import { useIframeHeight } from "./hooks/useIframeHeight.js";
 import { N, SANS, SERIF, SECTOR_COLORS as SC, SECTOR_LIGHT_COLORS as SCL } from "./styles/tokens.js";
+
+// ── DYNAMIC TODAY ─────────────────────────────────────────────────────────────
+const _now = new Date();
+const _nowYear = _now.getFullYear();
+const _nowMonth = _now.getMonth(); // 0-indexed
+const _nowDay = _now.getDate();
+const _nowDaysInMonth = new Date(_nowYear, _nowMonth + 1, 0).getDate();
+const CURRENT_YM = `${_nowYear}-${String(_nowMonth + 1).padStart(2, "0")}`;
+const REPORT_AS_OF_LABEL = `${MONTH_NAMES[_nowMonth]} ${_nowDay}, ${_nowYear}`;
+const YTD_LABEL = `Jan–${MONTH_NAMES[_nowMonth]} ${_nowDay}`;
+const TODAY_FRAC_IDX_DYNAMIC = 24 + (_nowYear - 2026) * 12 + _nowMonth + _nowDay / _nowDaysInMonth;
 
 // ── SUB-COMPONENTS ────────────────────────────────────────────────────────────
 
@@ -259,12 +267,12 @@ export default function V4App(){
   const tonnesColumnLabel=confirmedViewActive
     ?"Confirmed trade volume (t)"
     :activeTableYear
-      ?`${activeTableYear} Proj. trade volume (t)`
+      ?(activeTableYear>=2026?`${activeTableYear} Proj. trade volume (t)`:`${activeTableYear} trade volume (t)`)
       :"Proj. YTD trade volume (t)";
   const cbamColumnLabel=confirmedViewActive
     ?"Confirmed CBAM exposure"
     :activeTableYear
-      ?`Proj. CBAM exposure in ${activeTableYear}`
+      ?(activeTableYear>=2026?`Proj. CBAM exposure in ${activeTableYear}`:`Est. CBAM exposure in ${activeTableYear}`)
       :"Proj. CBAM exposure YTD";
 
   const sectorAnnCosts=useMemo(()=>{
@@ -409,7 +417,7 @@ export default function V4App(){
               for exporting emission&#8209;intensive products under the EU carbon border adjustment mechanism.
             </div>
             <div style={{marginTop:"auto"}}>
-              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2024-01" viewEndYm="2030-12" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={Q1_ETS} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={DS.CBAM_IDX} todayFracIdx={DS.TODAY_FRAC_IDX}/>
+              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2024-01" viewEndYm="2030-12" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={Q1_ETS} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={DS.CBAM_IDX} todayFracIdx={TODAY_FRAC_IDX_DYNAMIC}/>
               {(()=>{
                 const latestYm=liveMonths.length>0?liveMonths[liveMonths.length-1]:DATA_CUTOFF_YM;
                 const[lcY,lcM]=latestYm.split("-");
