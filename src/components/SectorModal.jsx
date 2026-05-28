@@ -8,9 +8,7 @@ import {
   SECTOR_STATS,
   YTD_LABEL,
   YTD_MONTHS,
-  avgMonthTonnes,
   ytdMonthFraction,
-  ytdTonnesForRows,
 } from "../lib/cbamCalculations.js";
 import { getBenchmark, CBAM_FACTOR } from "../data/cbamBenchmarks.js";
 import { N, SANS, SERIF, SECTOR_COLORS as SC, SECTOR_LIGHT_COLORS as SCL } from "../styles/tokens.js";
@@ -38,7 +36,7 @@ const SECTOR_INFO = {
   },
 };
 
-const CF2026 = CBAM_FACTOR[2026]; // 0.975
+const CF2026 = CBAM_FACTOR[2026];
 const fmtCf = yr => parseFloat(((CBAM_FACTOR[yr] ?? 0) * 100).toFixed(1));
 
 function SortTh({ col, label, align = "right", onSort, active, dir }) {
@@ -53,7 +51,18 @@ function SortTh({ col, label, align = "right", onSort, active, dir }) {
   );
 }
 
-export default function SectorModal({ sec, ets, liveEntries, onClose }) {
+/**
+ * Generic sector detail modal.
+ *
+ * Requires a `dataset` prop that conforms to the standard dataset interface
+ * (see src/datasets/censusDataset.js or comextDataset.js):
+ *   dataset.DATA_SOURCE          — display name, e.g. "Census Bureau"
+ *   dataset.getAvgMonthTonnes(cn, mo)
+ *   dataset.getYtdTonnesForRows(rows, liveEntries?)
+ */
+export default function SectorModal({ sec, ets, liveEntries, onClose, dataset }) {
+  const { getAvgMonthTonnes, getYtdTonnesForRows, DATA_SOURCE } = dataset;
+
   const info = SECTOR_INFO[sec] || { desc: "", extra: "" };
   const color = SC[sec] || N.teal600;
   const lightColor = SCL[sec] || N.teal400;
@@ -90,31 +99,31 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
       const bmg = getBenchmark(d.cn, d.route) ?? 0;
       const markupLabel = sec === "Fertilizers" ? "1%" : "10%";
 
-      // Annual average tonnes (for trajectory cards)
+      // Annual avg tonnes using this dataset's baseline
       const annT = [1,2,3,4,5,6,7,8,9,10,11,12].reduce(
-        (s, m) => s + avgMonthTonnes(d.cn, String(m).padStart(2, "0")), 0
+        (s, m) => s + getAvgMonthTonnes(d.cn, String(m).padStart(2, "0")), 0
       );
 
-      // YTD trade volume
-      const ytdTonnes = ytdTonnesForRows([d], liveEntries);
+      // YTD trade volume using this dataset's helper
+      const ytdTonnes = getYtdTonnesForRows([d], liveEntries);
 
-      // V4 formula: max(0, mv − bmg × CBAM_FACTOR) per metric ton
+      // Annual projected cost for a given year using this dataset's baseline
       const trajV4 = (mvk, yr) => {
         const cf = CBAM_FACTOR[yr] ?? 0;
         const mv = d[mvk] || 0;
         const netMv = Math.max(0, mv - bmg * cf);
         return [1,2,3,4,5,6,7,8,9,10,11,12].reduce(
-          (s, m) => s + avgMonthTonnes(d.cn, String(m).padStart(2, "0")) * netMv, 0
+          (s, m) => s + getAvgMonthTonnes(d.cn, String(m).padStart(2, "0")) * netMv, 0
         ) * ets * EUR_USD;
       };
 
-      // V4 YTD CBAM cost (Q1 at official price, rest at slider price)
+      // YTD CBAM cost (Q1 at official price, rest at slider)
       const netMv2026 = Math.max(0, (d.mv2026 || 0) - bmg * CF2026);
       let v4Q1 = 0, v4Apr = 0;
       for (const mo of YTD_MONTHS) {
         const ym = `${YTD_YEAR}-${mo}`;
         const liveT = liveEntries?.[_k]?.[ym]?.[0];
-        const tonnes = (liveT != null && liveT > 0 ? liveT : avgMonthTonnes(d.cn, mo)) * ytdMonthFraction(mo);
+        const tonnes = (liveT != null && liveT > 0 ? liveT : getAvgMonthTonnes(d.cn, mo)) * ytdMonthFraction(mo);
         if (mo <= "03") v4Q1 += tonnes;
         else v4Apr += tonnes;
       }
@@ -125,7 +134,7 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
         c2026: trajV4("mv2026", 2026), c2027: trajV4("mv2027", 2027), c2028: trajV4("mv2028", 2028),
       };
     });
-  }, [sec, ets, liveEntries]);
+  }, [sec, ets, liveEntries, getAvgMonthTonnes, getYtdTonnesForRows]);
 
   const totT = cnRows.reduce((s, r) => s + r.annT, 0);
   const totYtdTonnes = cnRows.reduce((s, r) => s + r.ytdTonnes, 0);
@@ -183,7 +192,7 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12, marginBottom: 20 }}>
             {[
-              { label: "Annual Avg trade volume", val: fmtKt(totT), sub: "2022–25 avg basis" },
+              { label: "Annual Avg trade volume", val: fmtKt(totT), sub: `2022–25 ${DATA_SOURCE} avg` },
               { label: "Annual Avg trade value", val: fmtM(SECTOR_STATS[sec]?.annUsd || 0), sub: "2022–25 avg basis" },
               { label: "CBAM exposure YTD", val: fmtM(totV4Today), sub: `${YTD_LABEL}` },
             ].map(({ label, val, sub }) => (
@@ -280,8 +289,8 @@ export default function SectorModal({ sec, ets, liveEntries, onClose }) {
           </div>
           <div style={{ marginTop: 8, fontFamily: SANS, fontSize: 11, color: N.tealMid }}>
             {viewPeriod === "ytd"
-              ? `YTD = ${YTD_LABEL}, 2026. YTD trade volume uses actual Comext data for confirmed months; remaining months use 2022–25 avg. ETS price: Q1 at €${Q1_ETS.toFixed(2)}/tCO₂e (official), remainder at €${ets.toFixed(0)}/tCO₂e assumed.`
-              : `Annual trade volume uses 2022–25 monthly avg. Projected ${viewPeriod} CBAM cost at €${ets.toFixed(0)}/tCO₂e ETS, ${pc.markup} mark-up, ${pc.cf} CBAM factor.`}
+              ? `YTD = ${YTD_LABEL}, 2026. YTD trade volume uses ${DATA_SOURCE} data for confirmed months; remaining months use 2022–25 ${DATA_SOURCE} avg. ETS price: Q1 at €${Q1_ETS.toFixed(2)}/tCO₂e (official), remainder at €${ets.toFixed(0)}/tCO₂e assumed.`
+              : `Annual trade volume uses 2022–25 ${DATA_SOURCE} monthly avg. Projected ${viewPeriod} CBAM cost at €${ets.toFixed(0)}/tCO₂e ETS, ${pc.markup} mark-up, ${pc.cf} CBAM factor.`}
           </div>
         </div>
       </div>
