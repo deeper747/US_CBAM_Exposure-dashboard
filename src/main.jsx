@@ -5,9 +5,9 @@ import { ComextDataProvider } from './context/ComextDataContext.jsx'
 const v = new URLSearchParams(location.search).get('v')
 
 const [appModule, Provider] =
-  v === '4' ? [import('./V4App.jsx'), ComextDataProvider]
-  : v === '2' ? [import('./App.jsx'), ComextDataProvider]
-  : [import('./V3App.jsx'), ComextDataProvider]
+  v === '3' ? [import('./App.jsx'), ComextDataProvider]
+  : v === '2' ? [import('./V3App.jsx'), ComextDataProvider]
+  : [import('./V4App.jsx'), ComextDataProvider]
 
 appModule.then(module => {
   const App = module.default
