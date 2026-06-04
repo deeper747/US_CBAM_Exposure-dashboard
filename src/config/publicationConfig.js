@@ -1,5 +1,8 @@
+const _now = new Date();
+const _todayYm = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
+
 export const PUBLICATION_CONFIG = {
-  reportAsOf: "2026-05-19",
+  reportAsOf: _todayYm,
   iframeParentOrigin: "https://www.niskanencenter.org",
   dataCutoffYm: "2026-01",
   baselineYears: ["2022", "2023", "2024", "2025"],

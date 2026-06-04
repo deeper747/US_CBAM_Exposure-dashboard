@@ -44,18 +44,18 @@ function DefaultValueMeter({value,extreme=false}){
     <span
       title={`Default value: ${value.toFixed(2)} tCO₂e/t${extreme?" +":""}`}
       aria-label={`Default value intensity ${filled} of 4${extreme?", plus":""}`}
-      style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-start",gap:5,lineHeight:1,width:78}}
+      style={{display:"inline-flex",alignItems:"center",justifyContent:"flex-start",gap:5,lineHeight:1,width:92}}
     >
       {Array.from({length:4}).map((_,i)=>(
         <span key={i} style={{
-          width:11,height:11,display:"inline-block",
+          width:14,height:14,display:"inline-block",
           clipPath:"polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%)",
           background:i<filled?N.teal900:N.tealLight,
           opacity:i<filled?1:0.45,
           boxShadow:i<filled?"none":`inset 0 0 0 1px ${N.tealMid}`,
         }}/>
       ))}
-      {extreme&&<span style={{fontFamily:SANS,fontSize:14,fontWeight:800,color:N.orange500,marginLeft:2}}>+</span>}
+      {extreme&&<span style={{fontFamily:SANS,fontSize:14,fontWeight:800,color:N.teal900,marginLeft:2,alignSelf:"flex-end",lineHeight:1}}>+</span>}
     </span>
   );
 }
@@ -87,7 +87,7 @@ const TERM_DEFS={
   benchmark:{title:"EU ETS product benchmark (tCO₂e/t)",def:"The best-in-class EU production emissions for each product. Multiplied by the CBAM factor each year, it gives the effective free-allocation equivalent deducted from the importer's liability. As the CBAM factor falls, this deduction shrinks and the charge grows.",source:<>Source: <a href="https://eur-lex.europa.eu/eli/reg_impl/2025/2620/oj" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2620</a>.</>},
   cbamFactor:{title:"CBAM factor",def:"The fraction of the EU ETS product benchmark still granted as free allocation to EU producers. Starts at 97.5% in 2026 — so 97.5% of the benchmark is still deducted — then falls to 0% from 2034, after which no free allocation remains and importers pay for all embedded emissions above zero.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02003L0087-20240301" target="_blank" rel="noreferrer" style={LS}>EU ETS Directive 2003/87/EC, Article 10a</a>.</>},
   ets:{title:"EU ETS carbon price",def:"The carbon price used to turn net embedded emissions into a CBAM cost. Q1 2026 uses the official CBAM certificate price; later months use the assumed price so you can test different carbon-market scenarios.",source:<>Source: <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={LS}>CBAM certificate price</a>.</>},
-  fxrate:{title:"Exchange rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.",source:"Source: European Central Bank (ECB) Statistical Data Warehouse"},
+  fxrate:{title:"Exchange rate (USD/EUR)",def:"The conversion from euro-denominated CBAM costs into US dollars. This calculator holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.",source:<>Source: <a href="https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/eurofxref-graph-usd.en.html" target="_blank" rel="noreferrer" style={LS}>European Central Bank (ECB) Euro reference exchange rates</a>.</>},
 };
 
 function InlineSelect({value,onChange,options,color}){
@@ -154,7 +154,7 @@ export default function V4App(){
   const liveChartOverrides=useMemo(()=>{
     if(!mergedTrade)return{};
     const cf2026=CBAM_FACTOR[2026];
-    const confirmedYms=new Set(Object.values(mergedTrade).flatMap(m=>Object.keys(m)).filter(ym=>ym>="2026-01"));
+    const confirmedYms=new Set(Object.entries(mergedTrade).filter(([k])=>k!=="28041000").flatMap(([,m])=>Object.keys(m)).filter(ym=>ym>="2026-01"));
     const ov={};
     for(const ym of confirmedYms){
       const mo=ym.split("-")[1];
@@ -187,7 +187,7 @@ export default function V4App(){
 
   const latestConfirmedYm=useMemo(()=>{
     if(!mergedTrade)return null;
-    const yms=Object.values(mergedTrade).flatMap(m=>Object.keys(m)).filter(ym=>ym>="2026-01");
+    const yms=Object.entries(mergedTrade).filter(([k])=>k!=="28041000").flatMap(([,m])=>Object.keys(m)).filter(ym=>ym>="2026-01");
     return yms.length?yms.sort().at(-1):null;
   },[mergedTrade]);
 
@@ -265,10 +265,10 @@ export default function V4App(){
   const displayTableCbamTotal=displayTableRows.reduce((s,r)=>s+r.displayCbam,0);
 
   const tonnesColumnLabel=confirmedViewActive
-    ?"Confirmed trade volume (t)"
+    ?"Confirmed trade volume"
     :activeTableYear
-      ?(activeTableYear>=2026?`${activeTableYear} Proj. trade volume (t)`:`${activeTableYear} trade volume (t)`)
-      :"Proj. YTD trade volume (t)";
+      ?(activeTableYear>=2026?`${activeTableYear} Proj. trade volume`:`${activeTableYear} trade volume`)
+      :"Proj. YTD trade volume";
   const cbamColumnLabel=confirmedViewActive
     ?"Confirmed CBAM exposure"
     :activeTableYear
@@ -381,7 +381,7 @@ export default function V4App(){
 
         {isMobile&&(
           <div style={{padding:"14px 16px 10px",borderBottom:`1px solid ${N.teal800}`}}>
-            <div style={{fontFamily:SANS,fontSize:20,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Dashboard <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
+            <div style={{fontFamily:SANS,fontSize:20,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Calculator <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
             <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Real CBAM costs with benchmark deduction and phase-in factor</div>
             <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. <span style={{color:N.orange400,fontWeight:800}}>Forgone revenue</span> for the federal government</div>
             <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid}}>Author: Jia-Shen Tsai, Niskanen Center</div>
@@ -417,7 +417,7 @@ export default function V4App(){
               for exporting emission&#8209;intensive products under the EU carbon border adjustment mechanism.
             </div>
             <div style={{marginTop:"auto"}}>
-              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2024-01" viewEndYm="2030-12" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={Q1_ETS} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={DS.CBAM_IDX} todayFracIdx={TODAY_FRAC_IDX_DYNAMIC}/>
+              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2025-01" viewEndYm="2028-12" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={Q1_ETS} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={DS.CBAM_IDX} todayFracIdx={TODAY_FRAC_IDX_DYNAMIC}/>
               {(()=>{
                 const latestYm=liveMonths.length>0?liveMonths[liveMonths.length-1]:DATA_CUTOFF_YM;
                 const[lcY,lcM]=latestYm.split("-");
@@ -438,7 +438,7 @@ export default function V4App(){
           <div style={{background:N.teal900,color:N.white,padding:isMobile?"16px 16px 24px":isTablet?"12px 20px 24px 16px":"12px 28px 24px 24px",display:"flex",flexDirection:"column",gap:20,position:"relative",zIndex:1,borderTop:isMobile?`1px solid ${N.teal800}`:"none"}}>
             {!isMobile&&(
               <div style={{paddingBottom:4,textAlign:"right"}}>
-                <div style={{fontFamily:SANS,fontSize:16,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Dashboard <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
+                <div style={{fontFamily:SANS,fontSize:16,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Calculator <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
                 <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated costs for US exporters under the EU CBAM default values</div>
                 <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. <span style={{color:N.orange400,fontWeight:800}}>Forgone revenue</span> for the federal government</div>
                 <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid}}>Author: Jia-Shen Tsai, Niskanen Center</div>
@@ -506,7 +506,7 @@ export default function V4App(){
               {confirmedViewActive&&confirmedViewPinned&&(
                 <div style={{marginBottom:8,fontFamily:SANS,fontSize:11,color:N.tealMid,opacity:0.85,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:4}}
                   onClick={()=>setConfirmedViewPinned(false)}>
-                  <span style={{fontSize:13}}>⊗</span><span>Pinned · click to unpin</span>
+                  <span style={{fontSize:13}}>✖︎</span><span>Pinned · click to unpin</span>
                 </div>
               )}
               {sectorAnnCosts.map(({sec,cost,pct})=>(
@@ -550,20 +550,20 @@ export default function V4App(){
             <table style={{width:"100%",minWidth:isMobile?640:1020,borderCollapse:"collapse",fontFamily:SANS,fontSize:isMobile?13:15,tableLayout:"fixed"}}>
               <colgroup>
                 <col style={{width:"18%"}}/>
-                <col style={{width:"14%"}}/>
-                <col style={{width:"14%"}}/>
-                <col style={{width:"8%"}}/>
-                <col style={{width:"11%"}}/>
-                <col style={{width:"9%"}}/>
-                <col style={{width:"26%"}}/>
+                <col style={{width:"16%"}}/>
+                <col style={{width:"16%"}}/>
+                <col style={{width:"10%"}}/>
+                <col style={{width:"10%"}}/>
+                <col style={{width:"10%"}}/>
+                <col style={{width:"20%"}}/>
               </colgroup>
               <thead>
-                <tr style={{background:N.teal900,color:N.white,verticalAlign:"bottom"}}>
+                <tr style={{background:N.teal900,color:N.white,verticalAlign:"top"}}>
                   <th style={{padding:isMobile?"8px 8px":"8px 12px",textAlign:"left",fontWeight:700,fontSize:isMobile?13:16,borderLeft:`4px solid ${N.teal900}`}}>Sector</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("tonnes","top")}}>{tonnesColumnLabel}</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("dv","top")}}>Default value (tCO₂e/t)</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("tonnes","top")}}>{tonnesColumnLabel}<span style={{display:"block",fontSize:10,fontWeight:400,opacity:0.7,marginTop:0.5}}>(t)</span></th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("dv","top")}}>Default value<span style={{display:"block",fontSize:10,fontWeight:400,opacity:0.7,marginTop:0.5}}>(tCO₂e/t · wt. avg.)</span></th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("markup","top")}}>Mark-up</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("benchmark","top")}}>Benchmark (tCO₂e/t)</th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("benchmark","top")}}>Benchmark<span style={{display:"block",fontSize:10,fontWeight:400,opacity:0.7,marginTop:0.5}}>(tCO₂e/t · wt. avg.)</span></th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("cbamFactor","top")}}>CBAM factor</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>{cbamColumnLabel}</th>
                 </tr>
@@ -589,7 +589,7 @@ export default function V4App(){
                       {isMobile?(
                         <span style={{fontSize:13,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums"}}>{r.wDv>0?r.wDv.toFixed(3):"—"}</span>
                       ):(
-                        <span style={{display:"inline-grid",gridTemplateColumns:"78px 52px",alignItems:"center",columnGap:4,whiteSpace:"nowrap"}}>
+                        <span style={{display:"inline-grid",gridTemplateColumns:"92px 52px",alignItems:"center",columnGap:4,whiteSpace:"nowrap"}}>
                           <DefaultValueMeter value={r.wDv} extreme={r.sec==="Hydrogen"}/>
                           <span style={{fontSize:16,fontWeight:700,color:N.teal900,fontVariantNumeric:"tabular-nums",textAlign:"right"}}>{r.wDv>0?r.wDv.toFixed(3):"—"}</span>
                         </span>

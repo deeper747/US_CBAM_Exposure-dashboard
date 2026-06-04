@@ -1,4 +1,4 @@
-# US CBAM Exposure Dashboard — Copy for Review
+# US CBAM Exposure Calculator — Copy for Review
 
 > **Notes for copy editors:**
 > - Text in `[brackets]` is dynamic/computed and not editable as copy
@@ -15,10 +15,10 @@
 
 ## Main Page
 
-### Dashboard Header (top-right panel, also shown at top on mobile)
+### Calculator Header (top-right panel, also shown at top on mobile)
 
 **Title:**
-US CBAM Exposure Dashboard *(Beta)*
+US CBAM Exposure Calculator *(Beta)*
 
 **Subtitle lines:**
 Estimated costs for US exporters under the EU CBAM default values
@@ -239,7 +239,7 @@ Source: [CBAM certificate price](link).
 
 *$1.13 / €*
 Title: Exchange rate (USD/EUR)
-Definition: The conversion from euro-denominated CBAM costs into US dollars. This dashboard holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.
+Definition: The conversion from euro-denominated CBAM costs into US dollars. This calculator holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average.
 Source: European Central Bank (ECB) Statistical Data Warehouse
 
 ---

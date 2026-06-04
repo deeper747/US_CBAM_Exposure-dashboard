@@ -146,7 +146,7 @@ export default function LineChart({
   };
 
   const histD = pathFrom(visibleStartIdx, cbamIdx);
-  const solidD = pathFrom(cbamIdx, cutIdx + 1);
+  const solidD = pathFrom(cbamIdx, cutIdx);
   const foreD = pathFrom(cutIdx, visibleEndIdx);
   const cumStart = Math.max(cbamIdx, visibleStartIdx);
   const cumD = cumStart <= visibleEndIdx ? points.slice(cumStart, visibleEndIdx + 1).map((p, i) => {
@@ -206,12 +206,12 @@ export default function LineChart({
         {cbamX != null && (
           <>
             <line x1={cbamX} y1={pad.t} x2={cbamX} y2={H - pad.b} stroke={N.orange400} strokeWidth={2.2} opacity={0.7}/>
-            <text x={cbamX - 80} y={pad.t + 16} fill={N.orange400} fontSize={14} fontFamily={SANS} fontWeight={700}>CBAM start</text>
-            <text x={cbamX - 8} y={yp(maxY) - 10} textAnchor="end" fill={N.tealMid} fontSize={9} fontFamily={SANS} opacity={0.6}>monthly cost</text>
+            <text x={cbamX - 90} y={pad.t + 20} fill={N.orange400} fontSize={16} fontFamily={SANS} fontWeight={700}>CBAM start</text>
+            <text x={cbamX - 8} y={yp(maxY) - 10} textAnchor="end" fill={N.tealMid} fontSize={12} fontFamily={SANS} opacity={0.6}>monthly cost</text>
             {Array.from({length: 4}, (_, i) => (i + 1) * maxY / 4).map(v => (
               <g key={v}>
                 <line x1={cbamX - 5} y1={yp(v)} x2={cbamX} y2={yp(v)} stroke={N.tealMid} strokeWidth={1} opacity={0.5}/>
-                <text x={cbamX - 8} y={yp(v) + 3} textAnchor="end" fill={N.tealMid} fontSize={9} fontFamily={SANS} opacity={0.6}>${v}M</text>
+                <text x={cbamX - 8} y={yp(v) + 3} textAnchor="end" fill={N.tealMid} fontSize={12} fontFamily={SANS} opacity={0.6}>${v}M</text>
               </g>
             ))}
           </>
@@ -219,7 +219,7 @@ export default function LineChart({
         {todayX != null && (
           <>
             <line x1={todayX} y1={pad.t} x2={todayX} y2={H - pad.b} stroke={N.teal400} strokeWidth={2.2} strokeDasharray="6,5" opacity={0.7}/>
-            <text x={todayX + 7} y={pad.t + 34} fill={N.teal400} fontSize={14} fontFamily={SANS} fontWeight={700}>Today</text>
+            <text x={todayX + 7} y={pad.t + 34} fill={N.teal400} fontSize={16} fontFamily={SANS} fontWeight={700}>Today</text>
           </>
         )}
         {cumD && <path d={cumD} fill="none" stroke={N.teal200} strokeWidth={4} strokeLinejoin="round" opacity={0.35} clipPath="url(#cum-clip)"/>}
@@ -227,7 +227,7 @@ export default function LineChart({
           const labelIdx = Math.min(cbamIdx + 15, visibleEndIdx);
           return labelIdx >= visibleStartIdx ? (
             <text x={xp(labelIdx - visibleStartIdx) + 58} y={pad.t + 14}
-              fill={N.teal200} fontSize={11} fontFamily={SANS} fontWeight={700} opacity={0.6}
+              fill={N.teal200} fontSize={14} fontFamily={SANS} fontWeight={700} opacity={0.6}
               stroke={N.teal900} strokeWidth={4} paintOrder="stroke" pointerEvents="none">Cumulative CBAM cost</text>
           ) : null;
         })()}
@@ -244,12 +244,12 @@ export default function LineChart({
           if (text === "confirmed exposure") {
             return (
               <g key={text}>
-                <text x={x} y={y} textAnchor={anchor} fill={confirmedPinned ? "#ffe88a" : color} stroke={N.teal900} strokeWidth={5} paintOrder="stroke" fontSize={13} fontFamily={SANS} fontWeight={800} letterSpacing={0} pointerEvents="none">{text}{confirmedPinned ? " ⊗" : ""}</text>
-                {confirmedPinned && <line x1={x} y1={y + 2} x2={x + 120} y2={y + 2} stroke="#ffe88a" strokeWidth={1} opacity={0.7} pointerEvents="none"/>}
+                <text x={x} y={y} textAnchor={anchor} fill={confirmedPinned ? "#ffe88a" : color} stroke={N.teal900} strokeWidth={5} paintOrder="stroke" fontSize={15} fontFamily={SANS} fontWeight={800} letterSpacing={0} pointerEvents="none">{text}{confirmedPinned ? " ✖︎" : ""}</text>
+                {confirmedPinned && <line x1={x} y1={y + 2} x2={x + 137} y2={y + 2} stroke="#ffe88a" strokeWidth={1} opacity={0.7} pointerEvents="none"/>}
               </g>
             );
           }
-          return <text key={text} x={x} y={y} textAnchor={anchor} fill={color} stroke={N.teal900} strokeWidth={5} paintOrder="stroke" fontSize={13} fontFamily={SANS} fontWeight={800} letterSpacing={0} pointerEvents="none">{text}</text>;
+          return <text key={text} x={x} y={y} textAnchor={anchor} fill={color} stroke={N.teal900} strokeWidth={5} paintOrder="stroke" fontSize={15} fontFamily={SANS} fontWeight={800} letterSpacing={0} pointerEvents="none">{text}</text>;
         })}
         {hov != null && (
           <circle cx={xp(hov.idx - visibleStartIdx)} cy={yp(points[hov.idx].v)} r={7.8} fill={N.teal600} stroke={N.white} strokeWidth={2.4}/>
