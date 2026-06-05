@@ -448,7 +448,7 @@ export default function V4App(){
             <div>
               <div style={{marginBottom:4}}>
                 <div style={{background:"rgba(255,255,255,0.05)",borderRadius:4,border:`1px solid rgba(255,255,255,0.08)`,marginBottom:12,overflow:"hidden"}}>
-                  <button onClick={()=>setHowToOpen(o=>!o)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",background:"none",border:"none",cursor:"pointer",padding:"10px 14px",fontFamily:SANS,fontSize:10,fontWeight:700,color:N.teal400,textTransform:"uppercase",letterSpacing:"0.08em"}}>
+                  <button onClick={()=>setHowToOpen(o=>!o)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",background:"none",border:"none",borderBottom:"none",outline:"none",WebkitAppearance:"none",MozAppearance:"none",appearance:"none",cursor:"pointer",padding:"10px 14px",fontFamily:SANS,fontSize:10,fontWeight:700,color:N.teal400,textTransform:"uppercase",letterSpacing:"0.08em"}}>
                     <span>How to explore</span>
                     <span style={{fontSize:14,lineHeight:1,transition:"transform 0.2s",transform:howToOpen?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
                   </button>
