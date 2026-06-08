@@ -1,21 +1,12 @@
 import { StrictMode, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ComextDataProvider } from './context/ComextDataContext.jsx'
+import V4App from './V4App.jsx'
 
-const v = new URLSearchParams(location.search).get('v')
-
-const [appModule, Provider] =
-  v === '3' ? [import('./App.jsx'), ComextDataProvider]
-  : v === '2' ? [import('./V3App.jsx'), ComextDataProvider]
-  : [import('./V4App.jsx'), ComextDataProvider]
-
-appModule.then(module => {
-  const App = module.default
-  createRoot(document.getElementById('root')).render(
-    <StrictMode>
-      <Provider>
-        {createElement(App)}
-      </Provider>
-    </StrictMode>,
-  )
-})
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <ComextDataProvider>
+      {createElement(V4App)}
+    </ComextDataProvider>
+  </StrictMode>,
+)
