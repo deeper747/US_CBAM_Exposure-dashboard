@@ -1,0 +1,9 @@
+{
+  "_note": "Update this file each quarter when the EU Commission publishes the official CBAM certificate price. No rebuild needed — just save and upload. Source: https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en",
+  "ets_confirmed_through": "2026-03",
+  "forecast_from": "Apr 2026",
+  "default_forecast_ets": 75.36,
+  "ets_quarterly_prices": {
+    "2026-Q1": 75.36
+  }
+}
