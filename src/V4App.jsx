@@ -130,13 +130,13 @@ export default function V4App(){
   const confirmedQ1Ets=mergedQtrPrices[`${confirmedEtsYear}-${confirmedEtsQLabel}`]??DEFAULT_FORECAST_ETS;
 
   const TERM_DEFS=useMemo(()=>({
-    tonnes:{title:"Exported metric tons",def:"How much CBAM-covered product the US ships to the EU. Confirmed Comext months use reported tonnage for Iron & Steel, Aluminum, Cement, and Fertilizers; Hydrogen uses US Census Bureau export data because of an unresolved anomaly in the EU Comext data in August 2025. All other months use the 2022–2025 monthly average as the trade baseline.",source:<>Sources: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Eurostat Comext</a> (Iron & Steel, Aluminum, Cement, Fertilizers) · <a href="https://usatradeonline.census.gov/buildReport" target="_blank" rel="noreferrer" style={LS}>US Census Bureau International Trade</a> (Hydrogen)</>},
+    tonnes:{title:"Exported metric tons",def:"How much CBAM-covered product the U.S. ships to the EU. Confirmed Comext months use reported tonnage for Iron & Steel, Aluminum, Cement, and Fertilizers; Hydrogen uses U.S. Census Bureau export data because of an unresolved anomaly in the EU Comext data for August 2025. All other months use the 2022–2025 monthly average as the trade baseline.",source:<>Sources: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Eurostat Comext</a> (Iron & Steel, Aluminum, Cement, Fertilizers) • <a href="https://usatradeonline.census.gov/buildReport" target="_blank" rel="noreferrer" style={LS}>U.S. Census Bureau International Trade</a> (Hydrogen)</>},
     dv:{title:"Default value (tCO₂e/t)",def:"The EU-assigned emissions intensity for each product when an exporter does not report verified facility-level emissions. It converts one metric ton of product into estimated metric tons of CO₂-equivalent.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
     markup:{title:"Mark-up / Phase-in %",def:"The penalty add-on applied to the default value. It nudges exporters toward submitting actual emissions data: 10% in 2026, 20% in 2027, 30% from 2028. Fertilizers stay at 1%.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32025R2621" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2621, Annex I</a>.</>},
     benchmark:{title:"Benchmark",def:"The top 10th percentile of best-in-class EU production emissions for each product. Multiplied by the CBAM factor each year, it gives the effective free-allocation equivalent deducted from the importer's liability. As the CBAM factor falls, this deduction shrinks and the charge grows.",source:<>Source: <a href="https://eur-lex.europa.eu/eli/reg_impl/2025/2620/oj" target="_blank" rel="noreferrer" style={LS}>EU Implementing Regulation 2025/2620</a>.</>},
     cbamFactor:{title:"CBAM factor",def:"The fraction of the EU ETS product benchmark still granted as free allocation to EU producers. Starts at 97.5% in 2026 — so 97.5% of the benchmark is deducted — then falls to 0% from 2034, after which no free allocation remains and importers pay for all embedded emissions above zero.",source:<>Source: <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02003L0087-20240301" target="_blank" rel="noreferrer" style={LS}>EU ETS Directive 2003/87/EC, Article 10a</a>.</>},
-    ets:{title:`€${ets.toFixed(1)}/tCO₂e`,def:"The carbon price used to convert net embedded emissions into a CBAM cost. The EU sets it after each quarter by averaging the auction price over that quarter. The tool updates the values applied to each quarter whenever the official CBAM certificate price is published; later months use the assumed price you define.",source:<>Source: <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={LS}>CBAM certificate price</a>.</>},
-    fxrate:{title:"$1.13 / €",def:"The conversion from euro costs into US dollars. This calculator holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average. The regulation uses the same lagged-average approach for future years: 2027 uses the 2026 average, 2028 uses the 2027 average, and so on.",source:<>Source: <a href="https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/eurofxref-graph-usd.en.html" target="_blank" rel="noreferrer" style={LS}>European Central Bank (ECB) Statistical Data Warehouse</a>.</>},
+    ets:{title:`€${ets.toFixed(1)}/tCO₂e`,def:"The carbon price used to convert net embedded emissions into a CBAM cost. The EU sets it after each quarter by averaging the auction price over that quarter. The tool updates the values applied to each quarter whenever the official CBAM certificate price is published; later months use the assumed price the user defines.",source:<>Source: <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={LS}>CBAM certificate price</a>.</>},
+    fxrate:{title:"$1.13 / €",def:"The conversion from euro costs into U.S. dollars. This calculator holds the exchange rate fixed at $1.13 per euro, based on the 2025 annual average. The regulation uses the same lagged-average approach for future years: 2027 uses the 2026 average, 2028 uses the 2027 average, and so on.",source:<>Source: <a href="https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/eurofxref-graph-usd.en.html" target="_blank" rel="noreferrer" style={LS}>European Central Bank (ECB) Statistical Data Warehouse</a>.</>},
   }),[ets]);
   const [hovered,setHovered]=useState(null);
   const [pinnedTerm,setPinnedTerm]=useState(null);
@@ -410,10 +410,9 @@ export default function V4App(){
 
         {isMobile&&(
           <div style={{padding:"14px 16px 10px",borderBottom:`1px solid ${N.teal800}`}}>
-            <div style={{fontFamily:SANS,fontSize:20,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Calculator <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
-            <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Real CBAM costs with benchmark deduction and phase-in factor</div>
-            <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. <span style={{color:N.orange400,fontWeight:800}}>Forgone revenue</span> for the federal government</div>
-            <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid}}>Author: Jia-Shen Tsai, Niskanen Center</div>
+            <div style={{fontFamily:SANS,fontSize:20,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US Carbon Border Cost Calculator</div>
+            <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated CBAM costs under EU default values and the phase-in schedule</div>
+            <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A measure of federal revenue the U.S. could capture — but currently won't</div>
           </div>
         )}
 
@@ -437,12 +436,12 @@ export default function V4App(){
               )}
             </div>
             <div style={{margin:"0 0 6px",fontFamily:SERIF,fontSize:isMobile?"clamp(28px,8vw,34px)":"clamp(43px,6vw,77px)",fontWeight:400,lineHeight:isMobile?1.08:0.98,letterSpacing:isMobile?"-0.02em":undefined,color:N.white}}>
-              The US{" "}
+              The U.S.{" "}
               <span style={{color:N.teal400}}>{confirmedViewActive?"loses an estimated":(chartHover&&!showYtdForHover)?chartHover.hlVerb:hlVerb}</span>{" "}
               <span style={{color:N.orange500,whiteSpace:"nowrap"}}>{confirmedViewActive?fmtM(confirmedTotal):(chartHover&&!showYtdForHover)?chartHover.hlAmt:hlAmt}</span>{" "}
               to the EU
             </div>
-            <div style={{margin:"0 0 8px",fontFamily:SANS,fontSize:isMobile?20:"clamp(18px,2vw,23px)",fontWeight:400,lineHeight:1.4,color:N.tealMid}}>
+            <div style={{margin:"0 0 8px",fontFamily:SANS,fontSize:isMobile?16:"clamp(18px,2vw,23px)",fontWeight:400,lineHeight:1.4,color:N.tealMid}}>
               for exporting emission&#8209;intensive products under the EU carbon border adjustment mechanism.
             </div>
             <div style={{marginTop:"auto"}}>
@@ -455,8 +454,8 @@ export default function V4App(){
                 const nextYr=parseInt(lcM)===12?parseInt(lcY)+1:parseInt(lcY);
                 const nextLabel=`${MONTH_NAMES[nextMoNum-1]} ${nextYr}`;
                 return(
-                  <p style={{margin:"4px 0 0",fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5}}>
-                    Estimated monthly CBAM cost ($M) · <span style={{color:N.tealLight,fontWeight:600}}>Trade</span>: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>Eurostat Comext</a> 2022–2025 avg (Iron & Steel, Aluminum, Cement, Fertilizers) and <a href="https://usatradeonline.census.gov/buildReport" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>US Census Bureau</a> export avg (Hydrogen); 2026 confirmed Jan–{latestLabel} via Comext, projected {nextLabel}–2028 · <span style={{color:N.tealLight,fontWeight:600}}>EU carbon price</span> (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>EU Commission</a>): {confirmedEtsQLabel} {confirmedEtsYear} confirmed at €{confirmedQ1Ets.toFixed(2)}/tCO₂e, assumed from {cbamConfig.forecast_from} · Data current as of {REPORT_AS_OF_LABEL}{fetchStatus==="loading"&&<span style={{color:N.teal400}}> · Fetching…</span>}{fetchStatus==="fallback"&&<span style={{color:N.orange400}}> · Live Comext fetch unavailable; using static baseline and bundled confirmed data.</span>}
+                  <p style={{margin:"4px 0 0",fontFamily:SANS,fontSize:9,color:N.tealMid,lineHeight:1.5}}>
+                    Estimated monthly CBAM cost ($M) • <span style={{color:N.tealLight,fontWeight:600}}>Trade</span>: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>Eurostat Comext</a> 2022–2025 avg (Iron & Steel, Aluminum, Cement, Fertilizers) and <a href="https://usatradeonline.census.gov/buildReport" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>U.S. Census Bureau</a> export avg (Hydrogen); confirmed Jan–{latestLabel} via Comext, projected {nextLabel}–2028 • <span style={{color:N.tealLight,fontWeight:600}}>EU carbon price</span> (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>EU Commission</a>): {confirmedEtsQLabel} {confirmedEtsYear} confirmed at €{confirmedQ1Ets.toFixed(2)}/tCO₂e, assumed from {cbamConfig.forecast_from} • Data current as of {REPORT_AS_OF_LABEL}{fetchStatus==="loading"&&<span style={{color:N.teal400}}> • Fetching…</span>}{fetchStatus==="fallback"&&<span style={{color:N.orange400}}> • Live Comext fetch unavailable; using static baseline and bundled confirmed data.</span>}
                   </p>
                 );
               })()}
@@ -467,10 +466,9 @@ export default function V4App(){
           <div style={{background:N.teal900,color:N.white,padding:isMobile?"16px 16px 24px":isTablet?"12px 20px 24px 16px":"12px 28px 24px 24px",display:"flex",flexDirection:"column",gap:20,position:"relative",zIndex:1,borderTop:isMobile?`1px solid ${N.teal800}`:"none"}}>
             {!isMobile&&(
               <div style={{paddingBottom:4,textAlign:"right"}}>
-                <div style={{fontFamily:SANS,fontSize:16,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US CBAM Exposure Calculator <span style={{fontWeight:400,color:N.tealMid,fontSize:11}}>(Beta)</span></div>
-                <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated costs for US exporters under the EU CBAM default values</div>
-                <div style={{fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A.K.A. <span style={{color:N.orange400,fontWeight:800}}>Forgone revenue</span> for the federal government</div>
-                <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid}}>Author: Jia-Shen Tsai, Niskanen Center</div>
+                <div style={{fontFamily:SANS,fontSize:18,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US Carbon Border Cost Calculator</div>
+                <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.2,marginBottom:2}}>Estimated EU CBAM costs under default values and phase-in schedule</div>
+                <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.2,marginBottom:2}}>A measure of federal revenue the U.S. could capture but currently won't</div>
               </div>
             )}
             {/* ETS Price */}
@@ -507,7 +505,7 @@ export default function V4App(){
                   <span>€30</span><span>€80</span><span>€130</span>
                 </div>
                 <div style={{marginTop:5,fontFamily:SANS,fontSize:11,color:N.tealMid,lineHeight:1.5}}>
-                  Past 5-yr range: low €{ETS_5Y_LOW.toFixed(0)}/t ({fmtQtr(ETS_5Y_LOW_QTR)}) · high €{ETS_5Y_HIGH.toFixed(0)}/t ({fmtQtr(ETS_5Y_HIGH_QTR)})
+                  Past 5-yr range: low €{ETS_5Y_LOW.toFixed(0)}/t ({fmtQtr(ETS_5Y_LOW_QTR)}) • high €{ETS_5Y_HIGH.toFixed(0)}/t ({fmtQtr(ETS_5Y_HIGH_QTR)})
                 </div>
               </div>
             </div>
@@ -519,23 +517,23 @@ export default function V4App(){
               </div>
               <div style={{fontSize:12,color:N.tealMid,marginBottom:confirmedViewActive?6:10}}>
                 {confirmedViewActive
-                  ?`Jan – ${confirmedMonthLabel} · CBAM factor ${fmtCf(2026)}% · at €${confirmedQ1Ets.toFixed(2)}`
+                  ?`Jan – ${confirmedMonthLabel} • CBAM factor ${fmtCf(2026)}% • at €${confirmedQ1Ets.toFixed(2)}`
                   :showYtdForHover
-                    ?`YTD · ${YTD_LABEL} · CBAM factor ${fmtCf(2026)}% · at €${ets.toFixed(0)}`
+                    ?`YTD • ${YTD_LABEL} • CBAM factor ${fmtCf(2026)}% • at €${ets.toFixed(0)}`
                     :(activeSectorYear&&!showYtdForHover)
-                      ?`${activeSectorYear} ${activeSectorYear<2026?"hypothetical":"projected"} · CBAM factor ${activeSectorYear<2026?100:fmtCf(activeSectorYear)}%`
+                      ?`${activeSectorYear} ${activeSectorYear<2026?"hypothetical":"projected"} • CBAM factor ${activeSectorYear<2026?100:fmtCf(activeSectorYear)}%`
                       :rangeEnd!=="today"
-                        ?`${rangeStart}${Number(rangeEnd)>rangeStart?`–${rangeEnd}`:""} · sector mix`
-                        :`YTD · ${YTD_LABEL}`
+                        ?`${rangeStart}${Number(rangeEnd)>rangeStart?`–${rangeEnd}`:""} • sector mix`
+                        :`YTD • ${YTD_LABEL}`
                 }{!confirmedViewActive&&!showYtdForHover&&(
-                  activeSectorYear?` · at €${ets.toFixed(0)}`
-                  :` · at €${ets.toFixed(0)}`
+                  activeSectorYear?` • at €${ets.toFixed(0)}`
+                  :` • at €${ets.toFixed(0)}`
                 )}
               </div>
               {confirmedViewActive&&confirmedViewPinned&&(
                 <div style={{marginBottom:8,fontFamily:SANS,fontSize:11,color:N.tealMid,opacity:0.85,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:4}}
                   onClick={()=>setConfirmedViewPinned(false)}>
-                  <span style={{fontSize:13}}>✖︎</span><span>Pinned · click to unpin</span>
+                  <span style={{fontSize:13}}>✖︎</span><span>Pinned • click to unpin</span>
                 </div>
               )}
               {sectorAnnCosts.map(({sec,cost,pct})=>(
@@ -590,9 +588,9 @@ export default function V4App(){
                 <tr style={{background:N.teal900,color:N.white,verticalAlign:"top"}}>
                   <th style={{padding:isMobile?"8px 8px":"8px 12px",textAlign:"left",fontWeight:700,fontSize:isMobile?13:16,borderLeft:`4px solid ${N.teal900}`}}>Sector</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("tonnes","top")}}>{tonnesColumnLabel}<span style={{display:"block",fontSize:10,fontWeight:400,opacity:0.7,marginTop:0.5}}>(t)</span></th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("dv","top")}}>Default value<span style={{display:"block",fontSize:10,fontWeight:400,opacity:0.7,marginTop:0.5}}>(tCO₂e/t · wt. avg.)</span></th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("dv","top")}}>Default value<span style={{display:"block",fontSize:10,fontWeight:400,opacity:0.7,marginTop:0.5}}>(tCO₂e/t • wt. avg.)</span></th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("markup","top")}}>Mark-up</th>
-                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("benchmark","top")}}>Benchmark<span style={{display:"block",fontSize:10,fontWeight:400,opacity:0.7,marginTop:0.5}}>(tCO₂e/t · wt. avg.)</span></th>
+                  <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("benchmark","top")}}>Benchmark<span style={{display:"block",fontSize:10,fontWeight:400,opacity:0.7,marginTop:0.5}}>(tCO₂e/t • wt. avg.)</span></th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,...colHl("cbamFactor","top")}}>CBAM factor</th>
                   <th style={{padding:"8px 8px",textAlign:"right",fontWeight:700,fontSize:isMobile?13:16,borderLeft:`3px solid rgba(125,206,218,0.3)`,background:"rgba(52,131,151,0.4)"}}>{cbamColumnLabel}</th>
                 </tr>
@@ -640,7 +638,7 @@ export default function V4App(){
           </div>
           <div style={{padding:"6px 16px 8px",fontFamily:SANS,fontSize:12,color:N.tealMid}}>
             {confirmedViewActive&&<span style={{color:N.tealMid,fontWeight:600,marginRight:6}}>Confirmed Comext data: Jan 2026 – {confirmedMonthLabel}.</span>}
-            Click any sector row for CN-code breakdown. Hover the line chart to shift the data display by year. Baseline: Eurostat Comext 2022–2025 avg for Iron &amp; Steel, Aluminum, Cement, and Fertilizers; US Census Bureau export avg for Hydrogen.
+            Click any sector row for CN-code breakdown. Hover the line chart to shift the data display by year. Baseline: Eurostat Comext 2022–2025 avg for Iron &amp; Steel, Aluminum, Cement, and Fertilizers; U.S. Census Bureau export avg for Hydrogen.
           </div>
         </div>
 

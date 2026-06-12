@@ -167,6 +167,8 @@ export default function LineChart({
   ].filter(Boolean);
   const tip = hov ? getTooltip(hov.idx) : null;
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
+  const isMobileView = viewportWidth < 640;
+  const mfs = n => isMobileView ? Math.round(n * 2.1) : n;
 
   return (
     <div style={{ position: "relative" }}>
@@ -175,7 +177,7 @@ export default function LineChart({
         onMouseMove={handleMouseMove} onMouseLeave={() => { chartLeaveTimer.current = setTimeout(() => { setHov(null); if (onChartLeave) onChartLeave(); }, 80); }} onClick={handleClick}>
         <defs><clipPath id="cum-clip"><rect x={pad.l} y={pad.t} width={cW} height={cH}/></clipPath></defs>
         {(() => {
-          const lineY = 24;
+          const lineY = isMobileView ? 36 : 24;
           const tickH = 5;
           const inV = i => i >= visibleStartIdx && i <= visibleEndIdx;
           const q1sX = inV(cbamIdx) ? xp(cbamIdx - visibleStartIdx) : null;
@@ -189,8 +191,8 @@ export default function LineChart({
               <line x1={q1eX} y1={lineY - tickH} x2={q1eX} y2={lineY + tickH} stroke="#F4DA91" strokeWidth={1.5}/>
               <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer"
                 onMouseEnter={() => setQ1LinkHov(true)} onMouseLeave={() => setQ1LinkHov(false)} style={{ cursor: "pointer" }}>
-                <text x={(q1sX + q1eX) / 2} y={lineY - 7} textAnchor="middle" fill="#F4DA91" fontSize={10} fontFamily={SANS} fontWeight={700}
-                  stroke={N.teal900} strokeWidth={3} paintOrder="stroke">€{q1Ets.toFixed(2)}/tCO<tspan dy="2" fontSize={8}>2</tspan></text>
+                <text x={(q1sX + q1eX) / 2} y={lineY - (isMobileView ? 13 : 7)} textAnchor="middle" fill="#F4DA91" fontSize={mfs(10)} fontFamily={SANS} fontWeight={700}
+                  stroke={N.teal900} strokeWidth={isMobileView ? 5 : 3} paintOrder="stroke">€{q1Ets.toFixed(2)}/tCO<tspan dy="2" fontSize={mfs(8)}>2</tspan></text>
                 {q1LinkHov && <line x1={(q1sX + q1eX) / 2 - 30} y1={lineY - 5} x2={(q1sX + q1eX) / 2 + 30} y2={lineY - 5} stroke="#F4DA91" strokeWidth={1}/>}
               </a>
             </>)}
@@ -198,20 +200,20 @@ export default function LineChart({
               <line x1={q2sX} y1={lineY} x2={q2eX} y2={lineY} stroke={N.teal400} strokeWidth={1.5} strokeDasharray="5,3"/>
               <line x1={q2sX} y1={lineY - tickH} x2={q2sX} y2={lineY + tickH} stroke={N.teal400} strokeWidth={1.5}/>
               <line x1={q2eX} y1={lineY - tickH} x2={q2eX} y2={lineY + tickH} stroke={N.teal400} strokeWidth={1.5}/>
-              <text x={(q2sX + q2eX) / 2} y={lineY - 7} textAnchor="middle" fill={N.teal400} fontSize={10} fontFamily={SANS} fontWeight={700}
-                stroke={N.teal900} strokeWidth={3} paintOrder="stroke">€{Math.round(forecastEts)}/tCO<tspan dy="2" fontSize={8}>2</tspan></text>
+              <text x={(q2sX + q2eX) / 2} y={lineY - (isMobileView ? 13 : 7)} textAnchor="middle" fill={N.teal400} fontSize={mfs(10)} fontFamily={SANS} fontWeight={700}
+                stroke={N.teal900} strokeWidth={isMobileView ? 5 : 3} paintOrder="stroke">€{Math.round(forecastEts)}/tCO<tspan dy="2" fontSize={mfs(8)}>2</tspan></text>
             </>)}
           </>);
         })()}
         {cbamX != null && (
           <>
             <line x1={cbamX} y1={pad.t} x2={cbamX} y2={H - pad.b} stroke={N.orange400} strokeWidth={2.2} opacity={0.7}/>
-            <text x={cbamX - 90} y={pad.t + 20} fill={N.orange400} fontSize={16} fontFamily={SANS} fontWeight={700}>CBAM start</text>
-            <text x={cbamX - 8} y={yp(maxY) - 10} textAnchor="end" fill={N.tealMid} fontSize={12} fontFamily={SANS} opacity={0.6}>monthly cost</text>
+            <text x={cbamX - 190} y={pad.t + 30} fill={N.orange400} fontSize={mfs(16)} fontFamily={SANS} fontWeight={700}>CBAM start</text>
+            {!isMobileView && <text x={cbamX - 8} y={yp(maxY) - 10} textAnchor="end" fill={N.tealMid} fontSize={12} fontFamily={SANS} opacity={0.6}>monthly cost</text>}
             {Array.from({length: 4}, (_, i) => (i + 1) * maxY / 4).map(v => (
               <g key={v}>
                 <line x1={cbamX - 5} y1={yp(v)} x2={cbamX} y2={yp(v)} stroke={N.tealMid} strokeWidth={1} opacity={0.5}/>
-                <text x={cbamX - 8} y={yp(v) + 3} textAnchor="end" fill={N.tealMid} fontSize={12} fontFamily={SANS} opacity={0.6}>${v}M</text>
+                <text x={cbamX - 8} y={yp(v) + 3} textAnchor="end" fill={N.tealMid} fontSize={mfs(12)} fontFamily={SANS} opacity={0.6}>${v}M</text>
               </g>
             ))}
           </>
@@ -219,11 +221,11 @@ export default function LineChart({
         {todayX != null && (
           <>
             <line x1={todayX} y1={pad.t} x2={todayX} y2={H - pad.b} stroke={N.teal400} strokeWidth={2.2} strokeDasharray="6,5" opacity={0.7}/>
-            <text x={todayX + 7} y={pad.t + 34} fill={N.teal400} fontSize={16} fontFamily={SANS} fontWeight={700}>Today</text>
+            <text x={todayX + 7} y={pad.t + 34} fill={N.teal400} fontSize={mfs(16)} fontFamily={SANS} fontWeight={700}>Today</text>
           </>
         )}
         {cumD && <path d={cumD} fill="none" stroke={N.teal200} strokeWidth={4} strokeLinejoin="round" opacity={0.35} clipPath="url(#cum-clip)"/>}
-        {cumD && (() => {
+        {!isMobileView && cumD && (() => {
           const labelIdx = Math.min(cbamIdx + 15, visibleEndIdx);
           return labelIdx >= visibleStartIdx ? (
             <text x={xp(labelIdx - visibleStartIdx) + 58} y={pad.t + 14}
@@ -238,9 +240,9 @@ export default function LineChart({
           onClick={e => { e.stopPropagation(); onConfirmedClick?.(); }}
         />}
         {yearMarks.map(({ label, idx }) => (
-          <text key={label} x={xp(idx - visibleStartIdx)} y={H - 8} textAnchor="middle" fill={label === "2026" ? N.teal200 : N.tealMid} fontSize={16} fontFamily={SANS} fontWeight={label === "2026" ? 700 : 500}>{label}</text>
+          <text key={label} x={xp(idx - visibleStartIdx)} y={H - 8} textAnchor="middle" fill={label === "2026" ? N.teal200 : N.tealMid} fontSize={mfs(16)} fontFamily={SANS} fontWeight={label === "2026" ? 700 : 500}>{label}</text>
         ))}
-        {graphLabels.map(({ x, y, text, color, anchor }) => {
+        {!isMobileView && graphLabels.map(({ x, y, text, color, anchor }) => {
           if (text === "confirmed exposure") {
             return (
               <g key={text}>
@@ -258,6 +260,22 @@ export default function LineChart({
           <circle cx={xp(hov.idx - visibleStartIdx)} cy={ypRaw(cumValues[hov.idx])} r={6} fill={N.teal200} stroke={N.white} strokeWidth={2} opacity={0.85} clipPath="url(#cum-clip)"/>
         )}
       </svg>
+      {isMobileView && (
+        <div style={{ position: "absolute", top: "14%", right: "2%", background: "rgba(8,35,40,0.78)", borderRadius: 3, padding: "5px 8px", display: "flex", flexDirection: "column", gap: 4, pointerEvents: "none" }}>
+          {[
+            { label: "hypothetical", color: N.tealMid, dashed: true },
+            { label: "confirmed",    color: "#F4DA91",  dashed: false },
+            { label: "projected",    color: N.teal600,  dashed: true },
+          ].map(({ label, color, dashed }) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="18" height="8" viewBox="0 0 18 8" style={{ flexShrink: 0 }}>
+                <line x1="0" y1="4" x2="18" y2="4" stroke={color} strokeWidth={dashed ? 1.8 : 2.5} strokeDasharray={dashed ? "4,3" : undefined}/>
+              </svg>
+              <span style={{ fontFamily: SANS, fontSize: 10, color, fontWeight: 600, whiteSpace: "nowrap" }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {tip && hov && (
         <div style={{ position: "fixed", left: Math.min(hov.sx + 16, viewportWidth - 195), top: Math.max(hov.sy - 70, 10),
           background: N.teal900, color: N.white, borderRadius: 4, padding: "10px 14px",

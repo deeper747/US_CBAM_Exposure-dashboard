@@ -15,20 +15,20 @@ import { N, SANS, SERIF, SECTOR_COLORS as SC, SECTOR_LIGHT_COLORS as SCL } from 
 
 const SECTOR_INFO = {
   "Iron & Steel": {
-    desc: "The largest CBAM sector by US export volume. Covers iron ore products, pig iron, ferro-alloys, flat and long steel products (HR/CR/coated), tubes, sections, and fabricated steel articles.",
-    extra: "US steelmakers are predominantly EAF-based (electric arc furnace), which typically produces lower emissions than the blast furnace route assumed in EU default values.",
+    desc: "The largest CBAM sector by U.S. export volume. Covers iron ore products, pig iron, ferro-alloys, flat and long steel products (HR/CR/coated), tubes, sections, and fabricated steel articles.",
+    extra: "U.S. steelmakers are predominantly electric arc furnace (EAF) based, which typically produces lower emissions than the blast furnace route assumed in EU default values.",
   },
   Aluminum: {
     desc: "Covers unwrought aluminium, semi-finished products (rods, wire, profiles, plates, foil), tubes, fabricated articles, and containers.",
-    extra: "Aluminum default values include upstream smelting and power generation emissions. The US power mix used in smelting will affect whether actual emissions are above or below the EU default.",
+    extra: "Aluminum default values reflect direct smelting emissions only. Indirect emissions from power generation—the larger share of aluminum's carbon footprint—are excluded from CBAM pricing until the EU resolves a WTO compatibility question with its own ETS compensation mechanisms.",
   },
   Cement: {
-    desc: "Includes Portland and hydraulic cement, clinker, white and grey variants, and calcined clay. US–EU cement trade is limited by high freight costs relative to product value.",
-    extra: "The EU is a net cement exporter to the US. CBAM exposure for US cement producers is therefore small in absolute terms.",
+    desc: "Includes Portland and hydraulic cement, clinker, white and grey variants, and calcined clay. U.S.–EU cement trade is limited by high freight costs relative to product value.",
+    extra: "The EU is a net cement exporter to the U.S. CBAM exposure for U.S. cement producers is therefore small in absolute terms.",
   },
   Fertilizers: {
-    desc: "Nitrogen-based fertilizers include anhydrous ammonia, urea, ammonium nitrate, and compound fertilizers (NPK/NK/DAP/MAP). The US is a major global ammonia and urea producer.",
-    extra: "Fertilizers have a special phase-in rate of 1% throughout 2026–2028 (vs. 10–30% for other sectors) due to high carbon leakage risk and food security concerns.",
+    desc: "Nitrogen-based fertilizers include anhydrous ammonia, urea, ammonium nitrate, and compound fertilizers (NPK/NK/DAP/MAP).",
+    extra: "Fertilizers have a special phase-in rate of 1% throughout 2026–2028 (vs. 10% to 30% for other sectors) due to high carbon leakage risk and food security concerns.",
   },
   Hydrogen: {
     desc: "Covers a single CN8 code. The default reflects steam-methane-reforming (SMR) production, which accounts for roughly 99% of global hydrogen output.",
@@ -215,7 +215,7 @@ export default function SectorModal({ sec, ets, q1Ets = Q1_ETS, liveEntries, onC
                 { year: "2028", cost: tot28, markup: sec === "Fertilizers" ? "1%" : "30%", cf: fmtCf(2028), col: "#c0392b" },
               ].map(({ year, cost, markup, cf, col }) => (
                 <div key={year} style={{ flex: "1 1 120px", background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "12px 14px", borderTop: `3px solid ${col}` }}>
-                  <div style={{ fontFamily: SANS, fontSize: 11, color: N.tealMid, marginBottom: 4 }}>{year} · {markup} mark-up · {cf}% CBAM factor</div>
+                  <div style={{ fontFamily: SANS, fontSize: 11, color: N.tealMid, marginBottom: 4 }}>{year} • {markup} mark-up • {cf}% CBAM factor</div>
                   <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 700, color: N.white }}>{fmtM(cost)}</div>
                 </div>
               ))}
@@ -224,7 +224,7 @@ export default function SectorModal({ sec, ets, q1Ets = Q1_ETS, liveEntries, onC
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: N.teal400, textTransform: "uppercase" }}>
-              CN Code Breakdown · {cnRows.length} product code{cnRows.length !== 1 ? "s" : ""}
+              CN Code Breakdown • {cnRows.length} product code{cnRows.length !== 1 ? "s" : ""}
             </div>
             <div style={{ display: "flex", gap: 4 }}>
               {[["ytd","YTD"],["2026","2026"],["2027","2027"],["2028","2028"]].map(([p, label]) => (

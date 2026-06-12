@@ -13,7 +13,7 @@ export function useIframeHeight(targetOrigin = IFRAME_PARENT_ORIGIN) {
         document.documentElement?.scrollHeight || 0,
         document.body?.scrollHeight || 0,
       );
-      window.parent?.postMessage({ cbam_height: height }, targetOrigin);
+      window.parent?.postMessage({ type: "arlResize", height }, targetOrigin);
     };
 
     if (typeof ResizeObserver !== "undefined" && document.body) {
