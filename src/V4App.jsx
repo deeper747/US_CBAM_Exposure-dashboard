@@ -411,8 +411,8 @@ export default function V4App(){
         {isMobile&&(
           <div style={{padding:"14px 16px 10px",borderBottom:`1px solid ${N.teal800}`}}>
             <div style={{fontFamily:SANS,fontSize:20,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US Carbon Border Cost Calculator</div>
-            <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated CBAM costs under EU default values and the phase-in schedule</div>
-            <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A measure of federal revenue the U.S. could capture — but currently won't</div>
+            <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>Estimated EU CBAM costs under default values and phase-in schedule</div>
+            <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.5,marginBottom:2}}>A measure of federal revenue the U.S. could capture but currently won't</div>
           </div>
         )}
 
@@ -435,13 +435,13 @@ export default function V4App(){
                 </>
               )}
             </div>
-            <div style={{margin:"0 0 6px",fontFamily:SERIF,fontSize:isMobile?"clamp(28px,8vw,34px)":"clamp(43px,6vw,77px)",fontWeight:400,lineHeight:isMobile?1.08:0.98,letterSpacing:isMobile?"-0.02em":undefined,color:N.white}}>
+            <div style={{margin:"0 0 6px",fontFamily:SERIF,fontSize:isMobile?"clamp(24px,8vw,32px)":"clamp(43px,6vw,77px)",fontWeight:400,lineHeight:isMobile?1.08:0.98,letterSpacing:isMobile?"-0.02em":undefined,color:N.white}}>
               The U.S.{" "}
               <span style={{color:N.teal400}}>{confirmedViewActive?"loses an estimated":(chartHover&&!showYtdForHover)?chartHover.hlVerb:hlVerb}</span>{" "}
               <span style={{color:N.orange500,whiteSpace:"nowrap"}}>{confirmedViewActive?fmtM(confirmedTotal):(chartHover&&!showYtdForHover)?chartHover.hlAmt:hlAmt}</span>{" "}
               to the EU
             </div>
-            <div style={{margin:"0 0 8px",fontFamily:SANS,fontSize:isMobile?16:"clamp(18px,2vw,23px)",fontWeight:400,lineHeight:1.4,color:N.tealMid}}>
+            <div style={{margin:"0 0 8px",fontFamily:SANS,fontSize:"clamp(13px,2.2vw,24px)",fontWeight:400,lineHeight:1.4,color:N.tealMid}}>
               for exporting emission&#8209;intensive products under the EU carbon border adjustment mechanism.
             </div>
             <div style={{marginTop:"auto"}}>
@@ -454,7 +454,7 @@ export default function V4App(){
                 const nextYr=parseInt(lcM)===12?parseInt(lcY)+1:parseInt(lcY);
                 const nextLabel=`${MONTH_NAMES[nextMoNum-1]} ${nextYr}`;
                 return(
-                  <p style={{margin:"4px 0 0",fontFamily:SANS,fontSize:9,color:N.tealMid,lineHeight:1.5}}>
+                  <p style={{margin:"4px 0 0",fontFamily:SANS,fontSize:isMobile?8:"clamp(9px,0.8vw,12px)",color:N.tealMid,lineHeight:1.5}}>
                     Estimated monthly CBAM cost ($M) • <span style={{color:N.tealLight,fontWeight:600}}>Trade</span>: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>Eurostat Comext</a> 2022–2025 avg (Iron & Steel, Aluminum, Cement, Fertilizers) and <a href="https://usatradeonline.census.gov/buildReport" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>U.S. Census Bureau</a> export avg (Hydrogen); confirmed Jan–{latestLabel} via Comext, projected {nextLabel}–2028 • <span style={{color:N.tealLight,fontWeight:600}}>EU carbon price</span> (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>EU Commission</a>): {confirmedEtsQLabel} {confirmedEtsYear} confirmed at €{confirmedQ1Ets.toFixed(2)}/tCO₂e, assumed from {cbamConfig.forecast_from} • Data current as of {REPORT_AS_OF_LABEL}{fetchStatus==="loading"&&<span style={{color:N.teal400}}> • Fetching…</span>}{fetchStatus==="fallback"&&<span style={{color:N.orange400}}> • Live Comext fetch unavailable; using static baseline and bundled confirmed data.</span>}
                   </p>
                 );
@@ -466,9 +466,8 @@ export default function V4App(){
           <div style={{background:N.teal900,color:N.white,padding:isMobile?"16px 16px 24px":isTablet?"12px 20px 24px 16px":"12px 28px 24px 24px",display:"flex",flexDirection:"column",gap:20,position:"relative",zIndex:1,borderTop:isMobile?`1px solid ${N.teal800}`:"none"}}>
             {!isMobile&&(
               <div style={{paddingBottom:4,textAlign:"right"}}>
-                <div style={{fontFamily:SANS,fontSize:18,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US Carbon Border Cost Calculator</div>
-                <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.2,marginBottom:2}}>Estimated EU CBAM costs under default values and phase-in schedule</div>
-                <div style={{fontFamily:SANS,fontSize:10,color:N.tealMid,lineHeight:1.2,marginBottom:2}}>A measure of federal revenue the U.S. could capture but currently won't</div>
+                <div style={{fontFamily:SANS,fontSize:20,fontWeight:700,color:N.white,letterSpacing:"0.01em",marginBottom:3}}>US Carbon Border Cost Calculator</div>
+                <div style={{fontFamily:SANS,fontSize:14,color:N.tealMid,lineHeight:1.2,marginBottom:1.5}}>Estimated EU CBAM costs under default values and phase-in schedule—a measure of federal revenue the U.S. could capture but currently won't</div>
               </div>
             )}
             {/* ETS Price */}
