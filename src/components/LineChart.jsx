@@ -208,7 +208,7 @@ export default function LineChart({
         {cbamX != null && (
           <>
             <line x1={cbamX} y1={pad.t} x2={cbamX} y2={H - pad.b} stroke={N.orange400} strokeWidth={2.2} opacity={0.7}/>
-            <text x={cbamX - 190} y={pad.t + 30} fill={N.orange400} fontSize={mfs(16)} fontFamily={SANS} fontWeight={700}>CBAM start</text>
+            <text x={cbamX - (isMobileView ? 190 : 90)} y={pad.t + 30} fill={N.orange400} fontSize={mfs(16)} fontFamily={SANS} fontWeight={700}>CBAM start</text>
             {!isMobileView && <text x={cbamX - 8} y={yp(maxY) - 10} textAnchor="end" fill={N.tealMid} fontSize={12} fontFamily={SANS} opacity={0.6}>monthly cost</text>}
             {Array.from({length: 4}, (_, i) => (i + 1) * maxY / 4).map(v => (
               <g key={v}>
