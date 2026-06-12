@@ -16,22 +16,22 @@ import { N, SANS, SERIF, SECTOR_COLORS as SC, SECTOR_LIGHT_COLORS as SCL } from 
 const SECTOR_INFO = {
   "Iron & Steel": {
     desc: "The largest CBAM sector by US export volume. Covers iron ore products, pig iron, ferro-alloys, flat and long steel products (HR/CR/coated), tubes, sections, and fabricated steel articles.",
-    extra: "US steelmakers are predominantly EAF-based (electric arc furnace), which typically produces lower emissions than the blast furnace route assumed in EU default values — so actual costs may be lower for verified reporters.",
+    extra: "US steelmakers are predominantly EAF-based (electric arc furnace), which typically produces lower emissions than the blast furnace route assumed in EU default values.",
   },
   Aluminum: {
-    desc: "Covers unwrought aluminium, semi-finished products (rods, wire, profiles, plates, foil), tubes, fabricated articles, and containers. The US is a significant primary and secondary aluminium producer.",
+    desc: "Covers unwrought aluminium, semi-finished products (rods, wire, profiles, plates, foil), tubes, fabricated articles, and containers.",
     extra: "Aluminum default values include upstream smelting and power generation emissions. The US power mix used in smelting will affect whether actual emissions are above or below the EU default.",
   },
   Cement: {
     desc: "Includes Portland and hydraulic cement, clinker, white and grey variants, and calcined clay. US–EU cement trade is limited by high freight costs relative to product value.",
-    extra: "Cement is one of the most carbon-intensive sectors by tCO₂e/t. Even at low trade volumes, the per-metric-ton CBAM charge can be significant.",
+    extra: "The EU is a net cement exporter to the US. CBAM exposure for US cement producers is therefore small in absolute terms.",
   },
   Fertilizers: {
-    desc: "Nitrogen-based fertilizers including anhydrous ammonia, urea, ammonium nitrate, and compound fertilizers (NPK/NK/DAP/MAP). The US is a major global ammonia and urea producer.",
+    desc: "Nitrogen-based fertilizers include anhydrous ammonia, urea, ammonium nitrate, and compound fertilizers (NPK/NK/DAP/MAP). The US is a major global ammonia and urea producer.",
     extra: "Fertilizers have a special phase-in rate of 1% throughout 2026–2028 (vs. 10–30% for other sectors) due to high carbon leakage risk and food security concerns.",
   },
   Hydrogen: {
-    desc: "Covers hydrogen gas (CN 2804 10 00). CBAM applies based on the hydrogen's production emissions intensity — electrolytic, SMR, or by-product routes have very different default values.",
+    desc: "Covers a single CN8 code. The default reflects steam-methane-reforming (SMR) production, which accounts for roughly 99% of global hydrogen output.",
     extra: "At 26.64 tCO₂e/t, hydrogen has the highest default value of any CBAM product. Even small trade volumes can carry a large CBAM cost.",
   },
 };
@@ -60,7 +60,7 @@ function SortTh({ col, label, align = "right", onSort, active, dir }) {
  *   dataset.getAvgMonthTonnes(cn, mo)
  *   dataset.getYtdTonnesForRows(rows, liveEntries?)
  */
-export default function SectorModal({ sec, ets, liveEntries, onClose, dataset }) {
+export default function SectorModal({ sec, ets, q1Ets = Q1_ETS, liveEntries, onClose, dataset }) {
   const { getAvgMonthTonnes, getYtdTonnesForRows, DATA_SOURCE } = dataset;
 
   const info = SECTOR_INFO[sec] || { desc: "", extra: "" };
@@ -127,7 +127,7 @@ export default function SectorModal({ sec, ets, liveEntries, onClose, dataset })
         if (mo <= "03") v4Q1 += tonnes;
         else v4Apr += tonnes;
       }
-      const v4TaxToday = (v4Q1 * Q1_ETS + v4Apr * ets) * netMv2026 * EUR_USD;
+      const v4TaxToday = (v4Q1 * q1Ets + v4Apr * ets) * netMv2026 * EUR_USD;
 
       return {
         cn: d.cn, desc: d.desc, total: d.total, bmg, markupLabel, cbamFactorLabel: "97.5%", annT, ytdTonnes, v4TaxToday,
@@ -289,7 +289,7 @@ export default function SectorModal({ sec, ets, liveEntries, onClose, dataset })
           </div>
           <div style={{ marginTop: 8, fontFamily: SANS, fontSize: 11, color: N.tealMid }}>
             {viewPeriod === "ytd"
-              ? `YTD = ${YTD_LABEL}, 2026. YTD trade volume uses ${DATA_SOURCE} data for confirmed months; remaining months use 2022–25 ${DATA_SOURCE} avg. ETS price: Q1 at €${Q1_ETS.toFixed(2)}/tCO₂e (official), remainder at €${ets.toFixed(0)}/tCO₂e assumed.`
+              ? `YTD = ${YTD_LABEL}, 2026. YTD trade volume uses ${DATA_SOURCE} data for confirmed months; remaining months use 2022–25 ${DATA_SOURCE} avg. ETS price: Q1 at €${q1Ets.toFixed(2)}/tCO₂e (official), remainder at €${ets.toFixed(0)}/tCO₂e assumed.`
               : `Annual trade volume uses 2022–25 ${DATA_SOURCE} monthly avg. Projected ${viewPeriod} CBAM cost at €${ets.toFixed(0)}/tCO₂e ETS, ${pc.markup} mark-up, ${pc.cf} CBAM factor.`}
           </div>
         </div>

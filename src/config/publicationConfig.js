@@ -8,7 +8,7 @@ export const PUBLICATION_CONFIG = {
   baselineYears: ["2022", "2023", "2024", "2025"],
   ytdYear: "2026",
   forecastFrom: "Apr 2026",
-  etsConfirmedThrough: "Mar 2026",
+  etsConfirmedThrough: "2026-03",
   eurUsd: 1.13,
   defaultForecastEts: 75.36,
   liveComextStartPeriod: "2026-01",

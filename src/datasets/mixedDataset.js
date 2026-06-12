@@ -131,7 +131,7 @@ export function getYtdTonnesForRows(rows, liveEntries = null) {
   return total;
 }
 
-export function getSectorYearCost(sec, yr, forecastEts, liveEntries = null) {
+export function getSectorYearCost(sec, yr, forecastEts, liveEntries = null, qtrOverrides = null) {
   const rows = RELEVANT.filter(d => d.sector === sec);
   const cf = CBAM_FACTOR[yr] ?? 0;
   let cost = 0;
@@ -149,7 +149,9 @@ export function getSectorYearCost(sec, yr, forecastEts, liveEntries = null) {
       } else {
         tonnes = getMonthTonnes(d.cn, ym);
       }
-      cost += tonnes * netMv * getQtrEts(ym, forecastEts);
+      const qKey = `${yr}-Q${Math.ceil(parseInt(mo) / 3)}`;
+      const price = qtrOverrides?.[qKey] ?? getQtrEts(ym, forecastEts);
+      cost += tonnes * netMv * price;
     }
   }
   return cost * EUR_USD;
