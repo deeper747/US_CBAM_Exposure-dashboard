@@ -20,6 +20,7 @@ import {
 import * as DS from "./datasets/mixedDataset.js";
 import { useComextData } from "./context/ComextDataContext.jsx";
 import { useIframeHeight } from "./hooks/useIframeHeight.js";
+import { useParentViewport } from "./hooks/useParentViewport.js";
 import { N, SANS, SERIF, SECTOR_COLORS as SC, SECTOR_LIGHT_COLORS as SCL } from "./styles/tokens.js";
 
 // ── DYNAMIC TODAY ─────────────────────────────────────────────────────────────
@@ -145,8 +146,10 @@ export default function V4App(){
   const [vw,setVw]=useState(typeof window!=="undefined"?window.innerWidth:1280);
   useEffect(()=>{const h=()=>setVw(window.innerWidth);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
   useIframeHeight();
-  const isMobile=vw<640;
-  const isTablet=vw<1024;
+  const parentVw=useParentViewport();
+  const effectiveVw=parentVw??vw;
+  const isMobile=effectiveVw<640;
+  const isTablet=effectiveVw<1024;
   const [chartHover,setChartHover]=useState(null);
   const [chartHoverPinned,setChartHoverPinned]=useState(false);
   const [chartPinnedYear,setChartPinnedYear]=useState(null);
@@ -445,7 +448,7 @@ export default function V4App(){
               for exporting emission&#8209;intensive products under the EU carbon border adjustment mechanism.
             </div>
             <div style={{marginTop:"auto"}}>
-              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2025-01" viewEndYm="2028-12" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={confirmedQ1Ets} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={DS.CBAM_IDX} todayFracIdx={TODAY_FRAC_IDX_DYNAMIC}/>
+              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2025-01" viewEndYm="2028-12" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={confirmedQ1Ets} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={DS.CBAM_IDX} todayFracIdx={TODAY_FRAC_IDX_DYNAMIC} isMobile={isMobile}/>
               {(()=>{
                 const latestYm=liveMonths.length>0?liveMonths[liveMonths.length-1]:DATA_CUTOFF_YM;
                 const[lcY,lcM]=latestYm.split("-");

@@ -25,6 +25,7 @@ export default function LineChart({
   padLeft = 12,
   maxY = 400,
   chartHeight = 360,
+  isMobile: isMobileProp,
 }) {
   const [hov, setHov] = useState(null);
   const [q1LinkHov, setQ1LinkHov] = useState(false);
@@ -167,7 +168,7 @@ export default function LineChart({
   ].filter(Boolean);
   const tip = hov ? getTooltip(hov.idx) : null;
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
-  const isMobileView = viewportWidth < 640;
+  const isMobileView = isMobileProp ?? viewportWidth < 640;
   const mfs = n => isMobileView ? Math.round(n * 2.1) : n;
 
   return (
