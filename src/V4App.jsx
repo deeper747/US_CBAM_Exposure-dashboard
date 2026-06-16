@@ -217,6 +217,35 @@ export default function V4App(){
 
   const liveMonths=useMemo(()=>Object.keys(liveChartOverrides).sort(),[liveChartOverrides]);
 
+  // A month is truly "confirmed" (yellow line) only when:
+  //   1. All four Comext-tracked sectors each have at least one data point for that month.
+  //   2. The EU ETS carbon price is confirmed for that month's quarter.
+  // Hydrogen always contributes via the Census baseline, so it is not a gating condition here.
+  const strictConfirmedCutIdx=useMemo(()=>{
+    const etsCap=cbamConfig.ets_confirmed_through??"2026-03";
+    if(!mergedTrade){
+      const ym=DATA_CUTOFF_YM<=etsCap?DATA_CUTOFF_YM:etsCap;
+      const idx=DS.CHART_DATA.findIndex(p=>p.ym===ym);
+      return idx>=0?idx:DS.CBAM_IDX-1;
+    }
+    const COMEXT_SECS=["Iron & Steel","Aluminum","Cement","Fertilizers"];
+    const secKeys=Object.fromEntries(COMEXT_SECS.map(sec=>[sec,RELEVANT.filter(d=>d.sector===sec).map(d=>trKey(d.cn))]));
+    const allYms=[...new Set(Object.entries(mergedTrade).filter(([k])=>k!=="28041000").flatMap(([,m])=>Object.keys(m)).filter(ym=>ym>="2026-01"))].sort();
+    let lastComplete=null;
+    let expected="2026-01";
+    for(const ym of allYms){
+      if(ym!==expected)break;
+      if(ym>etsCap)break;
+      if(COMEXT_SECS.every(sec=>secKeys[sec].some(k=>mergedTrade[k]?.[ym]?.[0]>0)))lastComplete=ym;
+      else break;
+      const[y,m]=ym.split("-").map(Number);
+      expected=`${m===12?y+1:y}-${String(m===12?1:m+1).padStart(2,"0")}`;
+    }
+    if(!lastComplete)return DS.CBAM_IDX-1;
+    const idx=DS.CHART_DATA.findIndex(p=>p.ym===lastComplete);
+    return idx>=0?idx:DS.CBAM_IDX-1;
+  },[mergedTrade,cbamConfig]);
+
   const latestConfirmedYm=useMemo(()=>{
     if(!mergedTrade)return null;
     const yms=Object.entries(mergedTrade).filter(([k])=>k!=="28041000").flatMap(([,m])=>Object.keys(m)).filter(ym=>ym>="2026-01");
@@ -243,7 +272,7 @@ export default function V4App(){
         const netMv=Math.max(0,mv-bmg*cf2026);
         for(const mo of confirmedMosList){
           const ym=`2026-${mo}`;
-          const t=mergedTrade[k]?.[ym]?.[0]??0;
+          const t=mergedTrade[k]?.[ym]?.[0]??DS.getAvgMonthTonnes(d.cn,mo);
           const qEts=getQtrEtsMerged(ym,ets);
           tonnes+=t;
           cost+=t*netMv*qEts*EUR_USD;
@@ -363,7 +392,8 @@ export default function V4App(){
     }
     const startYm=`${rangeStart}-01`,endYm=`${rangeEnd}-12`;
     const tot=DS.CHART_DATA.filter(m=>m.ym>=startYm&&m.ym<=endYm).reduce((s,m)=>s+m.factor*getQtrEtsMerged(m.ym,ets),0)*EUR_USD;
-    return{hlVerb:"is projected to lose",hlAmt:fmtM(tot)};
+    const verb=Number(rangeEnd)<2026?"would have lost":"is projected to lose";
+    return{hlVerb:verb,hlAmt:fmtM(tot)};
   },[rangeStart,rangeEnd,ets,totTaxToday,getQtrEtsMerged]);
 
   const annualCosts=useMemo(()=>{
@@ -448,7 +478,7 @@ export default function V4App(){
               for exporting emission&#8209;intensive products under the EU carbon border adjustment mechanism.
             </div>
             <div style={{marginTop:"auto"}}>
-              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2025-01" viewEndYm="2028-12" onChartClick={handleChartClick} cutIdx={liveDataCutIdx} q1Ets={confirmedQ1Ets} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={DS.CBAM_IDX} todayFracIdx={TODAY_FRAC_IDX_DYNAMIC} isMobile={isMobile}/>
+              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2025-01" viewEndYm="2028-12" onChartClick={handleChartClick} cutIdx={strictConfirmedCutIdx} q1Ets={confirmedQ1Ets} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={DS.CBAM_IDX} todayFracIdx={TODAY_FRAC_IDX_DYNAMIC} isMobile={isMobile}/>
               {(()=>{
                 const latestYm=liveMonths.length>0?liveMonths[liveMonths.length-1]:DATA_CUTOFF_YM;
                 const[lcY,lcM]=latestYm.split("-");
@@ -533,9 +563,14 @@ export default function V4App(){
                 )}
               </div>
               {confirmedViewActive&&confirmedViewPinned&&(
-                <div style={{marginBottom:8,fontFamily:SANS,fontSize:11,color:N.tealMid,opacity:0.85,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:4}}
+                <div style={{marginBottom:4,fontFamily:SANS,fontSize:11,color:N.tealMid,opacity:0.85,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:4}}
                   onClick={()=>setConfirmedViewPinned(false)}>
                   <span style={{fontSize:13}}>✖︎</span><span>Pinned • click to unpin</span>
+                </div>
+              )}
+              {confirmedViewActive&&(
+                <div style={{marginBottom:8,fontFamily:SANS,fontSize:11,color:N.tealMid,fontStyle:"italic",lineHeight:1.45,opacity:0.85}}>
+                  Trade volumes reflect the latest available Comext submissions and are preliminary — figures may be revised in subsequent reporting periods as data are finalized.
                 </div>
               )}
               {sectorAnnCosts.map(({sec,cost,pct})=>(

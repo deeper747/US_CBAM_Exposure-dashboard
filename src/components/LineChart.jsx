@@ -108,7 +108,7 @@ export default function LineChart({
       return { label, sub: `Pre-CBAM · hypothetical · €${qEts.toFixed(2)}/tCO₂e`, value: val, note: `${year} annual estimate: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "would have lost", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
     }
     if (isConfirmed) {
-      return { label: `${label} (confirmed)`, sub: "Actual Comext trade vol.", value: val, note: `${year} annual estimate: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "loses an estimated", hlAmt: annualAmt, year, isConfirmed: true, cumulative };
+      return { label: `${label} (confirmed)`, sub: "Actual Comext trade vol. · Preliminary, subject to revision", value: val, note: `${year} annual estimate: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "loses an estimated", hlAmt: annualAmt, year, isConfirmed: true, cumulative };
     }
     const markup = year >= 2028 ? 30 : year === 2027 ? 20 : 10;
     return { label, sub: `Projected (2022–25 avg trade · ${markup}% mark-up)`, value: val, note: `Est. monthly · ${year} total: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "is projected to lose", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
@@ -121,7 +121,8 @@ export default function LineChart({
     }
     const idx = idxFromClientX(e.clientX);
     if (idx == null) return;
-    setHov({ idx, sx: e.clientX, sy: e.clientY });
+    const svgRect = svgRef.current?.getBoundingClientRect();
+    setHov({ idx, sx: e.clientX, sy: e.clientY, svgTop: svgRect?.top ?? 0, svgRight: svgRect?.right ?? window.innerWidth });
     if (onChartHover) {
       const t = getTooltip(idx);
       onChartHover({ hlTime: t.hlTime, hlVerb: t.hlVerb, hlAmt: t.hlAmt, year: t.year, isConfirmed: t.isConfirmed, ym: points[idx].ym });
@@ -132,7 +133,8 @@ export default function LineChart({
     const idx = idxFromClientX(e.clientX);
     if (idx == null || !onChartClick) return;
     const t = getTooltip(idx);
-    setHov({ idx, sx: e.clientX, sy: e.clientY });
+    const svgRect = svgRef.current?.getBoundingClientRect();
+    setHov({ idx, sx: e.clientX, sy: e.clientY, svgTop: svgRect?.top ?? 0, svgRight: svgRect?.right ?? window.innerWidth });
     onChartClick(t.year, t);
   }, [idxFromClientX, getTooltip, onChartClick]);
 
@@ -278,7 +280,7 @@ export default function LineChart({
         </div>
       )}
       {tip && hov && (
-        <div style={{ position: "fixed", left: Math.min(hov.sx + 16, viewportWidth - 195), top: Math.max(hov.sy - 70, 10),
+        <div style={{ position: "fixed", left: hov.sx + 16 + 180 > (hov.svgRight ?? viewportWidth) ? Math.max(hov.sx - 196, 4) : Math.min(hov.sx + 16, viewportWidth - 195), top: Math.max((hov.svgTop ?? 0) + 8, 8),
           background: N.teal900, color: N.white, borderRadius: 4, padding: "10px 14px",
           boxShadow: "0 4px 12px rgba(12,42,48,0.28)", border: `1px solid ${N.teal600}`,
           fontFamily: SANS, pointerEvents: "none", zIndex: 60, minWidth: 180 }}>
