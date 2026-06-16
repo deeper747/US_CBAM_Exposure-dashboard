@@ -462,9 +462,9 @@ export default function V4App(){
               ):(
                 <>
                   <span>From{" "}</span>
-                  <InlineSelect value={rangeStart} onChange={v=>{clearChartPinnedYear();setRangeStart(v);if(rangeEnd!=="today"&&rangeEnd<v)setRangeEnd(v);else if(v!==2026&&rangeEnd==="today")setRangeEnd(2026);}} options={ALL_YEARS} color={N.teal400}/>
+                  <InlineSelect value={rangeStart} onChange={v=>{clearChartPinnedYear();setRangeStart(v);if(v<2026){const cur=rangeEnd==="today"?2026:rangeEnd;setRangeEnd(Math.min(Math.max(cur,v),2025));}else{if(rangeEnd!=="today"&&rangeEnd<v)setRangeEnd(v);else if(rangeEnd==="today"&&v!==2026)setRangeEnd(v);}}} options={ALL_YEARS} color={N.teal400}/>
                   <span>{" "}to{" "}</span>
-                  <InlineSelect value={rangeEnd} onChange={v=>{clearChartPinnedYear();setRangeEnd(v);}} options={rangeStart===2026?[...ALL_YEARS.filter(y=>y>=rangeStart),"today"]:ALL_YEARS.filter(y=>y>=rangeStart)} color={N.teal400}/>
+                  <InlineSelect value={rangeEnd} onChange={v=>{clearChartPinnedYear();setRangeEnd(v);}} options={rangeStart<2026?ALL_YEARS.filter(y=>y>=rangeStart&&y<2026):rangeStart===2026?[...ALL_YEARS.filter(y=>y>=rangeStart),"today"]:ALL_YEARS.filter(y=>y>=rangeStart)} color={N.teal400}/>
                 </>
               )}
             </div>
