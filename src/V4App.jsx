@@ -252,14 +252,21 @@ export default function V4App(){
     return yms.length?yms.sort().at(-1):null;
   },[mergedTrade]);
 
+  // The YM corresponding to the strict cut (ETS-capped, all-sector complete).
+  // This is what drives the title and sector cost accumulation.
+  const strictConfirmedYm=useMemo(()=>{
+    if(strictConfirmedCutIdx<DS.CBAM_IDX)return null;
+    return DS.CHART_DATA[strictConfirmedCutIdx]?.ym??null;
+  },[strictConfirmedCutIdx]);
+
   const confirmedMosList=useMemo(()=>{
-    if(!latestConfirmedYm)return[];
-    const lm=parseInt(latestConfirmedYm.split("-")[1]);
+    if(!strictConfirmedYm)return[];
+    const lm=parseInt(strictConfirmedYm.split("-")[1]);
     return Array.from({length:lm},(_,i)=>String(i+1).padStart(2,"0"));
-  },[latestConfirmedYm]);
+  },[strictConfirmedYm]);
 
   const confirmedDataBySector=useMemo(()=>{
-    if(!mergedTrade||!latestConfirmedYm||!confirmedMosList.length)return null;
+    if(!mergedTrade||!strictConfirmedYm||!confirmedMosList.length)return null;
     const cf2026=CBAM_FACTOR[2026];
     const result={};
     for(const sec of SECTORS_LIST){
@@ -281,7 +288,7 @@ export default function V4App(){
       result[sec]={tonnes,cost};
     }
     return result;
-  },[mergedTrade,latestConfirmedYm,confirmedMosList,ets]);
+  },[mergedTrade,strictConfirmedYm,confirmedMosList,ets]);
 
   const confirmedTotal=useMemo(()=>{
     if(!confirmedDataBySector)return 0;
@@ -289,10 +296,10 @@ export default function V4App(){
   },[confirmedDataBySector]);
 
   const confirmedMonthLabel=useMemo(()=>{
-    if(!latestConfirmedYm)return"";
-    const[,m]=latestConfirmedYm.split("-");
+    if(!strictConfirmedYm)return"";
+    const[,m]=strictConfirmedYm.split("-");
     return`${MONTH_NAMES[parseInt(m)-1]} 2026`;
-  },[latestConfirmedYm]);
+  },[strictConfirmedYm]);
 
   const chartPoints=useMemo(()=>DS.CHART_DATA.map(m=>({...m,v:(liveChartOverrides[m.ym]??m.factor)*getQtrEtsMerged(m.ym,ets)*EUR_USD/1e6})),[ets,liveChartOverrides,getQtrEtsMerged]);
 
