@@ -1,9 +1,9 @@
 {
-  "default": 75.36,
-  "latest_period": "2026-Q1",
+  "default": 75.28,
+  "latest_period": "2026-Q2",
   "source": "European Commission — official CBAM certificate price (weighted avg. EU ETS auction clearing prices)",
   "source_url": "https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en",
-  "last_updated": "2026-04-07",
+  "last_updated": "2026-07-06",
   "note": "Default is the official EU CBAM certificate price published quarterly by the Commission (weighted avg. auction clearing prices, €/tCO₂e). Historical quarterly/annual values are EUA secondary market prices from ICAP Allowance Price Explorer.",
   "quarterly": {
     "2005-Q1": 12.2,
@@ -90,7 +90,8 @@
     "2025-Q2": 69.89,
     "2025-Q3": 72.99,
     "2025-Q4": 80.37,
-    "2026-Q1": 75.36
+    "2026-Q1": 75.36,
+    "2026-Q2": 75.28
   },
   "annual": {
     "2005": 20.71,

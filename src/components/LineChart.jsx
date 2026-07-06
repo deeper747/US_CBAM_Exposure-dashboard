@@ -16,7 +16,7 @@ export default function LineChart({
   cutIdx = CUT_IDX,
   viewStartYm = "2024-07",
   viewEndYm = "2028-06",
-  q1Ets,
+  confirmedEtsQtrs = [],
   forecastEts = 75,
   onConfirmedClick,
   confirmedPinned = false,
@@ -104,7 +104,7 @@ export default function LineChart({
     const cumRaw = idx >= cbamIdx ? cumValues[idx] : null;
     const cumulative = cumRaw != null ? (cumRaw >= 1000 ? `$${(cumRaw / 1000).toFixed(2)}B` : `$${cumRaw.toFixed(0)}M`) : null;
     if (idx < cbamIdx) {
-      const qEts = getQtrEts(p.ym, q1Ets);
+      const qEts = getQtrEts(p.ym, confirmedEtsQtrs[0] ?? forecastEts);
       return { label, sub: `Pre-CBAM · hypothetical · €${qEts.toFixed(2)}/tCO₂e`, value: val, note: `${year} annual estimate: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "would have lost", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
     }
     if (isConfirmed) {
@@ -112,7 +112,7 @@ export default function LineChart({
     }
     const markup = year >= 2028 ? 30 : year === 2027 ? 20 : 10;
     return { label, sub: `Projected (2022–25 avg trade · ${markup}% mark-up)`, value: val, note: `Est. monthly · ${year} total: ${annualAmt}`, hlTime: `In ${year}`, hlVerb: "is projected to lose", hlAmt: annualAmt, year, isConfirmed: false, cumulative };
-  }, [points, annualTotals, cutIdx, cumValues, q1Ets, cbamIdx]);
+  }, [points, annualTotals, cutIdx, cumValues, confirmedEtsQtrs, forecastEts, cbamIdx]);
 
   const handleMouseMove = useCallback((e) => {
     if (chartLeaveTimer.current) {
@@ -183,22 +183,34 @@ export default function LineChart({
           const lineY = isMobileView ? 36 : 24;
           const tickH = 5;
           const inV = i => i >= visibleStartIdx && i <= visibleEndIdx;
-          const q1sX = inV(cbamIdx) ? xp(cbamIdx - visibleStartIdx) : null;
-          const q1eX = cbamIdx + 3 <= visibleEndIdx ? xp(Math.min(cbamIdx + 3, visibleEndIdx) - visibleStartIdx) : null;
-          const q2sX = inV(cbamIdx + 3) ? xp((cbamIdx + 3) - visibleStartIdx) : null;
+          const nConf = confirmedEtsQtrs.length;
+          const fcStart = cbamIdx + nConf * 3;
+          const q2sX = inV(fcStart) ? xp(fcStart - visibleStartIdx) : null;
           const q2eX = xp(visibleEndIdx - visibleStartIdx);
+          // Shrink confirmed-quarter labels when there are several, so adjacent prices sit
+          // side by side on one line rather than overlapping.
+          const ly = lineY - (isMobileView ? 13 : 7);
+          const confFs = nConf > 1 ? mfs(7.5) : mfs(10);
+          const confSubFs = nConf > 1 ? mfs(6) : mfs(8);
           return (<>
-            {q1sX != null && q1eX != null && (<>
-              <line x1={q1sX} y1={lineY} x2={q1eX} y2={lineY} stroke="#F4DA91" strokeWidth={1.5} strokeDasharray="5,3"/>
-              <line x1={q1sX} y1={lineY - tickH} x2={q1sX} y2={lineY + tickH} stroke="#F4DA91" strokeWidth={1.5}/>
-              <line x1={q1eX} y1={lineY - tickH} x2={q1eX} y2={lineY + tickH} stroke="#F4DA91" strokeWidth={1.5}/>
-              <a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer"
-                onMouseEnter={() => setQ1LinkHov(true)} onMouseLeave={() => setQ1LinkHov(false)} style={{ cursor: "pointer" }}>
-                <text x={(q1sX + q1eX) / 2} y={lineY - (isMobileView ? 13 : 7)} textAnchor="middle" fill="#F4DA91" fontSize={mfs(10)} fontFamily={SANS} fontWeight={700}
-                  stroke={N.teal900} strokeWidth={isMobileView ? 5 : 3} paintOrder="stroke">€{q1Ets.toFixed(2)}/tCO<tspan dy="2" fontSize={mfs(8)}>2</tspan></text>
-                {q1LinkHov && <line x1={(q1sX + q1eX) / 2 - 30} y1={lineY - 5} x2={(q1sX + q1eX) / 2 + 30} y2={lineY - 5} stroke="#F4DA91" strokeWidth={1}/>}
-              </a>
-            </>)}
+            {confirmedEtsQtrs.map((price, i) => {
+              const sIdx = cbamIdx + i * 3, eIdx = cbamIdx + (i + 1) * 3;
+              if (!inV(sIdx)) return null;
+              const sX = xp(sIdx - visibleStartIdx);
+              const eX = xp(Math.min(eIdx, visibleEndIdx) - visibleStartIdx);
+              const midX = (sX + eX) / 2;
+              return (
+                <a key={i} href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer"
+                  onMouseEnter={() => setQ1LinkHov(true)} onMouseLeave={() => setQ1LinkHov(false)} style={{ cursor: "pointer" }}>
+                  <line x1={sX} y1={lineY} x2={eX} y2={lineY} stroke="#F4DA91" strokeWidth={1.5} strokeDasharray="5,3"/>
+                  <line x1={sX} y1={lineY - tickH} x2={sX} y2={lineY + tickH} stroke="#F4DA91" strokeWidth={1.5}/>
+                  <line x1={eX} y1={lineY - tickH} x2={eX} y2={lineY + tickH} stroke="#F4DA91" strokeWidth={1.5}/>
+                  <text x={midX} y={ly} textAnchor="middle" fill="#F4DA91" fontSize={confFs} fontFamily={SANS} fontWeight={700}
+                    stroke={N.teal900} strokeWidth={isMobileView ? 5 : 3} paintOrder="stroke">€{price.toFixed(2)}/tCO<tspan dy="2" fontSize={confSubFs}>2</tspan></text>
+                  {q1LinkHov && <line x1={midX - 24} y1={ly + 2} x2={midX + 24} y2={ly + 2} stroke="#F4DA91" strokeWidth={1}/>}
+                </a>
+              );
+            })}
             {q2sX != null && (<>
               <line x1={q2sX} y1={lineY} x2={q2eX} y2={lineY} stroke={N.teal400} strokeWidth={1.5} strokeDasharray="5,3"/>
               <line x1={q2sX} y1={lineY - tickH} x2={q2sX} y2={lineY + tickH} stroke={N.teal400} strokeWidth={1.5}/>

@@ -4,10 +4,10 @@ import { EUR_USD, YTD_YEAR } from "../config/publicationConfig.js";
 import { fmtKt, fmtM, fmtT } from "../lib/formatters.js";
 import {
   MONTH_NAMES,
-  Q1_ETS,
   SECTOR_STATS,
   YTD_LABEL,
   YTD_MONTHS,
+  getQtrEts,
   ytdMonthFraction,
 } from "../lib/cbamCalculations.js";
 import { getBenchmark, CBAM_FACTOR } from "../data/cbamBenchmarks.js";
@@ -60,7 +60,7 @@ function SortTh({ col, label, align = "right", onSort, active, dir }) {
  *   dataset.getAvgMonthTonnes(cn, mo)
  *   dataset.getYtdTonnesForRows(rows, liveEntries?)
  */
-export default function SectorModal({ sec, ets, q1Ets = Q1_ETS, liveEntries, onClose, dataset }) {
+export default function SectorModal({ sec, ets, liveEntries, onClose, dataset }) {
   const { getAvgMonthTonnes, getYtdTonnesForRows, DATA_SOURCE } = dataset;
 
   const info = SECTOR_INFO[sec] || { desc: "", extra: "" };
@@ -117,17 +117,16 @@ export default function SectorModal({ sec, ets, q1Ets = Q1_ETS, liveEntries, onC
         ) * ets * EUR_USD;
       };
 
-      // YTD CBAM cost (Q1 at official price, rest at slider)
+      // YTD CBAM cost — each confirmed quarter at its official price, remaining months at the slider.
       const netMv2026 = Math.max(0, (d.mv2026 || 0) - bmg * CF2026);
-      let v4Q1 = 0, v4Apr = 0;
+      let v4TaxToday = 0;
       for (const mo of YTD_MONTHS) {
         const ym = `${YTD_YEAR}-${mo}`;
         const liveT = liveEntries?.[_k]?.[ym]?.[0];
         const tonnes = (liveT != null && liveT > 0 ? liveT : getAvgMonthTonnes(d.cn, mo)) * ytdMonthFraction(mo);
-        if (mo <= "03") v4Q1 += tonnes;
-        else v4Apr += tonnes;
+        v4TaxToday += tonnes * netMv2026 * getQtrEts(ym, ets);
       }
-      const v4TaxToday = (v4Q1 * q1Ets + v4Apr * ets) * netMv2026 * EUR_USD;
+      v4TaxToday *= EUR_USD;
 
       return {
         cn: d.cn, desc: d.desc, total: d.total, bmg, markupLabel, cbamFactorLabel: "97.5%", annT, ytdTonnes, v4TaxToday,
@@ -289,7 +288,7 @@ export default function SectorModal({ sec, ets, q1Ets = Q1_ETS, liveEntries, onC
           </div>
           <div style={{ marginTop: 8, fontFamily: SANS, fontSize: 11, color: N.tealMid }}>
             {viewPeriod === "ytd"
-              ? `YTD = ${YTD_LABEL}, 2026. YTD trade volume uses ${DATA_SOURCE} data for confirmed months; remaining months use 2022–25 ${DATA_SOURCE} avg. ETS price: Q1 at €${q1Ets.toFixed(2)}/tCO₂e (official), remainder at €${ets.toFixed(0)}/tCO₂e assumed.`
+              ? `YTD = ${YTD_LABEL}, 2026. YTD trade volume uses ${DATA_SOURCE} data for confirmed months; remaining months use 2022–25 ${DATA_SOURCE} avg. ETS price: confirmed quarters at official EU prices, remaining months at €${ets.toFixed(0)}/tCO₂e assumed.`
               : `Annual trade volume uses 2022–25 ${DATA_SOURCE} monthly avg. Projected ${viewPeriod} CBAM cost at €${ets.toFixed(0)}/tCO₂e ETS, ${pc.markup} mark-up, ${pc.cf} CBAM factor.`}
           </div>
         </div>

@@ -143,7 +143,7 @@ export function getSectorYearCost(sec, yr, forecastEts, liveEntries = null) {
 
 export function getYtdCostFactorsForRows(rows, liveEntries = null) {
   const cf2026 = CBAM_FACTOR[2026];
-  let cfQ1 = 0, cfApr = 0;
+  const cfByQtr = {};
   for (const d of rows) {
     const mv = d.mv2026 || 0;
     const bmg = getBenchmark(d.cn, d.route) ?? 0;
@@ -152,9 +152,9 @@ export function getYtdCostFactorsForRows(rows, liveEntries = null) {
     for (const mo of YTD_MONTHS) {
       const liveT = liveEntries?.[k]?.[`${YTD_YEAR}-${mo}`]?.[0];
       const tonnes = (liveT > 0 ? liveT : avgMonthTonnes(d.cn, mo)) * ytdMonthFraction(mo);
-      if (mo <= "03") cfQ1 += tonnes * netMv;
-      else cfApr += tonnes * netMv;
+      const qKey = `${YTD_YEAR}-Q${Math.ceil(parseInt(mo) / 3)}`;
+      cfByQtr[qKey] = (cfByQtr[qKey] || 0) + tonnes * netMv;
     }
   }
-  return { cfQ1, cfApr };
+  return { cfByQtr };
 }

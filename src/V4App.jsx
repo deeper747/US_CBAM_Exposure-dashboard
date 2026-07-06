@@ -3,7 +3,7 @@ import ETS_PRICES from "./data/ets_prices.json";
 import LineChart from "./components/LineChart.jsx";
 import SectorModal from "./components/SectorModal.jsx";
 import { getBenchmark, CBAM_FACTOR } from "./data/cbamBenchmarks.js";
-import { DATA_CUTOFF_YM, DEFAULT_FORECAST_ETS, EUR_USD } from "./config/publicationConfig.js";
+import { DATA_CUTOFF_YM, DEFAULT_FORECAST_ETS, EUR_USD, YTD_YEAR } from "./config/publicationConfig.js";
 import { useCbamLiveConfig } from "./hooks/useCbamLiveConfig.js";
 import { RELEVANT, SECTORS_LIST } from "./data/cbamDefaultValues.js";
 import { fmtM, fmtT, dvLevel } from "./lib/formatters.js";
@@ -129,6 +129,31 @@ export default function V4App(){
     return`Q${Math.ceil(m/3)}`;
   },[cbamConfig]);
   const confirmedQ1Ets=mergedQtrPrices[`${confirmedEtsYear}-${confirmedEtsQLabel}`]??DEFAULT_FORECAST_ETS;
+
+  // Official prices for each confirmed quarter of the YTD year, in quarter order (Q1, Q2, …).
+  // A quarter counts as confirmed once its price is present in mergedQtrPrices (bundled JSON + live config).
+  const confirmedQtrPrices=useMemo(()=>{
+    const cap=cbamConfig.ets_confirmed_through??"2026-06";
+    const[cy,cm]=cap.split("-").map(Number);
+    const yr=Number(YTD_YEAR);
+    const lastQ=cy>yr?4:cy<yr?0:Math.floor((cm-1)/3)+1;
+    const arr=[];
+    for(let q=1;q<=lastQ;q++)arr.push(mergedQtrPrices[`${yr}-Q${q}`]??DEFAULT_FORECAST_ETS);
+    return arr;
+  },[cbamConfig,mergedQtrPrices]);
+
+  // Price a per-quarter YTD cost-factor bundle: confirmed quarters use their official
+  // price (locked), remaining quarters use the user's forecast slider (ets).
+  const priceYtdFactors=useCallback((cfByQtr)=>{
+    let confirmed=0,total=0;
+    for(const qKey in cfByQtr){
+      const cp=mergedQtrPrices[qKey];
+      const c=cfByQtr[qKey]*(cp??ets);
+      total+=c;
+      if(cp!=null)confirmed+=c;
+    }
+    return{taxConfirmed:confirmed*EUR_USD,taxToday:total*EUR_USD};
+  },[mergedQtrPrices,ets]);
 
   const TERM_DEFS=useMemo(()=>({
     tonnes:{title:"Exported metric tons",def:"How much CBAM-covered product the U.S. ships to the EU. Confirmed Comext months use reported tonnage for Iron & Steel, Aluminum, Cement, and Fertilizers; Hydrogen uses U.S. Census Bureau export data because of an unresolved anomaly in the EU Comext data for August 2025. All other months use the 2022–2025 monthly average as the trade baseline.",source:<>Sources: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={LS}>Eurostat Comext</a> (Iron & Steel, Aluminum, Cement, Fertilizers) • <a href="https://usatradeonline.census.gov/buildReport" target="_blank" rel="noreferrer" style={LS}>U.S. Census Bureau International Trade</a> (Hydrogen)</>},
@@ -305,9 +330,10 @@ export default function V4App(){
 
   const tableRows=useMemo(()=>SECTORS_LIST.map(sec=>{
     const s=SECTOR_STATS[sec];
-    const{cfQ1,cfApr}=ytdCostFactors[sec];
-    return{sec,...s,wBmg:DS.SECTOR_BENCHMARKS[sec],taxQ1:cfQ1*confirmedQ1Ets*EUR_USD,taxToday:(cfQ1*confirmedQ1Ets+cfApr*ets)*EUR_USD};
-  }),[ets,ytdCostFactors,confirmedQ1Ets]);
+    const{cfByQtr}=ytdCostFactors[sec];
+    const{taxConfirmed,taxToday}=priceYtdFactors(cfByQtr);
+    return{sec,...s,wBmg:DS.SECTOR_BENCHMARKS[sec],taxQ1:taxConfirmed,taxToday};
+  }),[ytdCostFactors,priceYtdFactors]);
 
   const totTaxToday=tableRows.reduce((s,r)=>s+r.taxToday,0);
   const activeSectorYear=chartHover?.year??chartPinnedYear;
@@ -359,13 +385,13 @@ export default function V4App(){
         for(let y=rangeStart;y<=Number(rangeEnd);y++) sum+=DS.getSectorYearCost(sec,y,ets,mergedTrade,mergedQtrPrices);
         cost=sum;
       } else{
-        const{cfQ1,cfApr}=ytdCostFactors[sec];cost=(cfQ1*confirmedQ1Ets+cfApr*ets)*EUR_USD;
+        const{cfByQtr}=ytdCostFactors[sec];cost=priceYtdFactors(cfByQtr).taxToday;
       }
       return{sec,cost};
     });
     const tot=items.reduce((s,d)=>s+d.cost,0);
     return items.map(d=>({...d,pct:tot>0?d.cost/tot*100:0})).sort((a,b)=>b.pct-a.pct);
-  },[ets,activeSectorYear,mergedTrade,ytdCostFactors,rangeStart,rangeEnd,confirmedViewActive,confirmedDataBySector,showYtdForHover,mergedQtrPrices,confirmedQ1Ets]);
+  },[ets,activeSectorYear,mergedTrade,ytdCostFactors,rangeStart,rangeEnd,confirmedViewActive,confirmedDataBySector,showYtdForHover,mergedQtrPrices,priceYtdFactors]);
 
   // Mark-up % per sector for table column (10% in 2026, 20% in 2027, 30% from 2028)
   const markupPct=(sec)=>{
@@ -485,7 +511,7 @@ export default function V4App(){
               for exporting emission&#8209;intensive products under the EU carbon border adjustment mechanism.
             </div>
             <div style={{marginTop:"auto"}}>
-              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2025-01" viewEndYm="2028-12" onChartClick={handleChartClick} cutIdx={strictConfirmedCutIdx} q1Ets={confirmedQ1Ets} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={DS.CBAM_IDX} todayFracIdx={TODAY_FRAC_IDX_DYNAMIC} isMobile={isMobile}/>
+              <LineChart points={chartPoints} onChartHover={handleChartHover} onChartLeave={handleChartLeave} viewStartYm="2025-01" viewEndYm="2028-12" onChartClick={handleChartClick} cutIdx={strictConfirmedCutIdx} confirmedEtsQtrs={confirmedQtrPrices} forecastEts={ets} onConfirmedClick={handleConfirmedClick} confirmedPinned={confirmedViewPinned} cbamIdx={DS.CBAM_IDX} todayFracIdx={TODAY_FRAC_IDX_DYNAMIC} isMobile={isMobile}/>
               {(()=>{
                 const latestYm=liveMonths.length>0?liveMonths[liveMonths.length-1]:DATA_CUTOFF_YM;
                 const[lcY,lcM]=latestYm.split("-");
@@ -493,9 +519,10 @@ export default function V4App(){
                 const nextMoNum=parseInt(lcM)%12+1;
                 const nextYr=parseInt(lcM)===12?parseInt(lcY)+1:parseInt(lcY);
                 const nextLabel=`${MONTH_NAMES[nextMoNum-1]} ${nextYr}`;
+                const confirmedQtrList=confirmedQtrPrices.map((_,i)=>`Q${i+1}`).join(", ");
                 return(
                   <p style={{margin:"4px 0 0",fontFamily:SANS,fontSize:isMobile?8:"clamp(9px,0.8vw,12px)",color:N.tealMid,lineHeight:1.5}}>
-                    Estimated monthly CBAM cost ($M) • <span style={{color:N.tealLight,fontWeight:600}}>Trade</span>: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>Eurostat Comext</a> 2022–2025 avg (Iron & Steel, Aluminum, Cement, Fertilizers) and <a href="https://usatradeonline.census.gov/buildReport" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>U.S. Census Bureau</a> export avg (Hydrogen); confirmed Jan–{latestLabel} via Comext, projected {nextLabel}–2028 • <span style={{color:N.tealLight,fontWeight:600}}>EU carbon price</span> (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>EU Commission</a>): {confirmedEtsQLabel} {confirmedEtsYear} confirmed at €{confirmedQ1Ets.toFixed(2)}/tCO₂e, assumed from {cbamConfig.forecast_from} • Data current as of {REPORT_AS_OF_LABEL}{fetchStatus==="loading"&&<span style={{color:N.teal400}}> • Fetching…</span>}{fetchStatus==="fallback"&&<span style={{color:N.orange400}}> • Live Comext fetch unavailable; using static baseline and bundled confirmed data.</span>}
+                    Estimated monthly CBAM cost ($M) • <span style={{color:N.tealLight,fontWeight:600}}>Trade</span>: <a href="https://ec.europa.eu/eurostat/databrowser/view/ds-045409__custom_21409230/default/table" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>Eurostat Comext</a> 2022–2025 avg (Iron & Steel, Aluminum, Cement, Fertilizers) and <a href="https://usatradeonline.census.gov/buildReport" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>U.S. Census Bureau</a> export avg (Hydrogen); confirmed Jan–{latestLabel} via Comext, projected {nextLabel}–2028 • <span style={{color:N.tealLight,fontWeight:600}}>EU carbon price</span> (<a href="https://taxation-customs.ec.europa.eu/carbon-border-adjustment-mechanism/price-cbam-certificates_en" target="_blank" rel="noreferrer" style={{color:"inherit",textDecoration:"underline"}}>EU Commission</a>): {confirmedQtrList} {confirmedEtsYear} prices are official, prices from {cbamConfig.forecast_from} on are up to user choice • Data current as of {REPORT_AS_OF_LABEL}{fetchStatus==="loading"&&<span style={{color:N.teal400}}> • Fetching…</span>}{fetchStatus==="fallback"&&<span style={{color:N.orange400}}> • Live Comext fetch unavailable; using static baseline and bundled confirmed data.</span>}
                   </p>
                 );
               })()}
@@ -730,7 +757,7 @@ export default function V4App(){
 
       </div>
 
-      {selectedSector&&<SectorModal sec={selectedSector} ets={ets} q1Ets={confirmedQ1Ets} liveEntries={mergedTrade} onClose={()=>setSelectedSector(null)} dataset={DS}/>}
+      {selectedSector&&<SectorModal sec={selectedSector} ets={ets} liveEntries={mergedTrade} onClose={()=>setSelectedSector(null)} dataset={DS}/>}
     </>
   );
 }
