@@ -1,6 +1,8 @@
 // EU ETS product benchmarks (BMg, Column B) from EU Implementing Regulation 2025/2620, Annex I.
+// (2025/2620 is NOT amended by Correcting Regulation 2026/1740; only the default
+// value keys were updated to the new CN/TARIC codes and routes.)
 // Values in tCO2e per metric ton of product.
-// Keys: trKey(cn) + (route ? ":" + route : "")
+// Keys: cn without spaces + (route ? ":" + route : "")
 // Many integer values in the source CSV had "0," prefix stripped; correct values restored here.
 
 // CBAM factor = fraction of benchmark still granted as free allocation (Article 10a, Directive 2003/87/EC).
@@ -20,15 +22,15 @@ export const CBAM_FACTOR = {
 };
 
 export const BENCHMARKS = {
-  // Cement
-  "25070080:A":  0.666,   // Calcined clay / kaolinic clays
-  "25231000:A":  0.666,   // Grey clinker
-  "25231000:B":  0.859,   // White clinker
+  // Cement — keys updated to the TARIC codes introduced by Reg (EU) 2026/1740
+  "2507008080":  0.666,   // Calcined clay (kaolinic); route indicator dropped by 2026/1740
+  "2523100090:A":0.666,   // Grey/other clinker
+  "2523100010:B":0.859,   // White clinker
   "25232100":    0.859,   // White Portland cement
   "25232900":    0.666,   // Grey Portland cement
   "25233000":    0.717,   // Aluminous cement (route 1 value)
-  "25239000:A":  0.666,   // Grey hydraulic cements
-  "25239000:B":  0.847,   // White hydraulic cements
+  "2523900090:A":0.666,   // Grey/other hydraulic cements
+  "2523900010:B":0.847,   // White hydraulic cement
   // Hydrogen
   "28041000":    5.089,   // Hydrogen
   // Fertilizers
@@ -74,7 +76,7 @@ export const BENCHMARKS = {
   "730300":      1.484,   // Cast iron tubes/pipes
   "73072100":    1.154,   // SS flanges (avg: 1.173, 1.135)
   // Iron & Steel — route C (BF-BOF)
-  "7205:C":      1.288,   // Granules/powders of pig iron
+  "7205:C/F":    1.288,   // Granules/powders of pig iron; Reg 2026/1740 sets route (C)/(F) — conservative (C) benchmark used
   "72061000:C":  1.288,   // Steel ingots
   "7208:C":      1.370,   // HR flat-rolled ≥600mm
   "7209:C":      1.458,   // CR flat-rolled ≥600mm

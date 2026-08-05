@@ -1,6 +1,6 @@
 # Data Maintenance Notes
 
-Last reviewed: 2026-04-02
+Last reviewed: 2026-08-05
 
 ---
 
@@ -56,17 +56,28 @@ For dashboard purposes, provisional figures are fine. Just be aware that figures
 
 ---
 
-## 3. CBAM Default Values (`RAW` array in `App.jsx`)
+## 3. CBAM Default Values (`CBAM_DEFAULT_VALUE_ROWS` in `src/data/cbamDefaultValues.js`)
 
-**Source:** EU Implementing Regulation 2025/2621, Annex I (US default values)  
-**Update trigger:** Only if the European Commission issues a revised implementing regulation updating the default values. This is not expected to happen frequently — the 2025 regulation is the first full set. Monitor the EUR-Lex CBAM page for new implementing acts.
+**Source:** EU Implementing Regulation 2025/2621, Annex I (US default values), as replaced by Correcting Regulation (EU) 2026/1740 (OJ L, 31.7.2026; in force 3.8.2026, applies retroactively from 1.1.2026)  
+**Update trigger:** Only if the European Commission issues a further implementing regulation updating the default values. Monitor the EUR-Lex CBAM page for new implementing acts.
+
+**2026-08-05 update (Reg 2026/1740):** No US emission default value changed (verified row by row against both OJ texts). Codes and routes updated:
+
+- 2507 00 80 → TARIC 2507 00 80 80 (scope narrowed to calcined kaolinic clay); route indicator dropped
+- 2523 10 00 → TARIC 2523 10 00 10 (white clinker, B) / 2523 10 00 90 (grey/other, A); dashboard attributes 8-digit trade flows to the grey variant (predominant in US exports); white rows listed with zero tonnage
+- 2523 90 00 → TARIC 2523 90 00 10 (white, B) / 2523 90 00 90 (grey/other, A); same treatment
+- 7205 route (C) → (C)/(F); benchmark lookup keeps the conservative (C) value
+- Route changes not affecting rows in the dashboard subset: 7225 19 90 and 7226 19 80 (F→C), 7306 30 18 (gained C), 7318 12 10 and 7318 14 10 (lost C)
+
+**Benchmarks (`src/data/cbamBenchmarks.js`):** from Reg 2025/2620, which 2026/1740 does NOT amend. Only the cement keys were renamed to the new TARIC codes.
 
 ---
 
 ## 4. Mark-up Schedule
 
-**Source:** EU IR 2025/2621  
+**Source:** EU IR 2025/2621 as corrected by Reg (EU) 2026/1740, Annex I opening text  
 **Current schedule:** 10% (2026), 20% (2027), 30% (2028+); Fertilisers 1% throughout  
+**Note:** The correcting regulation deleted the printed 2026/27/28 mark-up columns (recital 10). The dashboard now computes marked-up values as `round(total × factor, 3)` in `cbamDefaultValues.js`, matching the CBAM Registry approach. Do not re-add hardcoded mark-up columns.  
 **Update trigger:** Only if the Commission amends the phase-in schedule. No changes expected before 2028.
 
 ---
